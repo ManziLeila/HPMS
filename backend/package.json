@@ -1,0 +1,49 @@
+{
+  "name": "backend",
+  "version": "1.0.0",
+  "description": "HC Solutions Payroll Management System backend (Express)",
+  "main": "src/server.js",
+  "scripts": {
+    "dev": "cross-env NODE_ENV=development nodemon src/server.js",
+    "start": "cross-env NODE_ENV=production node src/server.js",
+    "lint": "eslint \"src/**/*.{js,jsx}\"",
+    "format": "prettier --write \"src/**/*.{js,jsx,json}\"",
+    "test": "cross-env NODE_ENV=test jest --runInBand",
+    "reset-admin": "node ./scripts/resetAdmin.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "cors": "^2.8.5",
+    "dayjs": "^1.11.19",
+    "dotenv": "^17.2.3",
+    "exceljs": "^4.4.0",
+    "express": "^5.1.0",
+    "helmet": "^8.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "nodemailer": "^7.0.11",
+    "otplib": "^12.0.1",
+    "pdfkit": "^0.15.2",
+    "pg": "^8.16.3",
+    "pino": "^10.1.0",
+    "pino-http": "^11.0.0",
+    "qrcode": "^1.5.4",
+    "uuid": "^13.0.0",
+    "zod": "^4.1.13"
+  },
+  "devDependencies": {
+    "@babel/preset-env": "^7.28.5",
+    "@eslint/js": "^9.39.1",
+    "cross-env": "^10.1.0",
+    "eslint": "^9.39.1",
+    "globals": "^16.5.0",
+    "jest": "^30.2.0",
+    "nodemon": "^3.1.11",
+    "pino-pretty": "^11.3.0",
+    "prettier": "^3.6.2",
+    "supertest": "^7.1.4"
+  }
+}

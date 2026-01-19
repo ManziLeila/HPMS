@@ -1,0 +1,40 @@
+:root {
+  font-family: 'Inter', 'Sora', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  font-weight: 400;
+  color: #1e293b;
+  background-color: #f8fafc;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: #f8fafc;
+  min-height: 100vh;
+}
+
+#root {
+  min-height: 100vh;
+  background: #f8fafc;
+}
+
+input,
+select,
+button {
+  font-family: inherit;
+}
+
+.screen-center {
+  min-height: 60vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #64748b;
+  font-size: 1.1rem;
+}

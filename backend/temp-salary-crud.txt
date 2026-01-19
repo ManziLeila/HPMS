@@ -1,0 +1,103 @@
+// Salary CRUD functions - append to salaryController.js
+
+const updateSalarySchema = z.object({
+  baseSalary: z.coerce.number().optional(),
+  variableAllowance: z.coerce.number().optional(),
+  transportAllowance: z.coerce.number().optional(),
+  housingAllowance: z.coerce.number().optional(),
+  performanceAllowance: z.coerce.number().optional(),
+  advanceAmount: z.coerce.number().optional(),
+  frequency: z.enum(['monthly', 'weekly', 'daily']).optional(),
+  includeMedical: z.boolean().optional(),
+});
+
+export const updateSalary = async (req, res, next) => {
+  try {
+    const { salaryId } = salaryIdParams.parse(req.params);
+    const payload = updateSalarySchema.parse(req.body);
+
+    // Get existing record to merge with updates
+    const existing = await salaryRepo.findByIdWithEmployee(salaryId);
+    if (!existing) {
+      throw notFound('Salary record not found');
+    }
+
+    // Decrypt existing values to use as defaults
+    const existingValues = {
+      baseSalary: existing.basic_salary_enc ? Number(decryptField('basic_salary_enc', existing.basic_salary_enc)) : 0,
+      transportAllowance: existing.transport_allow_enc ? Number(decryptField('transport_allow_enc', existing.transport_allow_enc)) : 0,
+      housingAllowance: existing.housing_allow_enc ? Number(decryptField('housing_allow_enc', existing.housing_allow_enc)) : 0,
+      variableAllowance: existing.variable_allow_enc ? Number(decryptField('variable_allow_enc', existing.variable_allow_enc)) : 0,
+      performanceAllowance: existing.performance_allow_enc ? Number(decryptField('performance_allow_enc', existing.performance_allow_enc)) : 0,
+    };
+
+    // Merge with updates
+    const mergedPayload = {
+      baseSalary: payload.baseSalary ?? existingValues.baseSalary,
+      transportAllowance: payload.transportAllowance ?? existingValues.transportAllowance,
+      housingAllowance: payload.housingAllowance ?? existingValues.housingAllowance,
+      variableAllowance: payload.variableAllowance ?? existingValues.variableAllowance,
+      performanceAllowance: payload.performanceAllowance ?? existingValues.performanceAllowance,
+      advanceAmount: payload.advanceAmount ?? existing.advance_amount ?? 0,
+      frequency: payload.frequency ?? existing.pay_frequency,
+      includeMedical: payload.includeMedical ?? existing.include_medical ?? true,
+    };
+
+    // Recalculate payroll
+    const payrollSnapshot = calculatePayroll(mergedPayload);
+
+    // Re-encrypt all fields
+    const encryptedFields = {
+      basicSalaryEnc: encryptField('basic_salary_enc', mergedPayload.baseSalary),
+      transportAllowEnc: encryptField('transport_allow_enc', mergedPayload.transportAllowance),
+      housingAllowEnc: encryptField('housing_allow_enc', mergedPayload.housingAllowance),
+      variableAllowEnc: encryptField('variable_allow_enc', mergedPayload.variableAllowance),
+      performanceAllowEnc: encryptField('performance_allow_enc', mergedPayload.performanceAllowance),
+      netPaidEnc: encryptField('net_paid_enc', payrollSnapshot.netPaidToBank),
+    };
+
+    const updatedRecord = await salaryRepo.update({
+      salaryId,
+      encryptedFields,
+      payrollSnapshot,
+    });
+
+    await auditService.log({
+      userId: req.user.id,
+      actionType: 'UPDATE_SALARY',
+      details: { salaryId, changes: payload },
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+      correlationId: req.id,
+    });
+
+    res.json({ salary: updatedRecord, payrollSnapshot });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const deleteSalary = async (req, res, next) => {
+  try {
+    const { salaryId } = salaryIdParams.parse(req.params);
+
+    const deletedSalary = await salaryRepo.delete(salaryId);
+
+    if (!deletedSalary) {
+      throw notFound('Salary record not found');
+    }
+
+    await auditService.log({
+      userId: req.user.id,
+      actionType: 'DELETE_SALARY',
+      details: { salaryId, employeeId: deletedSalary.employee_id, payPeriod: deletedSalary.pay_period },
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+      correlationId: req.id,
+    });
+
+    res.json({ message: 'Salary record deleted successfully', salary: deletedSalary });
+  } catch (error) {
+    next(error);
+  }
+};
