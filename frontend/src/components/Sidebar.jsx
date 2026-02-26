@@ -2,7 +2,7 @@ import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard, Users, UserPlus, Upload,
   FileText, CheckSquare, ShieldCheck, FileSignature, Pencil,
-  Layers, Settings, Mail,
+  Layers, Settings, Mail, Calculator
 } from 'lucide-react';
 import useAuth from '../hooks/useAuth';
 import { useLanguage } from '../context/LanguageContext';
@@ -16,6 +16,7 @@ const ROUTE_MAP = {
     { path: '/employees', label: 'Employees', icon: Users },
     { path: '/employees/new', label: 'Employee Form', icon: UserPlus },
     { path: '/bulk-upload', label: 'Bulk Upload', icon: Upload },
+    { path: '/payroll-run', label: 'Payroll Run', icon: Calculator },
     { path: '/my-batches', label: 'My Batches', icon: Layers },
     { path: '/hr-review', label: 'Review Queue', icon: CheckSquare },
     { path: '/contracts', label: 'Contracts', icon: FileSignature },
@@ -48,6 +49,7 @@ const ROUTE_MAP = {
     { path: '/employees', label: 'Employees', icon: Users },
     { path: '/employees/new', label: 'Employee Form', icon: UserPlus },
     { path: '/bulk-upload', label: 'Bulk Upload', icon: Upload },
+    { path: '/payroll-run', label: 'Payroll Run', icon: Calculator },
     { path: '/my-batches', label: 'My Batches', icon: Layers },
     { path: '/contracts', label: 'Contracts', icon: FileSignature },
     { path: '/contract-templates', label: 'Contract Templates', icon: Pencil },

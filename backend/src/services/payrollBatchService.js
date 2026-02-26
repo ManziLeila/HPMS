@@ -304,32 +304,57 @@ class PayrollBatchService {
 
         await notificationService.createBulk(notifications);
 
-        // Send payslip emails to all employees in the batch
-        // (Assume getSalariesInBatch returns all salary records with employee info and payroll snapshot)
+        await this.sendPayslipsForBatch(batchId, sentBy);
+
+        return this.getBatchById(batchId);
+    }
+
+    // Send payslip emails for a batch
+    async sendPayslipsForBatch(batchId, userId) {
         const salaries = await payrollBatchRepo.getSalariesInBatch(batchId);
         const { sendPayslipEmail } = await import('./emailService.js');
         const { generatePayslipPdf } = await import('./payslipService.js');
+        const { decryptField } = await import('./encryptionService.js');
+        const fileStorageService = (await import('./fileStorageService.js')).default;
+
+        const results = { total: salaries.length, success: 0, failed: 0, errors: [] };
+
         for (const record of salaries) {
             try {
-                // Decrypt payroll snapshot if needed
-                let payrollSnapshot = record.payroll_snapshot;
-                if (typeof payrollSnapshot === 'string') {
+                // 1. Decrypt payroll snapshot
+                let payrollSnapshot = null;
+                if (record.payroll_snapshot_enc) {
                     try {
-                        payrollSnapshot = JSON.parse(payrollSnapshot);
+                        const raw = decryptField('payroll_snapshot_enc', record.payroll_snapshot_enc);
+                        payrollSnapshot = JSON.parse(raw);
                     } catch (e) {
-                        // fallback: skip if cannot parse
-                        continue;
+                        console.error('Failed to decrypt snapshot for', record.email, e);
                     }
                 }
-                if (!payrollSnapshot) continue;
 
-                // Generate payslip PDF
+                if (!payrollSnapshot) {
+                    results.failed++;
+                    results.errors.push(`Missing payroll data for ${record.full_name}`);
+                    continue;
+                }
+
+                // 2. Decrypt bank account
+                let bankAccountNumber = null;
+                if (record.account_number_enc) {
+                    try {
+                        bankAccountNumber = decryptField('account_number_enc', record.account_number_enc);
+                    } catch (e) {
+                        console.warn('Bank account decryption failed for', record.full_name);
+                    }
+                }
+
+                // 3. Generate PDF
                 const pdfBuffer = await generatePayslipPdf({
                     employee: {
                         fullName: record.full_name,
                         email: record.email,
                         bankName: record.bank_name,
-                        accountNumber: record.account_number,
+                        accountNumber: bankAccountNumber,
                         accountHolderName: record.account_holder_name,
                     },
                     salary: {
@@ -347,36 +372,32 @@ class PayrollBatchService {
                 const filename = `payslip-${record.full_name.replace(/\s+/g, '-').toLowerCase()}-${record.pay_period}.pdf`;
                 const payDate = new Date(record.pay_period);
                 payDate.setDate(payDate.getDate() + 2);
-                const formattedPayDate = payDate.toLocaleDateString('en-US', {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric',
-                });
 
+                // 4. Save to filesystem (organized by months)
+                await fileStorageService.savePayslip(pdfBuffer, filename, record.pay_period);
+
+                // 5. Send Email
                 await sendPayslipEmail({
                     employeeEmail: record.email,
                     employeeName: record.full_name,
                     employeeId: record.employee_id,
                     payPeriod: new Date(record.pay_period).toLocaleDateString('en-US', { year: 'numeric', month: 'long' }),
                     netSalary: new Intl.NumberFormat('en-RW', { style: 'currency', currency: 'RWF' }).format(payrollSnapshot.netSalary),
-                    payDate: formattedPayDate,
+                    payDate: payDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
                     pdfBuffer,
                     filename,
                     companyName: 'HC Solutions',
-                    hrContact: 'HR Department',
-                    responseDays: '5',
                     senderName: 'Payroll Team',
-                    jobTitle: 'Payroll Administrator',
-                    companyEmail: 'payroll@hcsolutions.rw',
-                    companyPhone: '+250 788 000 000',
                 });
+
+                results.success++;
             } catch (err) {
-                // Log and continue
+                results.failed++;
+                results.errors.push(`Failed for ${record.full_name}: ${err.message}`);
                 console.error('Failed to send payslip email for', record.email, err);
             }
         }
-
-        return this.getBatchById(batchId);
+        return results;
     }
 
     // Get dashboard stats

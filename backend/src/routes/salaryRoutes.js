@@ -12,8 +12,10 @@ import {
   resetPeriod,
   listSalariesByEmployee,
   getMonthlyReport,
+  submitMonthForReview,
   listRecentSalaries,
   downloadPayslip,
+  downloadMonthPayslips,
   exportMonthlyReportToExcel,
 } from '../controllers/salaryController.js';
 import { sendPayslipEmailManually } from '../controllers/sendPayslipManually.js';
@@ -25,7 +27,9 @@ router.use(authenticate, requireRole(['Admin', 'HR', 'FinanceOfficer']));
 router.post('/', createSalary);
 router.post('/preview', previewSalary);
 router.get('/reports/monthly', getMonthlyReport);
+router.post('/reports/monthly/submit', submitMonthForReview);
 router.get('/reports/monthly/export', exportMonthlyReportToExcel);
+router.get('/reports/monthly/payslips-zip', downloadMonthPayslips);
 router.delete('/reports/monthly/reset', resetPeriod);
 router.get('/recent', listRecentSalaries);
 

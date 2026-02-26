@@ -18,7 +18,7 @@ const signToken = (payload, options = {}) => {
 
   return jwt.sign(payload, signKey, {
     algorithm,
-    expiresIn: options.expiresIn ?? '15m',
+    expiresIn: options.expiresIn ?? config.jwt.expiresIn,
   });
 };
 
@@ -52,8 +52,7 @@ export const initiateLogin = async ({
         role: user.role,
         sessionId,
         mfa: true,
-      },
-      { expiresIn: '1h' },
+      }
     );
 
     await auditService.log({
@@ -140,8 +139,7 @@ export const verifyMfa = async ({ token, code, ipAddress, userAgent, correlation
       role: user.role,
       sessionId,
       mfa: true,
-    },
-    { expiresIn: '1h' },
+    }
   );
 
   await auditService.log({

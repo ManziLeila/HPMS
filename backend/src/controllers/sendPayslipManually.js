@@ -4,6 +4,8 @@ import salaryRepo from '../repositories/salaryRepo.js';
 import { notFound } from '../utils/httpError.js';
 import { generatePayslipPdf } from '../services/payslipService.js';
 import { sendPayslipEmail } from '../services/emailService.js';
+import smsService from '../services/smsService.js';
+import fileStorageService from '../services/fileStorageService.js';
 
 const salaryIdParams = z.object({
     salaryId: z.coerce.number(),
@@ -87,6 +89,9 @@ export const sendPayslipEmailManually = async (req, res, next) => {
 
         const filename = `payslip-${employeeData.full_name.replace(/\s+/g, '-').toLowerCase()}-${employeeData.pay_period}.pdf`;
 
+        // Save to filesystem (organized by months)
+        await fileStorageService.savePayslip(pdfBuffer, filename, employeeData.pay_period);
+
         // Calculate payment date (display only)
         const payDate = new Date(employeeData.pay_period);
         payDate.setDate(payDate.getDate() + 2);
@@ -96,29 +101,64 @@ export const sendPayslipEmailManually = async (req, res, next) => {
             day: 'numeric'
         });
 
-        const emailResult = await sendPayslipEmail({
-            employeeEmail: employeeData.email,
-            employeeName: employeeData.full_name,
-            employeeId: employeeData.employee_id,
-            payPeriod: new Date(employeeData.pay_period).toLocaleDateString('en-US', { year: 'numeric', month: 'long' }),
-            netSalary: new Intl.NumberFormat('en-RW', { style: 'currency', currency: 'RWF' }).format(payrollSnapshot.netSalary),
-            payDate: formattedPayDate,
-            pdfBuffer,
-            filename,
-            companyName: 'HC Solutions',
-            senderName: req.user?.email || 'Payroll Team',
-            customMessage,
-        });
+        // ── 5. Delivery (Email VS SMS) ──────────────────────
+        const formattedPayPeriod = new Intl.NumberFormat('en-RW', { style: 'currency', currency: 'RWF' }).format(payrollSnapshot.netSalary);
+        const displayMonth = new Date(employeeData.pay_period).toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
 
-        if (!emailResult.success) {
-            throw new Error(emailResult.error || 'Failed to send email');
+        if (employeeData.email) {
+            // Normal behavior — Email with attachment
+            const emailResult = await sendPayslipEmail({
+                employeeEmail: employeeData.email,
+                employeeName: employeeData.full_name,
+                employeeId: employeeData.employee_id,
+                payPeriod: displayMonth,
+                netSalary: formattedPayPeriod,
+                payDate: formattedPayDate,
+                pdfBuffer,
+                filename,
+                companyName: 'HC Solutions',
+                senderName: req.user?.email || 'Payroll Team',
+                customMessage,
+            });
+
+            if (!emailResult.success) {
+                throw new Error(emailResult.error || 'Failed to send email');
+            }
+
+            res.json({
+                success: true,
+                message: `Payslip email sent successfully to ${employeeData.email}`,
+                sentTo: employeeData.email,
+                method: 'EMAIL'
+            });
+        } else if (employeeData.phone_number) {
+            // Fallback behavior — SMS
+            console.log(`[SMS FALLBACK] Employee ${employeeData.full_name} has no email. Sending SMS to ${employeeData.phone_number}`);
+
+            const smsResult = await smsService.sendPayslipSms({
+                phoneNumber: employeeData.phone_number,
+                employeeName: employeeData.full_name,
+                netSalary: formattedPayPeriod,
+                payPeriod: displayMonth
+            });
+
+            if (!smsResult.success) {
+                throw new Error(smsResult.error || 'Failed to send SMS');
+            }
+
+            res.json({
+                success: true,
+                message: `Payslip summary sent via SMS to ${employeeData.phone_number}`,
+                sentTo: employeeData.phone_number,
+                method: 'SMS'
+            });
+        } else {
+            // Nowhere to send!
+            return res.status(400).json({
+                success: false,
+                message: "This employee has neither an email nor a phone number. Cannot deliver payslip notification."
+            });
         }
-
-        res.json({
-            success: true,
-            message: `Payslip email sent successfully to ${employeeData.email}`,
-            sentTo: employeeData.email,
-        });
     } catch (error) {
         next(error);
     }

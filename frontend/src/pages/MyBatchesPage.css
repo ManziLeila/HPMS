@@ -233,6 +233,25 @@
     background: #fecaca;
 }
 
+.mb__btn--email {
+    background: #eff6ff;
+    color: #2563eb;
+    border: 1px solid #bfdbfe;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.mb__btn--email:hover:not(:disabled) {
+    background: #dbeafe;
+    border-color: #3b82f6;
+}
+
+.mb__btn--email:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
 .mb__no-action {
     color: #cbd5e1;
     font-size: 0.85rem;

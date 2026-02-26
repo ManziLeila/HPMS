@@ -31,6 +31,9 @@ router.post('/md-review', payrollBatchController.mdReview);
 // Send to bank
 router.post('/send-to-bank', payrollBatchController.sendToBank);
 
+// Send payslip emails for a batch manually
+router.post('/:id/send-emails', payrollBatchController.sendBatchEmails);
+
 // Get batch by ID
 router.get('/:id', payrollBatchController.getBatchById);
 

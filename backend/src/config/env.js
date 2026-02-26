@@ -35,6 +35,7 @@ const envSchema = z.object({
     .optional(),
   JWT_PUBLIC_KEY_PATH: z.string().trim().optional(),
   JWT_PRIVATE_KEY_PATH: z.string().trim().optional(),
+  JWT_EXPIRES_IN: z.string().trim().default('1h'),
   MFA_ISSUER: z.string().trim().default('HC Solutions Payroll'),
   MFA_REQUIRED: z
     .string()
@@ -47,6 +48,11 @@ const envSchema = z.object({
     .min(32, 'ENCRYPTION_MASTER_KEY must be at least 32 characters'),
   LOG_LEVEL: z.enum(['error', 'warn', 'info', 'debug', 'trace']).default('info'),
   CORS_ORIGINS: z.string().trim().default('http://localhost:5173'),
+  SMS_ENABLED: z.string().optional().default('false').transform(v => v === 'true'),
+  SMS_PROVIDER: z.string().optional().default('africastalking'),
+  SMS_API_KEY: z.string().optional(),
+  SMS_USERNAME: z.string().optional(),
+  SMS_SENDER_ID: z.string().optional(),
 });
 
 const parsed = envSchema.safeParse(process.env);
@@ -79,6 +85,7 @@ const jwtConfig = {
   publicKey: readKey(env.JWT_PUBLIC_KEY_PATH),
   privateKey: readKey(env.JWT_PRIVATE_KEY_PATH),
   secret: env.JWT_SECRET,
+  expiresIn: env.JWT_EXPIRES_IN,
 };
 
 if (!jwtConfig.publicKey && !jwtConfig.secret) {
@@ -109,6 +116,13 @@ const config = {
   isDevelopment: env.NODE_ENV === 'development',
   isProduction: env.NODE_ENV === 'production',
   isTest: env.NODE_ENV === 'test',
+  sms: {
+    enabled: env.SMS_ENABLED,
+    provider: env.SMS_PROVIDER,
+    apiKey: env.SMS_API_KEY,
+    username: env.SMS_USERNAME,
+    senderId: env.SMS_SENDER_ID,
+  },
 };
 
 if (config.isDevelopment) {

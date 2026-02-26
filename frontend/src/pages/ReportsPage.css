@@ -399,3 +399,65 @@
   color: #991b1b;
   margin-top: 16px;
 }
+
+/* Modal Shared Styles for ReportsPage */
+.reports-page__modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+  backdrop-filter: blur(4px);
+}
+
+.reports-page__modal-content {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  width: 100%;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.reports-page__modal-content header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 10px;
+}
+
+.reports-page__modal-content h3 {
+  margin: 0;
+  color: #1e293b;
+}
+
+.reports-page__modal-close {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: #64748b;
+  cursor: pointer;
+}
+
+.reports-page__modal-btn {
+  background: #3b82f6;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.reports-page__modal-btn:hover {
+  background: #2563eb;
+}

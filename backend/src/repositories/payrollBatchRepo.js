@@ -165,7 +165,10 @@ class PayrollBatchRepository {
         s.*,
         e.full_name,
         e.email,
-        e.department
+        e.department,
+        e.bank_name,
+        e.account_holder_name,
+        e.account_number_enc
       FROM hpms_core.salaries s
       JOIN hpms_core.employees e ON s.employee_id = e.employee_id
       WHERE s.batch_id = $1

@@ -60,6 +60,21 @@ const MyBatchesPage = () => {
         }
     };
 
+    /* ── Send payslip emails ───────────────────────────────────── */
+    const [emailLoading, setEmailLoading] = useState(false);
+    const handleSendEmails = async (batchId, batchName) => {
+        if (!window.confirm(`Send payslip emails to all employees in "${batchName}"?`)) return;
+        setEmailLoading(true);
+        try {
+            const res = await apiClient.post(`/payroll-batches/${batchId}/send-emails`, {}, { token });
+            setMsg({ type: 'ok', text: `✉️ ${res.message || 'Emails sent successfully!'}` });
+        } catch (e) {
+            setMsg({ type: 'err', text: e.message || 'Failed to send emails' });
+        } finally {
+            setEmailLoading(false);
+        }
+    };
+
     /* ── Delete batch ─────────────────────────────────────────── */
     const handleDelete = async (batchId, batchName) => {
         if (!window.confirm(`Delete "${batchName}"? This cannot be undone.`)) return;
@@ -154,6 +169,16 @@ const MyBatchesPage = () => {
                                                         onClick={() => handleSendToBank(b.batch_id, b.batch_name)}
                                                     >
                                                         🏦 Send to Bank
+                                                    </button>
+                                                )}
+                                                {['APPROVED', 'SENT_TO_BANK'].includes(b.status) && (
+                                                    <button
+                                                        className="mb__btn mb__btn--email"
+                                                        disabled={emailLoading}
+                                                        onClick={() => handleSendEmails(b.batch_id, b.batch_name)}
+                                                        title="Send payslip emails to all employees"
+                                                    >
+                                                        ✉️ Send Payslips
                                                     </button>
                                                 )}
                                                 {b.status === 'PENDING' && (

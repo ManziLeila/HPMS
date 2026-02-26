@@ -242,6 +242,29 @@ export const sendToBank = async (req, res, next) => {
     }
 };
 
+// Send payslips for a batch manually
+export const sendBatchEmails = async (req, res, next) => {
+    try {
+        const batchId = Number(req.params.id);
+        if (isNaN(batchId)) throw badRequest('Invalid batch ID');
+
+        const allowedRoles = [ROLES.FINANCE_OFFICER, ROLES.MANAGING_DIRECTOR, ROLES.ADMIN];
+        if (!allowedRoles.includes(req.user.role)) {
+            throw forbidden('Insufficient permissions to send payslips');
+        }
+
+        const stats = await payrollBatchService.sendPayslipsForBatch(batchId, req.user.id);
+
+        res.json({
+            success: true,
+            message: `Processed ${stats.total} records: ${stats.success} sent, ${stats.failed} failed`,
+            data: stats,
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
 // Get dashboard statistics
 export const getDashboardStats = async (req, res, next) => {
     try {

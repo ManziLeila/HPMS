@@ -63,7 +63,7 @@ const salaryRepo = {
 
   async listByEmployee(employeeId) {
     const { rows } = await db.query(
-      `SELECT salary_id, pay_period, pay_frequency, gross_salary, rssb_pension, paye, total_employer_contrib
+      `SELECT salary_id, pay_period, pay_frequency, gross_salary, rssb_pension, paye, total_employer_contrib, hr_status, hr_comment
        FROM hpms_core.salaries
        WHERE employee_id = $1
        ORDER BY pay_period DESC`,
@@ -84,7 +84,10 @@ const salaryRepo = {
           s.total_employer_contrib,
           e.employee_id,
           e.full_name,
-          e.email
+          e.email,
+          s.hr_status,
+          s.hr_comment,
+          s.payroll_snapshot_enc
        FROM hpms_core.salaries s
        INNER JOIN hpms_core.employees e ON e.employee_id = s.employee_id
        WHERE EXTRACT(YEAR FROM s.pay_period) = $1
@@ -112,7 +115,10 @@ const salaryRepo = {
           s.gross_salary,
           s.paye,
           e.full_name,
-          e.email
+          e.email,
+          s.hr_status,
+          s.hr_comment,
+          s.payroll_snapshot_enc
        FROM hpms_core.salaries s
        INNER JOIN hpms_core.employees e ON e.employee_id = s.employee_id
        ORDER BY s.created_at DESC
@@ -137,6 +143,27 @@ const salaryRepo = {
       [salaryId],
     );
     return rows[0];
+  },
+
+  async findByPeriodWithEmployee({ year, month }) {
+    const { rows } = await db.query(
+      `SELECT s.*, 
+              e.full_name, 
+              e.email, 
+              e.bank_name,
+              e.account_holder_name,
+              e.account_number_enc,
+              e.role,
+              e.department,
+              e.date_of_joining
+       FROM hpms_core.salaries s
+       INNER JOIN hpms_core.employees e ON e.employee_id = s.employee_id
+       WHERE EXTRACT(YEAR FROM s.pay_period) = $1
+         AND EXTRACT(MONTH FROM s.pay_period) = $2
+       ORDER BY e.full_name`,
+      [year, month],
+    );
+    return rows;
   },
 
   async update({ salaryId, encryptedFields, payrollSnapshot }) {
@@ -181,9 +208,11 @@ const salaryRepo = {
            pay_frequency = $14,
            advance_amount = $15,
            payroll_snapshot_enc = $16,
+           hr_status = 'PENDING',
+           hr_comment = NULL,
            updated_at = NOW()
        WHERE salary_id = $1
-       RETURNING salary_id, pay_period, gross_salary, paye, updated_at`,
+       RETURNING *`,
       [
         salaryId,
         basicSalaryEnc,

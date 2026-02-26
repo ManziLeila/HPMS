@@ -9,6 +9,7 @@ import { generatePayslipPdf } from '../services/payslipService.js';
 import { sendSalaryProcessedEmail, sendFONotification } from '../services/emailService.js';
 import { generateMonthlyPayrollExcel } from '../services/excelService.js';
 import notificationService from '../services/notificationService.js';
+import fileStorageService from '../services/fileStorageService.js';
 
 const salarySchema = z.object({
   employeeId: z.coerce.number(),
@@ -399,15 +400,29 @@ export const getMonthlyReport = async (req, res, next) => {
     // so a single corrupt record doesn't crash the whole report.
     const decryptedReport = report.map(row => {
       let net_salary = null;
+
+      // Try primary source
       if (row.net_paid_enc) {
         try {
           net_salary = decryptField('net_paid_enc', row.net_paid_enc);
         } catch {
-          // Decryption failed for this row (e.g. key rotation or corrupt data).
-          // Return null and surface the record anyway — better than a 500.
           net_salary = null;
         }
       }
+
+      // Try fallback source: payroll_snapshot_enc
+      if ((net_salary === null || net_salary === undefined) && row.payroll_snapshot_enc) {
+        try {
+          const raw = decryptField('payroll_snapshot_enc', row.payroll_snapshot_enc);
+          if (raw) {
+            const snap = JSON.parse(raw);
+            net_salary = snap.netPaidToBank ?? snap.netSalary ?? snap.net_salary ?? null;
+          }
+        } catch (err) {
+          console.warn(`[getMonthlyReport] Snapshot fallback failed for ${row.salary_id}`);
+        }
+      }
+
       return { ...row, net_salary };
     });
 
@@ -568,6 +583,10 @@ export const downloadPayslip = async (req, res, next) => {
       payrollSnapshot,
     });
 
+    // Save to filesystem (organized by months)
+    const filename = `payslip-${record.full_name.replace(/\s+/g, '-').toLowerCase()}-${record.pay_period}.pdf`;
+    await fileStorageService.savePayslip(pdfBuffer, filename, record.pay_period);
+
     // Payslip emails are now sent only after all approvals and after send-to-bank, not here.
 
     res.setHeader('Content-Type', 'application/pdf');
@@ -612,6 +631,190 @@ export const exportMonthlyReportToExcel = async (req, res, next) => {
     res.send(excelBuffer);
   } catch (error) {
     next(error);
+  }
+};
+
+// Download all payslips for a month as a ZIP
+export const downloadMonthPayslips = async (req, res, next) => {
+  try {
+    const { year, month } = monthlyReportQuery.parse({
+      year: req.query.year,
+      month: req.query.month,
+    });
+
+    const fs = (await import('fs/promises'));
+    const path = (await import('path')).default;
+    const dayjs = (await import('dayjs')).default;
+
+    // 1. Get all records for this period
+    const records = await salaryRepo.findByPeriodWithEmployee({ year, month });
+
+    console.log(`[downloadMonthPayslips] Found ${records?.length || 0} records for ${year}-${month}`);
+
+    if (!records || records.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: `No salary records found for ${year}-${String(month).padStart(2, '0')}.`,
+      });
+    }
+
+    // 2. Ensuring all payslips exist in storage
+    const yearStr = year.toString();
+    const monthStr = month.toString().padStart(2, '0');
+
+    for (const record of records) {
+      // Consistent date formatting for filenames
+      const periodDate = dayjs(record.pay_period).format('YYYY-MM-DD');
+      const filename = `payslip-${record.full_name.replace(/\s+/g, '-').toLowerCase()}-${periodDate}.pdf`;
+
+      const filePath = path.join(fileStorageService.payslipsDir, yearStr, monthStr, filename);
+
+      try {
+        await fs.access(filePath);
+      } catch {
+        // File doesn't exist, generate it from the snapshot
+        console.log(`[downloadMonthPayslips] Generating missing payslip for: ${record.full_name}`);
+
+        let decryptedComp = {
+          baseSalary: 0,
+          transportAllowance: 0,
+          housingAllowance: 0,
+          variableAllowance: 0,
+          performanceAllowance: 0,
+        };
+
+        // Decryption Logic
+        let snap = null;
+        if (record.payroll_snapshot_enc) {
+          try {
+            const raw = decryptField('payroll_snapshot_enc', record.payroll_snapshot_enc);
+            if (raw) snap = JSON.parse(raw);
+          } catch (e) {
+            console.error(`[downloadMonthPayslips] Snap decryption failed for ${record.full_name}:`, e.message);
+          }
+        }
+
+        if (snap) {
+          const sa = snap.allowances || snap;
+          decryptedComp.baseSalary = snap.basicSalary ?? snap.baseSalary ?? snap.base_salary ?? 0;
+          decryptedComp.transportAllowance = sa.transport ?? sa.transportAllowance ?? sa.transport_allowance ?? 0;
+          decryptedComp.housingAllowance = sa.housing ?? sa.housingAllowance ?? sa.housing_allowance ?? 0;
+          decryptedComp.performanceAllowance = sa.performance ?? sa.performanceAllowance ?? sa.performance_allowance ?? 0;
+          decryptedComp.variableAllowance = sa.variable ?? sa.variableAllowance ?? sa.variable_allowance ?? 0;
+        } else {
+          // Fallback to individual encrypted columns
+          try { decryptedComp.baseSalary = Number(decryptField('basic_salary_enc', record.basic_salary_enc)) || 0; } catch { }
+          try { decryptedComp.transportAllowance = Number(decryptField('transport_allow_enc', record.transport_allow_enc)) || 0; } catch { }
+          try { decryptedComp.housingAllowance = Number(decryptField('housing_allow_enc', record.housing_allow_enc)) || 0; } catch { }
+          try { decryptedComp.variableAllowance = Number(decryptField('variable_allow_enc', record.variable_allow_enc)) || 0; } catch { }
+          try { decryptedComp.performanceAllowance = Number(decryptField('performance_allow_enc', record.performance_allow_enc)) || 0; } catch { }
+        }
+
+        if (decryptedComp.baseSalary === 0 && record.gross_salary > 0) {
+          decryptedComp.baseSalary = record.gross_salary;
+        }
+
+        const payrollSnapshot = calculatePayroll({
+          ...decryptedComp,
+          advanceAmount: record.advance_amount || 0,
+          frequency: record.pay_frequency,
+          includeMedical: record.include_medical !== false,
+        });
+
+        let bankAccountNumber = null;
+        if (record.account_number_enc) {
+          try { bankAccountNumber = decryptField('account_number_enc', record.account_number_enc); } catch { }
+        }
+
+        const pdfBuffer = await generatePayslipPdf({
+          employee: {
+            fullName: record.full_name,
+            email: record.email,
+            bankName: record.bank_name,
+            accountNumber: bankAccountNumber,
+            accountHolderName: record.account_holder_name,
+            role: record.role,
+            department: record.department,
+            dateOfJoining: record.date_of_joining,
+          },
+          salary: {
+            payPeriod: record.pay_period,
+            frequency: record.pay_frequency,
+            workedDays: 26,
+            ...decryptedComp,
+          },
+          payrollSnapshot,
+        });
+
+        await fileStorageService.savePayslip(pdfBuffer, filename, record.pay_period);
+      }
+    }
+
+    // 3. Generate the ZIP
+    console.log(`[downloadMonthPayslips] Packing ZIP for ${yearStr}/${monthStr}`);
+    const zipBuffer = await fileStorageService.generateMonthZip(yearStr, monthStr);
+
+    if (!zipBuffer) {
+      console.error(`[downloadMonthPayslips] ZIP generation returned null for ${yearStr}/${monthStr}`);
+      return res.status(404).json({
+        success: false,
+        message: `No files found to ZIP for ${yearStr}-${monthStr}.`,
+      });
+    }
+
+    const filenameBase = `payslips-${year}-${monthStr}.zip`;
+
+    res.setHeader('Content-Type', 'application/zip');
+    res.setHeader('Content-Disposition', `attachment; filename="${filenameBase}"`);
+    res.send(zipBuffer);
+  } catch (error) {
+    console.error('[downloadMonthPayslips] Fatal Error:', error);
+    next(error);
+  }
+};
+
+// Submit a whole month for HR review (Finance Officer confirmation step)
+export const submitMonthForReview = async (req, res, next) => {
+  try {
+    const { year, month } = req.body;
+    if (!year || !month) return res.status(400).json({ message: 'Year and month are required' });
+
+    const records = await salaryRepo.monthlyReport({ year, month });
+    if (records.length === 0) {
+      return res.status(404).json({ message: 'No records found to submit for this month' });
+    }
+
+    // Check if any are rejected
+    const rejected = records.filter(r => r.hr_status === 'HR_REJECTED');
+    if (rejected.length > 0) {
+      return res.status(400).json({
+        message: 'Cannot submit. Some records were rejected by HR and must be corrected first.',
+        rejectedCount: rejected.length
+      });
+    }
+
+    // Log the submission
+    await auditService.log({
+      userId: req.user.id,
+      actionType: 'SUBMIT_MONTH_TO_HR',
+      details: { year, month, recordCount: records.length },
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+    });
+
+    // Notify HR
+    try {
+      await sendFONotification('HR', {
+        title: 'Payroll Month Ready for Review',
+        body: `Finance has confirmed the payroll for ${year}/${month} is ready for HR review.`
+      });
+    } catch (e) {
+      console.warn('Notification failed but month was submitted', e.message);
+    }
+
+    res.json({ success: true, message: 'Monthly payroll submitted for HR review' });
+  } catch (err) {
+    next(err);
   }
 };
 
