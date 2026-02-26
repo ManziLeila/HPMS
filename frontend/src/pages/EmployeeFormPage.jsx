@@ -9,6 +9,7 @@ const initialFormState = {
   fullName: '',
   email: '',
   phoneNumber: '',
+  rssbNumber: '',
   role: 'Employee',
   bankName: '',
   accountNumber: '',
@@ -73,8 +74,8 @@ const EmployeeFormPage = () => {
     }
 
     // Validation
-    if (!formValues.fullName || !formValues.email) {
-      setCreateStatus('Please enter employee name and email.');
+    if (!formValues.fullName) {
+      setCreateStatus('Please enter employee name.');
       return;
     }
     if (!formValues.payPeriod) {
@@ -99,8 +100,9 @@ const EmployeeFormPage = () => {
         '/employees',
         {
           fullName: formValues.fullName,
-          email: formValues.email,
+          email: formValues.email || undefined,
           role: formValues.role || 'Employee',
+          rssbNumber: formValues.rssbNumber || undefined,
         },
         { token }
       );
@@ -179,7 +181,7 @@ const EmployeeFormPage = () => {
               />
             </label>
             <label>
-              Work email
+              Work email <span style={{ fontSize: '0.8em', color: '#94a3b8' }}>(optional)</span>
               <input
                 type="email"
                 name="email"
@@ -221,6 +223,15 @@ const EmployeeFormPage = () => {
                 name="phoneNumber"
                 placeholder="+250 XXX XXX XXX"
                 value={formValues.phoneNumber}
+                onChange={handleChange}
+              />
+            </label>
+            <label>
+              RSSB Number <span style={{ fontSize: '0.8em', color: '#94a3b8' }}>(optional)</span>
+              <input
+                name="rssbNumber"
+                placeholder="e.g. 20655126"
+                value={formValues.rssbNumber}
                 onChange={handleChange}
               />
             </label>
@@ -282,10 +293,11 @@ const EmployeeFormPage = () => {
                 type="number"
                 name="baseSalary"
                 min="0"
-                step="5000"
+                step="any"
                 placeholder="0"
                 value={formValues.baseSalary}
                 onChange={handleChange}
+                onWheel={(e) => e.target.blur()}
               />
             </label>
             <label>
@@ -294,10 +306,11 @@ const EmployeeFormPage = () => {
                 type="number"
                 name="advanceAmount"
                 min="0"
-                step="1000"
+                step="any"
                 placeholder="0"
                 value={formValues.advanceAmount}
                 onChange={handleChange}
+                onWheel={(e) => e.target.blur()}
               />
             </label>
             <label>
@@ -306,10 +319,11 @@ const EmployeeFormPage = () => {
                 type="number"
                 name="variableAllowance"
                 min="0"
-                step="1000"
+                step="any"
                 placeholder="0"
                 value={formValues.variableAllowance}
                 onChange={handleChange}
+                onWheel={(e) => e.target.blur()}
               />
             </label>
             <label>
@@ -318,10 +332,11 @@ const EmployeeFormPage = () => {
                 type="number"
                 name="transportAllowance"
                 min="0"
-                step="1000"
+                step="any"
                 placeholder="0"
                 value={formValues.transportAllowance}
                 onChange={handleChange}
+                onWheel={(e) => e.target.blur()}
               />
             </label>
             <label>
@@ -330,10 +345,11 @@ const EmployeeFormPage = () => {
                 type="number"
                 name="housingAllowance"
                 min="0"
-                step="1000"
+                step="any"
                 placeholder="0"
                 value={formValues.housingAllowance}
                 onChange={handleChange}
+                onWheel={(e) => e.target.blur()}
               />
             </label>
             <label>
@@ -342,10 +358,11 @@ const EmployeeFormPage = () => {
                 type="number"
                 name="performanceAllowance"
                 min="0"
-                step="1000"
+                step="any"
                 placeholder="0"
                 value={formValues.performanceAllowance}
                 onChange={handleChange}
+                onWheel={(e) => e.target.blur()}
               />
             </label>
           </div>

@@ -2,7 +2,8 @@ const currency = (value) =>
   new Intl.NumberFormat('en-RW', {
     style: 'currency',
     currency: 'RWF',
-    maximumFractionDigits: 0,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
   }).format(value);
 
 const clampNumber = (value) => {

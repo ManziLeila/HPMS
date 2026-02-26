@@ -1,12 +1,18 @@
 .chart-card {
-  padding: 24px;
-  border-radius: 28px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  background: rgba(15, 23, 42, 0.7);
-  color: #f8fafc;
+  padding: 28px 24px;
+  border-radius: 22px;
+  border: 1.5px solid #e2e8f0;
+  background: linear-gradient(120deg, #003a75 60%, #f5911f 100%);
+  color: #fff;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 18px;
+  box-shadow: 0 8px 32px rgba(0, 47, 108, 0.13), 0 1.5px 6px rgba(0,0,0,0.04);
+  transition: box-shadow 0.18s, transform 0.18s;
+}
+.chart-card:hover {
+  box-shadow: 0 12px 36px rgba(245,145,31,0.13), 0 2px 8px rgba(0,47,108,0.08);
+  transform: translateY(-2px) scale(1.01);
 }
 
 .chart-card__header {
@@ -17,9 +23,10 @@
 
 .chart-card__eyebrow {
   text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: rgba(248, 250, 252, 0.6);
-  font-size: 0.8rem;
+  letter-spacing: 0.09em;
+  color: #f5911f;
+  font-size: 0.85rem;
+  font-weight: 700;
 }
 
 .chart-card__badge {

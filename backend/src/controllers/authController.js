@@ -1,6 +1,10 @@
 import { z } from 'zod';
+import bcrypt from 'bcryptjs';
+
 import { initiateLogin, verifyMfa } from '../services/authService.js';
 import auditService from '../services/auditService.js';
+import pool from '../config/database.js';
+
 
 const loginSchema = z.object({
   email: z.string().email(),
@@ -72,11 +76,55 @@ export const logout = async (req, res, next) => {
 };
 
 export const me = async (req, res) => {
+  const { rows } = await pool.query(
+    'SELECT full_name FROM hpms_core.employees WHERE employee_id = $1',
+    [req.user.id]
+  );
   res.json({
     id: req.user.id,
     email: req.user.email,
     role: req.user.role,
+    fullName: rows[0]?.full_name || null,
     sessionId: req.user.sessionId,
   });
+};
+
+const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1),
+  newPassword: z.string().min(8, 'New password must be at least 8 characters'),
+});
+
+export const changePassword = async (req, res, next) => {
+  try {
+    const { currentPassword, newPassword } = changePasswordSchema.parse(req.body);
+
+    // Fetch stored password hash
+    const { rows } = await pool.query(
+      'SELECT password_hash FROM hpms_core.employees WHERE employee_id = $1',
+      [req.user.id]
+    );
+    if (!rows.length) return res.status(404).json({ error: { message: 'User not found' } });
+
+    const valid = await bcrypt.compare(currentPassword, rows[0].password_hash);
+    if (!valid) return res.status(400).json({ error: { message: 'Current password is incorrect' } });
+
+    const newHash = await bcrypt.hash(newPassword, 12);
+    await pool.query(
+      'UPDATE hpms_core.employees SET password_hash = $1, updated_at = NOW() WHERE employee_id = $2',
+      [newHash, req.user.id]
+    );
+
+    await auditService.log({
+      userId: req.user.id,
+      actionType: 'CHANGE_PASSWORD',
+      details: {},
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+    });
+
+    res.json({ message: 'Password changed successfully' });
+  } catch (error) {
+    next(error);
+  }
 };
 

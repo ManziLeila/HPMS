@@ -80,6 +80,7 @@ const salaryRepo = {
           s.pay_frequency,
           s.gross_salary,
           s.paye,
+          s.net_paid_enc,
           s.total_employer_contrib,
           e.employee_id,
           e.full_name,
@@ -232,6 +233,62 @@ const salaryRepo = {
 
     const { rows } = await db.query(query, params);
     return rows;
+  },
+  /**
+   * Set HR review status on a single salary record.
+   * Returns the updated row joined with employee info.
+   */
+  async hrReview({ salaryId, status, comment, reviewedBy }) {
+    const { rows } = await db.query(
+      `UPDATE hpms_core.salaries
+       SET hr_status      = $2,
+           hr_comment     = $3,
+           hr_reviewed_at = NOW(),
+           hr_reviewed_by = $4,
+           updated_at     = NOW()
+       WHERE salary_id = $1
+       RETURNING salary_id, employee_id, pay_period, gross_salary, hr_status, hr_comment`,
+      [salaryId, status, comment || null, reviewedBy],
+    );
+    return rows[0];
+  },
+
+  /**
+   * Bulk-approve all PENDING salary records for a period.
+   * Returns the updated rows joined with employee info for notifications.
+   */
+  async bulkHrReview({ year, month, status, comment, reviewedBy }) {
+    const { rows } = await db.query(
+      `UPDATE hpms_core.salaries s
+       SET hr_status      = $3,
+           hr_comment     = $4,
+           hr_reviewed_at = NOW(),
+           hr_reviewed_by = $5,
+           updated_at     = NOW()
+       FROM hpms_core.employees e
+       WHERE s.employee_id = e.employee_id
+         AND EXTRACT(YEAR  FROM s.pay_period) = $1
+         AND EXTRACT(MONTH FROM s.pay_period) = $2
+         AND s.hr_status = 'PENDING'
+       RETURNING s.salary_id, s.employee_id, s.pay_period, s.gross_salary,
+                 s.hr_status, e.full_name, e.email, e.created_by`,
+      [year, month, status, comment || null, reviewedBy],
+    );
+    return rows;
+  },
+
+  /**
+   * Who created a given salary (the Finance Officer's employee_id).
+   */
+  async getCreatedBy(salaryId) {
+    const { rows } = await db.query(
+      `SELECT s.created_by, e.full_name, e.employee_id
+       FROM hpms_core.salaries s
+       LEFT JOIN hpms_core.employees e ON e.employee_id = s.created_by
+       WHERE s.salary_id = $1`,
+      [salaryId],
+    );
+    return rows[0];
   },
 };
 

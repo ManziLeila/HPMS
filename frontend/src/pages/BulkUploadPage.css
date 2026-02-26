@@ -1,0 +1,383 @@
+.bulk-upload-page {
+    padding: 2rem;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+.bulk-upload-page__header {
+    margin-bottom: 2rem;
+}
+
+.bulk-upload-page__eyebrow {
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--hc-accent);
+    margin-bottom: 0.5rem;
+}
+
+.bulk-upload-page__header h2 {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--hc-primary);
+    margin-bottom: 0.5rem;
+}
+
+.bulk-upload-page__description {
+    color: #64748b;
+    font-size: 1rem;
+    line-height: 1.6;
+}
+
+.bulk-upload-page__form {
+    display: grid;
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.bulk-upload-page__card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.bulk-upload-page__card header {
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 2px solid var(--hc-primary-lighter);
+}
+
+.bulk-upload-page__card h3 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--hc-primary);
+    margin: 0;
+}
+
+.bulk-upload-page__content {
+    color: #475569;
+}
+
+.bulk-upload-page__columns-list {
+    list-style: none;
+    padding: 0;
+    margin: 1rem 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 0.5rem;
+}
+
+.bulk-upload-page__columns-list li {
+    padding: 0.75rem 1rem;
+    background: rgba(15, 22, 115, 0.08);
+    border-left: 3px solid var(--hc-primary);
+    border-radius: 4px;
+    font-size: 0.875rem;
+    color: #1e293b;
+    font-weight: 500;
+}
+
+.bulk-upload-page__template-btn {
+    background: linear-gradient(135deg, var(--hc-primary-light), var(--hc-primary));
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 0.875rem;
+}
+
+.bulk-upload-page__template-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(6, 182, 212, 0.3);
+}
+
+.bulk-upload-page__fields {
+    display: grid;
+    gap: 1rem;
+}
+
+.bulk-upload-page__fields label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--hc-primary);
+}
+
+.bulk-upload-page__fields input,
+.bulk-upload-page__fields select {
+    padding: 0.75rem;
+    background: #ffffff;
+    border: 2px solid #cbd5e1;
+    border-radius: 8px;
+    color: #1e293b;
+    font-size: 1rem;
+    transition: all 0.2s;
+}
+
+.bulk-upload-page__fields input:focus,
+.bulk-upload-page__fields select:focus {
+    outline: none;
+    border-color: var(--hc-primary);
+    box-shadow: 0 0 0 3px rgba(15, 22, 115, 0.1);
+}
+
+.bulk-upload-page__checkbox {
+    flex-direction: row !important;
+    align-items: center;
+    gap: 0.75rem !important;
+}
+
+.bulk-upload-page__checkbox input[type="checkbox"] {
+    width: 1.25rem;
+    height: 1.25rem;
+    cursor: pointer;
+    accent-color: var(--hc-accent);
+}
+
+.bulk-upload-page__file-input {
+    margin-bottom: 1rem;
+}
+
+.bulk-upload-page__file-input input[type="file"] {
+    display: none;
+}
+
+.bulk-upload-page__file-label {
+    display: inline-block;
+    padding: 0.75rem 1.5rem;
+    background: #ffffff;
+    border: 2px dashed var(--hc-primary);
+    border-radius: 8px;
+    color: var(--hc-primary);
+    cursor: pointer;
+    transition: all 0.2s;
+    font-weight: 600;
+}
+
+.bulk-upload-page__file-label:hover {
+    border-color: var(--hc-accent);
+    background: rgba(247, 139, 15, 0.05);
+    color: var(--hc-accent);
+}
+
+.bulk-upload-page__upload-btn {
+    width: 100%;
+    padding: 1rem;
+    background: linear-gradient(135deg, var(--hc-accent), var(--hc-accent-dark));
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.bulk-upload-page__upload-btn:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.bulk-upload-page__upload-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.bulk-upload-page__status {
+    margin-top: 1rem;
+    padding: 0.75rem;
+    border-radius: 8px;
+    font-weight: 500;
+    text-align: center;
+}
+
+.bulk-upload-page__status.success {
+    background: rgba(245, 145, 31, 0.1);
+    color: #f5911f;
+    border: 1px solid rgba(245, 145, 31, 0.3);
+}
+
+.bulk-upload-page__status.error {
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.bulk-upload-page__status.info {
+    background: rgba(6, 182, 212, 0.1);
+    color: #06b6d4;
+    border: 1px solid rgba(6, 182, 212, 0.3);
+}
+
+.bulk-upload-page__results {
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+    border: 1px solid #334155;
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.bulk-upload-page__results header {
+    margin-bottom: 1.5rem;
+}
+
+.bulk-upload-page__results h3 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #f0f9ff;
+    margin: 0;
+}
+
+.bulk-upload-page__stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.bulk-upload-page__stat {
+    background: rgba(6, 182, 212, 0.1);
+    border: 1px solid rgba(6, 182, 212, 0.3);
+    border-radius: 8px;
+    padding: 1rem;
+    text-align: center;
+}
+
+.bulk-upload-page__stat.success {
+    background: rgba(16, 185, 129, 0.1);
+    border-color: rgba(16, 185, 129, 0.3);
+}
+
+.bulk-upload-page__stat.error {
+    background: rgba(239, 68, 68, 0.1);
+    border-color: rgba(239, 68, 68, 0.3);
+}
+
+.bulk-upload-page__stat-label {
+    font-size: 0.875rem;
+    color: #94a3b8;
+    margin-bottom: 0.5rem;
+}
+
+.bulk-upload-page__stat-value {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #f0f9ff;
+    margin: 0;
+}
+
+.bulk-upload-page__actions {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+}
+
+.bulk-upload-page__action-btn {
+    flex: 1;
+    min-width: 200px;
+    padding: 1rem;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: white;
+}
+
+.bulk-upload-page__action-btn.download {
+    background: linear-gradient(135deg, var(--hc-primary-light), var(--hc-primary));
+}
+
+.bulk-upload-page__action-btn.email {
+    background: linear-gradient(135deg, var(--hc-accent), var(--hc-accent-dark));
+}
+
+.bulk-upload-page__action-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.bulk-upload-page__table-section {
+    margin-top: 1.5rem;
+}
+
+.bulk-upload-page__table-section h4 {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: #f0f9ff;
+    margin-bottom: 1rem;
+}
+
+.bulk-upload-page__table-wrapper {
+    overflow-x: auto;
+    border-radius: 8px;
+    border: 1px solid #334155;
+}
+
+.bulk-upload-page__table-wrapper table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #1e293b;
+}
+
+.bulk-upload-page__table-wrapper thead {
+    background: #0f172a;
+}
+
+.bulk-upload-page__table-wrapper th {
+    padding: 0.75rem 1rem;
+    text-align: left;
+    font-weight: 600;
+    color: #06b6d4;
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.bulk-upload-page__table-wrapper td {
+    padding: 0.75rem 1rem;
+    color: #cbd5e1;
+    border-top: 1px solid #334155;
+    font-size: 0.875rem;
+}
+
+.bulk-upload-page__table-wrapper tbody tr:hover {
+    background: rgba(6, 182, 212, 0.05);
+}
+
+.bulk-upload-page__table-wrapper .error-message {
+    color: #ef4444;
+    font-weight: 500;
+}
+
+@media (max-width: 768px) {
+    .bulk-upload-page {
+        padding: 1rem;
+    }
+
+    .bulk-upload-page__header h2 {
+        font-size: 1.5rem;
+    }
+
+    .bulk-upload-page__columns-list {
+        grid-template-columns: 1fr;
+    }
+
+    .bulk-upload-page__actions {
+        flex-direction: column;
+    }
+
+    .bulk-upload-page__action-btn {
+        min-width: 100%;
+    }
+}

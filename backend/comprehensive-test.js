@@ -36,7 +36,7 @@ console.log('Gross Salary:', result.grossSalary.toLocaleString());
 console.log('');
 
 console.log('=== TAX CALCULATION ===');
-console.log('PAYE Base (Exemption):', result.payeBase.toLocaleString());
+console.log('PAYE Base (Taxable Income):', result.taxableIncome.toLocaleString());
 console.log('Taxable Income:', result.taxableIncome.toLocaleString());
 console.log('PAYE Tax:', Math.round(result.paye).toLocaleString());
 console.log('');

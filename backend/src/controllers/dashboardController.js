@@ -2,9 +2,11 @@ import db from '../repositories/db.js';
 
 export const getDashboardStats = async (req, res, next) => {
   try {
-    // Get total employees count
+    // Count only real payroll employees — exclude system login roles
     const employeeCount = await db.query(
-      `SELECT COUNT(*) as count FROM hpms_core.employees WHERE status = 'ACTIVE' OR status IS NULL`,
+      `SELECT COUNT(*) as count FROM hpms_core.employees
+       WHERE role = 'Employee'
+         AND (status = 'ACTIVE' OR status IS NULL)`,
     );
 
     // Get current month payroll stats

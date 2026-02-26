@@ -2,14 +2,17 @@ import { z } from 'zod';
 import { encryptField } from '../services/encryptionService.js';
 import auditService from '../services/auditService.js';
 import userService from '../services/userService.js';
+import notificationService from '../services/notificationService.js';
+import { sendWelcomeEmail } from '../services/emailService.js';
 import { badRequest } from '../utils/httpError.js';
 
 const createEmployeeSchema = z.object({
   fullName: z.string().min(3),
-  email: z.string().email(),
-  role: z.enum(['Admin', 'Employee']).default('Employee'),
+  email: z.string().email().optional().or(z.literal('')).transform(v => v || null),
+  role: z.enum(['Admin', 'Employee', 'FinanceOfficer', 'HR', 'ManagingDirector']).default('Employee'),
   bankAccountNumber: z.string().min(6).optional(),
   temporaryPassword: z.string().min(10).optional(),
+  rssbNumber: z.string().max(20).optional(),
 });
 
 export const createEmployee = async (req, res, next) => {
@@ -34,6 +37,7 @@ export const createEmployee = async (req, res, next) => {
       password: password,
       bankAccountEnc: encryptedBank,
       role: payload.role,
+      rssbNumber: payload.rssbNumber,
     });
 
     await auditService.log({
@@ -45,7 +49,27 @@ export const createEmployee = async (req, res, next) => {
       correlationId: req.id,
     });
 
+    // Respond immediately — notifications fire async
     res.status(201).json(newEmployee);
+
+    // ── async side-effects (don't block the response) ──────────
+    const createdByName = req.user.fullName || req.user.email || 'A staff member';
+
+    // In-app notification to HR + Admin, welcome ping to new employee
+    notificationService.notifyNewEmployee({
+      newEmployee,
+      createdByName,
+    }).catch((e) => console.error('notifyNewEmployee failed:', e));
+
+    // Welcome email with temporary password (only if employee has email)
+    if (newEmployee.email) {
+      sendWelcomeEmail({
+        employeeEmail: newEmployee.email,
+        employeeName: newEmployee.full_name,
+        temporaryPassword: password,
+        role: newEmployee.role,
+      }).catch((e) => console.error('sendWelcomeEmail failed:', e));
+    }
   } catch (error) {
     next(error);
   }
@@ -84,10 +108,11 @@ export const getEmployee = async (req, res, next) => {
 const updateEmployeeSchema = z.object({
   fullName: z.string().min(3).optional(),
   email: z.string().email().optional(),
-  role: z.enum(['Admin', 'Employee']).optional(),
+  role: z.enum(['Admin', 'Employee', 'FinanceOfficer', 'HR', 'ManagingDirector']).optional(),
   phoneNumber: z.string().optional(),
   bankName: z.string().optional(),
   accountHolderName: z.string().optional(),
+  rssbNumber: z.string().max(20).optional(),
 });
 
 export const updateEmployee = async (req, res, next) => {

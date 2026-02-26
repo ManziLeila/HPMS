@@ -24,7 +24,7 @@ const decryptPayrollSnapshot = (encryptedData) => {
 export const sendPayslipEmailManually = async (req, res, next) => {
     try {
         const { salaryId } = salaryIdParams.parse(req.params);
-        const { customMessage } = req.body || {}; // Get custom message from request body
+        const { customMessage } = req.body || {};
 
         // Get salary record with employee data
         const employeeData = await salaryRepo.findByIdWithEmployee(salaryId);
@@ -33,28 +33,26 @@ export const sendPayslipEmailManually = async (req, res, next) => {
             throw notFound('Salary record not found');
         }
 
-        console.log('Employee data retrieved:', {
+        // 🚨 Security/Workflow check: Only allow sending if HR has approved
+        if (employeeData.hr_status !== 'HR_APPROVED' && employeeData.hr_status !== 'MD_APPROVED' && employeeData.hr_status !== 'SENT_TO_BANK') {
+            return res.status(403).json({
+                success: false,
+                message: `Cannot send payslip. Current status is ${employeeData.hr_status || 'PENDING'}. Record must be HR Approved first.`
+            });
+        }
+
+        console.log('Employee data retrieved for email:', {
             salary_id: employeeData.salary_id,
             full_name: employeeData.full_name,
-            has_payroll_snapshot: !!employeeData.payroll_snapshot_enc,
+            status: employeeData.hr_status
         });
 
         // Decrypt payroll snapshot
         if (!employeeData.payroll_snapshot_enc) {
-            console.error('Payroll snapshot missing for salary_id:', salaryId);
-            throw new Error('This salary record is missing payroll data. Please create a new salary record to generate a fresh payslip.');
+            throw new Error('This salary record is missing payroll data snapshot.');
         }
 
         const payrollSnapshot = decryptPayrollSnapshot(employeeData.payroll_snapshot_enc);
-
-        if (!payrollSnapshot) {
-            throw new Error('Failed to decrypt payroll snapshot');
-        }
-
-        console.log('Payroll snapshot decrypted successfully:', {
-            grossSalary: payrollSnapshot.grossSalary,
-            netSalary: payrollSnapshot.netSalary,
-        });
 
         // Decrypt bank account if available
         let bankAccountNumber = null;
@@ -77,7 +75,7 @@ export const sendPayslipEmailManually = async (req, res, next) => {
             },
             salary: {
                 payPeriod: employeeData.pay_period,
-                frequency: employeeData.pay_frequency || 'monthly', // Use pay_frequency from database
+                frequency: employeeData.pay_frequency || 'monthly',
                 baseSalary: employeeData.base_salary,
                 transportAllowance: employeeData.transport_allowance,
                 housingAllowance: employeeData.housing_allowance,
@@ -87,10 +85,9 @@ export const sendPayslipEmailManually = async (req, res, next) => {
             payrollSnapshot,
         });
 
-        // Send email with PDF attachment
         const filename = `payslip-${employeeData.full_name.replace(/\s+/g, '-').toLowerCase()}-${employeeData.pay_period}.pdf`;
 
-        // Calculate payment date (typically 2 business days after processing)
+        // Calculate payment date (display only)
         const payDate = new Date(employeeData.pay_period);
         payDate.setDate(payDate.getDate() + 2);
         const formattedPayDate = payDate.toLocaleDateString('en-US', {
@@ -99,7 +96,7 @@ export const sendPayslipEmailManually = async (req, res, next) => {
             day: 'numeric'
         });
 
-        const emailParams = {
+        const emailResult = await sendPayslipEmail({
             employeeEmail: employeeData.email,
             employeeName: employeeData.full_name,
             employeeId: employeeData.employee_id,
@@ -109,43 +106,13 @@ export const sendPayslipEmailManually = async (req, res, next) => {
             pdfBuffer,
             filename,
             companyName: 'HC Solutions',
-            hrContact: 'HR Department',
-            responseDays: '5',
-            senderName: 'Payroll Team',
-            jobTitle: 'Payroll Administrator',
-            companyEmail: 'payroll@hcsolutions.rw',
-            companyPhone: '+250 788 000 000',
-            customMessage, // Pass custom message if provided
-        };
-
-        console.log('=== SEND EMAIL DEBUG ===');
-        console.log('Email params:', JSON.stringify(emailParams, null, 2));
-        console.log('Employee data:', {
-            email: employeeData.email,
-            full_name: employeeData.full_name,
-            employee_id: employeeData.employee_id,
-            pay_period: employeeData.pay_period,
+            senderName: req.user?.email || 'Payroll Team',
+            customMessage,
         });
 
-        // Validate required parameters
-        const requiredParams = ['employeeEmail', 'employeeName', 'employeeId', 'payPeriod', 'payDate'];
-        for (const param of requiredParams) {
-            if (!emailParams[param]) {
-                console.error(`Missing required parameter: ${param}`);
-                throw new Error(`Missing required parameter: ${param}`);
-            }
+        if (!emailResult.success) {
+            throw new Error(emailResult.error || 'Failed to send email');
         }
-
-        // Ensure all string parameters are actually strings
-        Object.keys(emailParams).forEach(key => {
-            if (emailParams[key] !== null && emailParams[key] !== undefined && typeof emailParams[key] !== 'object') {
-                emailParams[key] = String(emailParams[key]);
-            }
-        });
-
-        console.log('Validated email params:', emailParams);
-
-        await sendPayslipEmail(emailParams);
 
         res.json({
             success: true,

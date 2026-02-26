@@ -1,7 +1,9 @@
 .employees-page {
-    padding: 2rem;
+    padding: 2.5rem 1.5rem 3rem 1.5rem;
     max-width: 1400px;
     margin: 0 auto;
+    background: linear-gradient(120deg, #f8fafc 60%, #e0e7ef 100%);
+    min-height: 100vh;
 }
 
 .page-header {
@@ -9,10 +11,11 @@
 }
 
 .page-header h1 {
-    font-size: 2rem;
-    font-weight: 600;
-    color: #1e293b;
+    font-size: 2.2rem;
+    font-weight: 800;
+    color: #003a75;
     margin-bottom: 0.5rem;
+    letter-spacing: -0.02em;
 }
 
 .page-header p {
@@ -21,10 +24,11 @@
 }
 
 .employees-table-container {
-    background: white;
-    border-radius: 12px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    background: #fff;
+    border-radius: 18px;
+    box-shadow: 0 8px 32px rgba(0, 47, 108, 0.09), 0 1.5px 6px rgba(0,0,0,0.03);
     overflow: hidden;
+    border: 1.5px solid #e2e8f0;
 }
 
 .employees-table {
@@ -33,27 +37,29 @@
 }
 
 .employees-table thead {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
+    background: linear-gradient(90deg, #f5911f 0%, #0057b0 100%);
+    color: #fff;
 }
 
 .employees-table th {
-    padding: 1rem;
+    padding: 1.1rem 1rem;
     text-align: left;
-    font-weight: 600;
-    font-size: 0.875rem;
+    font-weight: 700;
+    font-size: 0.93rem;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.07em;
 }
 
 .employees-table td {
-    padding: 1rem;
+    padding: 1.1rem 1rem;
     border-bottom: 1px solid #e2e8f0;
     color: #334155;
+    font-size: 1.01rem;
 }
 
 .employees-table tbody tr:hover {
-    background: #f8fafc;
+    background: #f1f5fa;
+    transition: background 0.18s;
 }
 
 .employees-table tbody tr:last-child td {
@@ -62,21 +68,23 @@
 
 .role-badge {
     display: inline-block;
-    padding: 0.25rem 0.75rem;
+    padding: 0.32rem 0.9rem;
     border-radius: 9999px;
-    font-size: 0.75rem;
-    font-weight: 600;
+    font-size: 0.82rem;
+    font-weight: 700;
     text-transform: uppercase;
+    letter-spacing: 0.06em;
+    box-shadow: 0 1px 4px rgba(0,47,108,0.07);
 }
 
 .role-admin {
-    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-    color: white;
+    background: linear-gradient(90deg, #f5911f 0%, #0057b0 100%);
+    color: #fff;
 }
 
 .role-employee {
-    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-    color: white;
+    background: linear-gradient(90deg, #0057b0 0%, #f5911f 100%);
+    color: #fff;
 }
 
 .actions {

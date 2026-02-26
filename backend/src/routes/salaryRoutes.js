@@ -4,6 +4,9 @@ import {
   createSalary,
   previewSalary,
   getSalary,
+  getSalaryDetail,
+  hrReviewSalary,
+  bulkHrReviewSalaries,
   updateSalary,
   deleteSalary,
   resetPeriod,
@@ -25,9 +28,15 @@ router.get('/reports/monthly', getMonthlyReport);
 router.get('/reports/monthly/export', exportMonthlyReportToExcel);
 router.delete('/reports/monthly/reset', resetPeriod);
 router.get('/recent', listRecentSalaries);
+
+// ── HR Review endpoints (must be before /:salaryId to avoid conflicts) ─
+router.post('/hr-review/bulk', bulkHrReviewSalaries);          // Bulk approve/reject a whole period
+router.post('/:salaryId/hr-review', hrReviewSalary);           // Single approve/reject
+router.get('/:salaryId/detail', getSalaryDetail);              // Full decrypted breakdown
+
 router.get('/employee/:employeeId', listSalariesByEmployee);
 router.get('/:salaryId/payslip', downloadPayslip);
-router.post('/:salaryId/send-email', sendPayslipEmailManually); // Manual email send
+router.post('/:salaryId/send-email', sendPayslipEmailManually);
 router.get('/:salaryId', getSalary);
 router.put('/:salaryId', updateSalary);
 router.delete('/:salaryId', deleteSalary);

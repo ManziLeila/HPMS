@@ -6,8 +6,36 @@ import { formatCurrency } from '../utils/payroll';
 
 const current = new Date();
 
+const STATUS_META = {
+  PENDING: { label: 'Pending', color: '#f59e0b' },
+  HR_APPROVED: { label: 'HR Approved', color: '#10b981' },
+  HR_REJECTED: { label: 'HR Rejected', color: '#ef4444' },
+  MD_APPROVED: { label: 'MD Approved', color: '#6366f1' },
+  REJECTED: { label: 'Rejected', color: '#ef4444' },
+  SENT_TO_BANK: { label: 'Paid', color: '#0ea5e9' },
+};
+
+const Badge = ({ status }) => {
+  const m = STATUS_META[status] || { label: status, color: '#94a3b8' };
+  return (
+    <span className="reports-page__badge" style={{
+      background: m.color + '22',
+      color: m.color,
+      borderColor: m.color + '55',
+      padding: '2px 8px',
+      borderRadius: '12px',
+      fontSize: '0.7rem',
+      fontWeight: '700',
+      border: '1px solid',
+      textTransform: 'uppercase'
+    }}>
+      {m.label}
+    </span>
+  );
+};
+
 const ReportsPage = () => {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const [filters, setFilters] = useState({
     year: current.getFullYear(),
     month: current.getMonth() + 1,
@@ -16,23 +44,26 @@ const ReportsPage = () => {
   const [monthlyReport, setMonthlyReport] = useState([]);
   const [recentSalaries, setRecentSalaries] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [downloadMessage, setDownloadMessage] = useState(null);
+  const [error, setError] = useState(null);         // load errors — cleared on each reload
+  const [actionMsg, setActionMsg] = useState(null); // feedback for save/delete/download
   const [editingSalary, setEditingSalary] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [resetConfirm, setResetConfirm] = useState(false);
   const [editLoading, setEditLoading] = useState(false);
+  const [emailLoading, setEmailLoading] = useState(false);
   const { year, month } = filters;
 
   const loadMonthlyReport = useCallback(async () => {
     if (!token) return;
     setLoading(true);
+    setError(null); // ← always wipe stale error when a new fetch starts
     try {
       const query = new URLSearchParams({ year, month, frequency: filters.frequency }).toString();
       const response = await apiClient.get(`/salaries/reports/monthly?${query}`, { token });
       setMonthlyReport(response.data || []);
-    } catch (error) {
+    } catch (err) {
       setMonthlyReport([]);
-      setDownloadMessage(error.message || 'Failed to load monthly report');
+      setError(err.message || 'Failed to load monthly report');
     } finally {
       setLoading(false);
     }
@@ -43,9 +74,9 @@ const ReportsPage = () => {
     try {
       const response = await apiClient.get('/salaries/recent?limit=8', { token });
       setRecentSalaries(response.data || []);
-    } catch (error) {
+    } catch (err) {
       setRecentSalaries([]);
-      setDownloadMessage(error.message || 'Failed to load recent payroll runs');
+      // don't overwrite the main error — recent salaries is secondary
     }
   }, [token]);
 
@@ -73,9 +104,9 @@ const ReportsPage = () => {
         paye: acc.paye + Number(row.paye || 0),
         deductions:
           acc.deductions +
-          Number(row.gross_salary || 0) - Number(row.paye || 0),
+          (Number(row.gross_salary || 0) - Number(row.net_salary || 0)),
         employer: acc.employer + Number(row.total_employer_contrib || 0),
-        takeHome: acc.takeHome + (Number(row.gross_salary || 0) - Number(row.paye || 0)),
+        takeHome: acc.takeHome + Number(row.net_salary || 0),
       }),
       { gross: 0, paye: 0, deductions: 0, employer: 0, takeHome: 0 },
     );
@@ -84,27 +115,17 @@ const ReportsPage = () => {
   const handleDownloadPayslip = async (salary) => {
     if (!token) return;
     try {
-      setDownloadMessage(`Preparing payslip for ${salary.full_name}...`);
+      setActionMsg(`Preparing payslip for ${salary.full_name}...`);
       const response = await fetch(`${API_BASE_URL}/salaries/${salary.salary_id}/payslip`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
       });
-      if (!response.ok) {
-        throw new Error('Failed to download payslip');
-      }
-
-      // Extract filename from Content-Disposition header
+      if (!response.ok) throw new Error('Failed to download payslip');
       const contentDisposition = response.headers.get('Content-Disposition');
       let filename = `payslip-${salary.full_name.replace(/\s+/g, '-').toLowerCase()}-${salary.pay_period}.pdf`;
-
       if (contentDisposition) {
-        const filenameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
-        if (filenameMatch && filenameMatch[1]) {
-          filename = filenameMatch[1];
-        }
+        const m = contentDisposition.match(/filename="?([^"]+)"?/);
+        if (m?.[1]) filename = m[1];
       }
-
       const blob = await response.blob();
       const link = document.createElement('a');
       link.href = URL.createObjectURL(blob);
@@ -113,49 +134,54 @@ const ReportsPage = () => {
       link.click();
       link.remove();
       URL.revokeObjectURL(link.href);
-      setDownloadMessage(`Payslip ready for ${salary.full_name}`);
-    } catch (error) {
-      setDownloadMessage(error.message || 'Unable to download payslip');
+      setActionMsg(`✅ Payslip ready for ${salary.full_name}`);
+      setTimeout(() => setActionMsg(null), 4000);
+    } catch (err) {
+      setActionMsg(`❌ ${err.message || 'Unable to download payslip'}`);
     }
   };
 
   const handleExportToExcel = async () => {
     if (!token) return;
     try {
-      setDownloadMessage('Generating Excel report...');
-      const query = new URLSearchParams({ year, month, frequency: filters.frequency }).toString();
-      const response = await fetch(`${API_BASE_URL}/salaries/reports/monthly/export?${query}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+      setActionMsg('Generating Excel report…');
+      const response = await fetch(`${API_BASE_URL}/salaries/reports/monthly/export?year=${year}&month=${month}`, {
+        headers: { Authorization: `Bearer ${token}` },
       });
-
-      if (!response.ok) {
-        throw new Error('Failed to export report');
-      }
-
-      // Extract filename from Content-Disposition header
-      const contentDisposition = response.headers.get('Content-Disposition');
-      let filename = `payroll-report-${year}-${String(month).padStart(2, '0')}.xlsx`;
-
-      if (contentDisposition) {
-        const filenameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
-        if (filenameMatch && filenameMatch[1]) {
-          filename = filenameMatch[1];
-        }
-      }
-
+      if (!response.ok) throw new Error('Unable to export report');
       const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
-      link.href = URL.createObjectURL(blob);
-      link.download = filename;
+      link.href = url;
+      link.setAttribute('download', `monthly-report-${year}-${month}.xlsx`);
       document.body.appendChild(link);
       link.click();
       link.remove();
-      URL.revokeObjectURL(link.href);
-      setDownloadMessage('Excel report downloaded successfully');
-    } catch (error) {
-      setDownloadMessage(error.message || 'Unable to export report');
+      window.URL.revokeObjectURL(url);
+      setActionMsg('✅ Excel report downloaded');
+      setTimeout(() => setActionMsg(null), 4000);
+    } catch (err) {
+      setActionMsg(`❌ ${err.message || 'Unable to export report'}`);
+      setTimeout(() => setActionMsg(null), 4000);
+    }
+  };
+
+  const handleSendEmail = async (salary) => {
+    if (!token) return;
+    if (!window.confirm(`Send payslip email to ${salary.full_name}?`)) return;
+
+    setEmailLoading(true);
+    setActionMsg(`Sending email to ${salary.email}...`);
+    try {
+      await apiClient.post(`/salaries/${salary.salary_id}/send-email`, {}, { token });
+      setActionMsg(`✅ Email sent successfully to ${salary.email}`);
+      setTimeout(() => setActionMsg(null), 5000);
+    } catch (err) {
+      const msg = err.response?.data?.message || err.message;
+      setActionMsg(`❌ Failed: ${msg}`);
+      setTimeout(() => setActionMsg(null), 8000);
+    } finally {
+      setEmailLoading(false);
     }
   };
 
@@ -178,8 +204,7 @@ const ReportsPage = () => {
     if (!token || !editingSalary) return;
     try {
       setEditLoading(true);
-      setDownloadMessage('Updating salary record...');
-
+      setActionMsg('Updating salary record…');
       await apiClient.put(
         `/salaries/${editingSalary.salary_id}`,
         {
@@ -193,13 +218,13 @@ const ReportsPage = () => {
         },
         { token }
       );
-
-      setDownloadMessage('Salary record updated successfully!');
+      setActionMsg('✅ Salary record updated!');
+      setTimeout(() => setActionMsg(null), 4000);
       setEditingSalary(null);
       loadMonthlyReport();
       loadRecentSalaries();
-    } catch (error) {
-      setDownloadMessage('Failed to update salary: ' + (error.message || 'Unknown error'));
+    } catch (err) {
+      setActionMsg('❌ Failed to update: ' + (err.message || 'Unknown error'));
     } finally {
       setEditLoading(false);
     }
@@ -208,36 +233,57 @@ const ReportsPage = () => {
   const handleDeleteSalary = async (salaryId) => {
     if (!token) return;
     try {
-      setDownloadMessage('Deleting salary record...');
+      setActionMsg('Deleting salary record…');
       await apiClient.delete(`/salaries/${salaryId}`, { token });
-      setDownloadMessage('Salary record deleted successfully!');
+      setActionMsg('✅ Record deleted!');
+      setTimeout(() => setActionMsg(null), 3000);
       setDeleteConfirm(null);
       loadMonthlyReport();
       loadRecentSalaries();
-    } catch (error) {
-      console.error('Delete error:', error);
-      setDownloadMessage('Failed to delete salary: ' + (error.message || 'Unknown error'));
+    } catch (err) {
+      setActionMsg('❌ Failed to delete: ' + (err.message || 'Unknown error'));
     }
   };
 
   const handleResetPeriod = async () => {
     if (!token) return;
     try {
-      setDownloadMessage('Resetting period...');
+      setActionMsg('Resetting period…');
       const query = new URLSearchParams({ year, month, frequency: filters.frequency }).toString();
       const response = await apiClient.delete(`/salaries/reports/monthly/reset?${query}`, { token });
-      setDownloadMessage(response.message || `Successfully deleted ${response.deletedCount} record(s)`);
+      setActionMsg(`✅ ${response.message || `Deleted ${response.deletedCount} record(s)`}`);
+      setTimeout(() => setActionMsg(null), 4000);
       setResetConfirm(false);
       loadMonthlyReport();
       loadRecentSalaries();
-    } catch (error) {
-      console.error('Reset error:', error);
-      setDownloadMessage('Failed to reset period: ' + (error.message || 'Unknown error'));
+    } catch (err) {
+      setActionMsg('❌ Failed to reset: ' + (err.message || 'Unknown error'));
     }
   };
 
   return (
     <div className="reports-page">
+      {/* HR workflow context banner — shown only to HR role */}
+      {user?.role === 'HR' && (
+        <div style={{
+          background: '#eff6ff',
+          border: '1px solid #bfdbfe',
+          borderRadius: '10px',
+          padding: '12px 16px',
+          marginBottom: '12px',
+          fontSize: '0.85rem',
+          color: '#1d4ed8',
+          display: 'flex',
+          alignItems: 'flex-start',
+          gap: '10px',
+        }}>
+          <span style={{ fontSize: '1.1rem', marginTop: '1px' }}>ℹ️</span>
+          <div>
+            <strong>HR Workflow:</strong> This page shows individual salary records computed by the Finance Officer — for reference only.
+            {' '}Your action is in <strong>Review Queue</strong>: once the Finance Officer groups salaries into a payroll batch and submits it, it will appear there for your verification.
+          </div>
+        </div>
+      )}
       <section className="reports-page__filters">
         <div>
           <p className="reports-page__eyebrow">Reporting Window</p>
@@ -311,6 +357,21 @@ const ReportsPage = () => {
           </button>
         </div>
       </section>
+      {/* Action feedback toast — shown top of monthly section */}
+      {actionMsg && (
+        <div
+          style={{
+            padding: '10px 16px', borderRadius: '8px', marginBottom: '16px',
+            background: actionMsg.startsWith('❌') ? '#fef2f2' : actionMsg.startsWith('✅') ? '#f0fdf4' : '#eff6ff',
+            border: `1px solid ${actionMsg.startsWith('❌') ? '#fca5a5' : actionMsg.startsWith('✅') ? '#86efac' : '#bfdbfe'}`,
+            color: actionMsg.startsWith('❌') ? '#991b1b' : actionMsg.startsWith('✅') ? '#166534' : '#1d4ed8',
+            fontSize: '0.85rem', fontWeight: 500, cursor: 'pointer',
+          }}
+          onClick={() => setActionMsg(null)}
+        >
+          {actionMsg}
+        </div>
+      )}
       <section className="reports-page__kpis">
         <article>
           <p>Total Gross</p>
@@ -339,7 +400,12 @@ const ReportsPage = () => {
             <p className="reports-page__eyebrow">Monthly Report</p>
             <h3>Employee Payroll Details</h3>
           </div>
-          {downloadMessage && <p className="reports-page__status">{downloadMessage}</p>}
+          {error && (
+            <p className="reports-page__status" style={{ color: '#dc2626' }}>⚠️ {error}</p>
+          )}
+          {actionMsg && (
+            <p className="reports-page__status">{actionMsg}</p>
+          )}
         </header>
         <div className="reports-page__table-wrapper">
           <table>
@@ -351,13 +417,14 @@ const ReportsPage = () => {
                 <th>Gross</th>
                 <th>PAYE</th>
                 <th>Take Home</th>
+                <th>Status</th>
                 <th>Actions</th>
               </tr>
             </thead>
             <tbody>
               {monthlyReport.length === 0 && (
                 <tr>
-                  <td colSpan="7">
+                  <td colSpan="8">
                     No payroll records found for this period.
                     <br />
                     <small style={{ color: '#666', marginTop: '8px', display: 'block' }}>
@@ -376,17 +443,22 @@ const ReportsPage = () => {
                   <td>{row.pay_frequency}</td>
                   <td>{formatCurrency(row.gross_salary)}</td>
                   <td>{formatCurrency(row.paye)}</td>
-                  <td>{formatCurrency((row.gross_salary || 0) - (row.paye || 0))}</td>
+                  <td>{row.net_salary != null ? formatCurrency(row.net_salary) : <span style={{ color: '#94a3b8', fontSize: '0.8rem' }}>Encrypted</span>}</td>
+                  <td><Badge status={row.hr_status || 'PENDING'} /></td>
                   <td>
                     <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                      <button
-                        type="button"
-                        onClick={() => handleEditSalary(row)}
-                        className="reports-page__action-btn reports-page__edit-btn"
-                        title="Edit salary record"
-                      >
-                        ✏️ Edit
-                      </button>
+                      {row.hr_status === 'HR_APPROVED' && (
+                        <button
+                          type="button"
+                          disabled={emailLoading}
+                          onClick={() => handleSendEmail(row)}
+                          className="reports-page__action-btn"
+                          style={{ backgroundColor: '#10b981', color: 'white', border: 'none' }}
+                          title="Send payslip email"
+                        >
+                          ✉️ Email
+                        </button>
+                      )}
                       <button
                         type="button"
                         onClick={() => setDeleteConfirm(row)}
@@ -417,7 +489,7 @@ const ReportsPage = () => {
             <p className="reports-page__eyebrow">Recent Payroll Runs</p>
             <h3>Download Payslips</h3>
           </div>
-          {downloadMessage && <p className="reports-page__status">{downloadMessage}</p>}
+          {actionMsg && <p className="reports-page__status">{actionMsg}</p>}
         </header>
         <div className="reports-page__table-wrapper">
           <table>

@@ -1,24 +1,25 @@
 import db from './db.js';
 
 const employeeRepo = {
-  async create({ fullName, email, bankAccountEnc, role, passwordHash, mfaSecret, bankName, accountNumberEnc, accountHolderName, phoneNumber, department, dateOfJoining }) {
+  async create({ fullName, email, bankAccountEnc, role, passwordHash, mfaSecret, bankName, accountNumberEnc, accountHolderName, phoneNumber, department, dateOfJoining, rssbNumber }) {
     const { rows } = await db.query(
       `INSERT INTO hpms_core.employees
         (full_name, email, bank_account_enc, role, password_hash, mfa_secret, 
-         bank_name, account_number_enc, account_holder_name, phone_number, department, date_of_joining)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-       RETURNING employee_id, full_name, email, role, department, date_of_joining, created_at`,
-      [fullName, email, bankAccountEnc, role, passwordHash, mfaSecret, bankName, accountNumberEnc, accountHolderName, phoneNumber, department, dateOfJoining],
+         bank_name, account_number_enc, account_holder_name, phone_number, department, date_of_joining, rssb_number)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+       RETURNING employee_id, full_name, email, role, department, date_of_joining, rssb_number, created_at`,
+      [fullName, email || null, bankAccountEnc, role, passwordHash, mfaSecret, bankName, accountNumberEnc, accountHolderName, phoneNumber, department, dateOfJoining, rssbNumber || null],
     );
     return rows[0];
   },
 
   async findByEmail(email) {
+    if (!email) return undefined;
     const { rows } = await db.query(
       `SELECT employee_id, full_name, email, role, password_hash, mfa_secret,
               bank_name, account_number_enc, account_holder_name, phone_number,
               email_notifications_enabled, sms_notifications_enabled,
-              department, date_of_joining
+              department, date_of_joining, rssb_number
        FROM hpms_core.employees
        WHERE email = $1`,
       [email],
@@ -30,7 +31,7 @@ const employeeRepo = {
     const { rows } = await db.query(
       `SELECT employee_id, full_name, email, role, created_at,
               bank_name, account_holder_name, phone_number,
-              department, date_of_joining
+              department, date_of_joining, rssb_number
        FROM hpms_core.employees
        ORDER BY created_at DESC
        LIMIT $1 OFFSET $2`,
@@ -71,7 +72,7 @@ const employeeRepo = {
       `SELECT employee_id, full_name, email, role, created_at,
               bank_name, account_number_enc, account_holder_name, phone_number,
               email_notifications_enabled, sms_notifications_enabled,
-              department, date_of_joining
+              department, date_of_joining, rssb_number
        FROM hpms_core.employees
        WHERE employee_id = $1`,
       [employeeId],
@@ -79,7 +80,7 @@ const employeeRepo = {
     return rows[0];
   },
 
-  async update({ employeeId, fullName, email, role, phoneNumber, bankName, accountHolderName, department, dateOfJoining }) {
+  async update({ employeeId, fullName, email, role, phoneNumber, bankName, accountHolderName, department, dateOfJoining, rssbNumber }) {
     const { rows } = await db.query(
       `UPDATE hpms_core.employees
        SET full_name = COALESCE($2, full_name),
@@ -90,10 +91,11 @@ const employeeRepo = {
            account_holder_name = COALESCE($7, account_holder_name),
            department = COALESCE($8, department),
            date_of_joining = COALESCE($9, date_of_joining),
+           rssb_number = COALESCE($10, rssb_number),
            updated_at = NOW()
        WHERE employee_id = $1
-       RETURNING employee_id, full_name, email, role, phone_number, bank_name, account_holder_name, department, date_of_joining, updated_at`,
-      [employeeId, fullName, email, role, phoneNumber, bankName, accountHolderName, department, dateOfJoining],
+       RETURNING employee_id, full_name, email, role, phone_number, bank_name, account_holder_name, department, date_of_joining, rssb_number, updated_at`,
+      [employeeId, fullName, email, role, phoneNumber, bankName, accountHolderName, department, dateOfJoining, rssbNumber],
     );
     return rows[0];
   },
@@ -125,6 +127,16 @@ const employeeRepo = {
       `SELECT COUNT(*) as total FROM hpms_core.employees`
     );
     return parseInt(rows[0].total, 10);
+  },
+
+  async findByIds(ids) {
+    if (!ids || ids.length === 0) return [];
+    const placeholders = ids.map((_, i) => `$${i + 1}`).join(',');
+    const { rows } = await db.query(
+      `SELECT employee_id, full_name, email, role, rssb_number FROM hpms_core.employees WHERE employee_id IN (${placeholders})`,
+      ids
+    );
+    return rows;
   },
 };
 

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { apiClient } from '../api/client';
 import useAuth from '../hooks/useAuth';
+import { useLanguage } from '../context/LanguageContext';
 import './EmployeesPage.css';
 
 const EmployeesPage = () => {
@@ -10,6 +11,7 @@ const EmployeesPage = () => {
     const [editingEmployee, setEditingEmployee] = useState(null);
     const [deleteConfirm, setDeleteConfirm] = useState(null);
     const { token } = useAuth();
+    const { t } = useLanguage();
 
     useEffect(() => {
         fetchEmployees();
@@ -19,7 +21,9 @@ const EmployeesPage = () => {
         try {
             setLoading(true);
             const response = await apiClient.get('/employees', { token });
-            setEmployees(response.data || []);
+            // Hide system login accounts — only show payroll employees
+            const SYSTEM_ROLES = ['FinanceOfficer', 'HR', 'ManagingDirector', 'Admin'];
+            setEmployees((response.data || []).filter(e => !SYSTEM_ROLES.includes(e.role)));
             setError(null);
         } catch (err) {
             setError(err.message || 'Failed to load employees');
@@ -43,7 +47,7 @@ const EmployeesPage = () => {
                 `/employees/${editingEmployee.employee_id}`,
                 {
                     fullName: editingEmployee.full_name,
-                    email: editingEmployee.email,
+                    email: editingEmployee.email || undefined,
                     phoneNumber: editingEmployee.phoneNumber,
                     bankName: editingEmployee.bankName,
                     accountHolderName: editingEmployee.accountHolderName,
@@ -72,7 +76,7 @@ const EmployeesPage = () => {
     if (loading) {
         return (
             <div className="employees-page">
-                <div className="loading">Loading employees...</div>
+                <div className="loading">{t('loadingEmployees')}</div>
             </div>
         );
     }
@@ -80,8 +84,8 @@ const EmployeesPage = () => {
     if (error) {
         return (
             <div className="employees-page">
-                <div className="error">Error: {error}</div>
-                <button onClick={fetchEmployees}>Retry</button>
+                <div className="error">{t('error')}: {error}</div>
+                <button onClick={fetchEmployees}>{t('retry')}</button>
             </div>
         );
     }
@@ -89,22 +93,22 @@ const EmployeesPage = () => {
     return (
         <div className="employees-page">
             <header className="page-header">
-                <h1>Employee Management</h1>
-                <p>Manage employee information and access</p>
+                <h1>{t('employeeManagement')}</h1>
+                <p>{t('manageEmployeeInfo')}</p>
             </header>
 
             <div className="employees-table-container">
                 <table className="employees-table">
                     <thead>
                         <tr>
-                            <th>ID</th>
-                            <th>Name</th>
-                            <th>Email</th>
-                            <th>Role</th>
-                            <th>Phone</th>
-                            <th>Bank</th>
-                            <th>Created</th>
-                            <th>Actions</th>
+                            <th>{t('id')}</th>
+                            <th>{t('name')}</th>
+                            <th>{t('email')}</th>
+                            <th>{t('role')}</th>
+                            <th>{t('phone')}</th>
+                            <th>{t('bank')}</th>
+                            <th>{t('created')}</th>
+                            <th>{t('actions')}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -112,7 +116,7 @@ const EmployeesPage = () => {
                             <tr key={employee.employee_id}>
                                 <td>{employee.employee_id}</td>
                                 <td>{employee.full_name}</td>
-                                <td>{employee.email}</td>
+                                <td>{employee.email || '—'}</td>
                                 <td>
                                     <span className={`role-badge role-${employee.role.toLowerCase()}`}>
                                         {employee.role}
@@ -126,13 +130,13 @@ const EmployeesPage = () => {
                                         className="btn-edit"
                                         onClick={() => handleEdit(employee)}
                                     >
-                                        ✏️ Edit
+                                        ✏️ {t('edit')}
                                     </button>
                                     <button
                                         className="btn-delete"
                                         onClick={() => setDeleteConfirm(employee)}
                                     >
-                                        🗑️ Delete
+                                        🗑️ {t('delete')}
                                     </button>
                                 </td>
                             </tr>
@@ -142,7 +146,7 @@ const EmployeesPage = () => {
 
                 {employees.length === 0 && (
                     <div className="empty-state">
-                        <p>No employees found</p>
+                        <p>{t('noEmployeesFound')}</p>
                     </div>
                 )}
             </div>
@@ -151,10 +155,10 @@ const EmployeesPage = () => {
             {editingEmployee && (
                 <div className="modal-overlay" onClick={() => setEditingEmployee(null)}>
                     <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-                        <h2>Edit Employee</h2>
+                        <h2>{t('editEmployee')}</h2>
 
                         <div className="form-group">
-                            <label>Full Name</label>
+                            <label>{t('fullName')}</label>
                             <input
                                 type="text"
                                 value={editingEmployee.full_name}
@@ -166,10 +170,10 @@ const EmployeesPage = () => {
                         </div>
 
                         <div className="form-group">
-                            <label>Email</label>
+                            <label>{t('email')} <span style={{ fontSize: '0.8em', color: '#94a3b8' }}>(optional)</span></label>
                             <input
                                 type="email"
-                                value={editingEmployee.email}
+                                value={editingEmployee.email || ''}
                                 onChange={(e) => setEditingEmployee({
                                     ...editingEmployee,
                                     email: e.target.value
@@ -178,7 +182,7 @@ const EmployeesPage = () => {
                         </div>
 
                         <div className="form-group">
-                            <label>Phone Number</label>
+                            <label>{t('phoneNumber')}</label>
                             <input
                                 type="tel"
                                 value={editingEmployee.phoneNumber}
@@ -191,7 +195,7 @@ const EmployeesPage = () => {
                         </div>
 
                         <div className="form-group">
-                            <label>Bank Name</label>
+                            <label>{t('bankName')}</label>
                             <input
                                 type="text"
                                 value={editingEmployee.bankName}
@@ -204,7 +208,7 @@ const EmployeesPage = () => {
                         </div>
 
                         <div className="form-group">
-                            <label>Account Holder Name</label>
+                            <label>{t('accountHolderName')}</label>
                             <input
                                 type="text"
                                 value={editingEmployee.accountHolderName}
@@ -216,7 +220,7 @@ const EmployeesPage = () => {
                         </div>
 
                         <div className="form-group">
-                            <label>Role</label>
+                            <label>{t('role')}</label>
                             <select
                                 value={editingEmployee.role}
                                 onChange={(e) => setEditingEmployee({
@@ -224,10 +228,10 @@ const EmployeesPage = () => {
                                     role: e.target.value
                                 })}
                             >
-                                <option value="Employee">Employee</option>
-                                <option value="Admin">Admin (Legacy)</option>
-                                <option value="HR">HR</option>
-                                <option value="FinanceOfficer">Finance Officer</option>
+                                <option value="Employee">{t('employee')}</option>
+                                <option value="Admin">{t('adminLegacy')}</option>
+                                <option value="HR">{t('hr')}</option>
+                                <option value="FinanceOfficer">{t('financeOfficer')}</option>
                             </select>
                         </div>
 
@@ -236,13 +240,13 @@ const EmployeesPage = () => {
                                 className="btn-cancel"
                                 onClick={() => setEditingEmployee(null)}
                             >
-                                Cancel
+                                {t('cancel')}
                             </button>
                             <button
                                 className="btn-save"
                                 onClick={handleSaveEdit}
                             >
-                                Save Changes
+                                {t('saveChanges')}
                             </button>
                         </div>
                     </div>
@@ -253,12 +257,12 @@ const EmployeesPage = () => {
             {deleteConfirm && (
                 <div className="modal-overlay" onClick={() => setDeleteConfirm(null)}>
                     <div className="modal-content modal-confirm" onClick={(e) => e.stopPropagation()}>
-                        <h2>⚠️ Confirm Delete</h2>
+                        <h2>⚠️ {t('confirmDelete')}</h2>
                         <p>
-                            Are you sure you want to delete <strong>{deleteConfirm.full_name}</strong>?
+                            {t('deleteConfirmation')} <strong>{deleteConfirm.full_name}</strong>?
                         </p>
                         <p className="warning-text">
-                            This action cannot be undone. All salary records for this employee will remain in the system.
+                            {t('deleteWarning')}
                         </p>
 
                         <div className="modal-actions">
@@ -266,13 +270,13 @@ const EmployeesPage = () => {
                                 className="btn-cancel"
                                 onClick={() => setDeleteConfirm(null)}
                             >
-                                Cancel
+                                {t('cancel')}
                             </button>
                             <button
                                 className="btn-delete-confirm"
                                 onClick={() => handleDelete(deleteConfirm.employee_id)}
                             >
-                                Delete Employee
+                                {t('deleteEmployeeButton')}
                             </button>
                         </div>
                     </div>

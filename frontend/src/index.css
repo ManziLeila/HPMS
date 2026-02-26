@@ -1,8 +1,25 @@
 :root {
   font-family: 'Inter', 'Sora', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
   font-weight: 400;
+
+  /* HC Solutions Official Brand Colors */
+  --hc-primary: #003661;
+  /* Midnight Blue - Primary Brand Color */
+  --hc-primary-light: #004d8a;
+  /* Light Midnight Blue */
+  --hc-primary-lighter: #0066b3;
+  /* Lighter Blue */
+  --hc-accent: #f5911f;
+  /* Tree Poppy Orange - Accent Color */
+  --hc-accent-dark: #d97d0f;
+  /* Dark Orange */
+  --hc-bg-dark: #002847;
+  /* Very Dark Blue for backgrounds */
+  --hc-bg-medium: #003661;
+  /* Medium Dark Blue */
+
   color: #1e293b;
-  background-color: #f8fafc;
+  background: linear-gradient(135deg, #003661 0%, #004d8a 100%);
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
 }
@@ -15,13 +32,13 @@
 
 body {
   margin: 0;
-  background: #f8fafc;
+  background: linear-gradient(135deg, #003661 0%, #004d8a 100%);
   min-height: 100vh;
 }
 
 #root {
   min-height: 100vh;
-  background: #f8fafc;
+  background: linear-gradient(135deg, #003661 0%, #004d8a 100%);
 }
 
 input,
@@ -35,6 +52,6 @@ button {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #64748b;
+  color: #e0f2f1;
   font-size: 1.1rem;
 }

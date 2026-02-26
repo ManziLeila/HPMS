@@ -20,9 +20,7 @@ const resolveApiBase = () => {
 
 export const API_BASE_URL = resolveApiBase();
 
-// ===============
-// HEADER BUILDER
-// ===============
+
 const buildHeaders = (token, extraHeaders = {}) => {
   const headers = {
     "Content-Type": "application/json",
@@ -36,9 +34,7 @@ const buildHeaders = (token, extraHeaders = {}) => {
   return headers;
 };
 
-// ====================
-// PARSE API RESPONSES
-// ====================
+
 const parseResponse = async (response) => {
   if (response.status === 204) return null;
 

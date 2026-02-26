@@ -2,11 +2,13 @@ import { z } from 'zod';
 import { encryptField, decryptField } from '../services/encryptionService.js';
 import { calculatePayroll } from '../services/payrollService.js';
 import salaryRepo from '../repositories/salaryRepo.js';
+import employeeRepo from '../repositories/employeeRepo.js';
 import auditService from '../services/auditService.js';
 import { notFound } from '../utils/httpError.js';
 import { generatePayslipPdf } from '../services/payslipService.js';
-import { sendSalaryProcessedEmail, sendPayslipEmail } from '../services/emailService.js';
+import { sendSalaryProcessedEmail, sendFONotification } from '../services/emailService.js';
 import { generateMonthlyPayrollExcel } from '../services/excelService.js';
+import notificationService from '../services/notificationService.js';
 
 const salarySchema = z.object({
   employeeId: z.coerce.number(),
@@ -34,6 +36,122 @@ const monthlyReportQuery = z.object({
 const salaryIdParams = z.object({
   salaryId: z.coerce.number(),
 });
+
+const hrReviewSchema = z.object({
+  action: z.enum(['APPROVE', 'REJECT']),
+  comment: z.string().optional(),
+});
+
+const bulkHrReviewSchema = z.object({
+  year: z.coerce.number().min(2000),
+  month: z.coerce.number().min(1).max(12),
+  action: z.enum(['APPROVE', 'REJECT']),
+  comment: z.string().optional(),
+});
+
+/**
+ * POST /salaries/:salaryId/hr-review
+ * HR approves or rejects a single computed salary.
+ * Notifies the Finance Officer who computed it.
+ */
+export const hrReviewSalary = async (req, res, next) => {
+  try {
+    const { salaryId } = salaryIdParams.parse(req.params);
+    const { action, comment } = hrReviewSchema.parse(req.body);
+
+    const newStatus = action === 'APPROVE' ? 'HR_APPROVED' : 'HR_REJECTED';
+    const reviewedBy = req.user.id;
+    const reviewerName = req.user.email || 'HR';
+
+    const updated = await salaryRepo.hrReview({ salaryId, status: newStatus, comment, reviewedBy });
+    if (!updated) throw new Error('Salary record not found');
+
+    // Look up the Finance Officer who created this salary
+    const creator = await salaryRepo.getCreatedBy(salaryId);
+    const record = await salaryRepo.findByIdWithEmployee(salaryId);
+
+    if (creator?.employee_id) {
+      // In-app notification
+      await notificationService.notifyFOSalaryReviewed({
+        foUserId: creator.employee_id,
+        employeeName: record?.full_name || 'Employee',
+        payPeriod: updated.pay_period,
+        status: newStatus,
+        comment,
+        reviewedByName: reviewerName,
+      });
+
+      // Email notification
+      const appUrl = process.env.APP_URL || 'http://localhost:5173';
+      await sendFONotification({
+        foEmail: creator.email,
+        foName: creator.full_name,
+        period: new Date(updated.pay_period).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }),
+        status: newStatus,
+        count: 1,
+        reviewedBy: reviewerName,
+        comment,
+        actionUrl: `${appUrl}/hr-review`,
+      });
+    }
+
+    res.json({ success: true, salary: updated });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * POST /salaries/hr-review/bulk
+ * HR approves (or rejects) all PENDING salary records for a given month/year.
+ * Notifies each Finance Officer who computed records in that period.
+ */
+export const bulkHrReviewSalaries = async (req, res, next) => {
+  try {
+    const { year, month, action, comment } = bulkHrReviewSchema.parse(req.body);
+
+    const newStatus = action === 'APPROVE' ? 'HR_APPROVED' : 'HR_REJECTED';
+    const reviewedBy = req.user.id;
+    const reviewerName = req.user.email || 'HR';
+
+    const updated = await salaryRepo.bulkHrReview({ year, month, status: newStatus, comment, reviewedBy });
+
+    if (updated.length > 0) {
+      // Notify each unique FO who computed any of these records
+      const foIds = [...new Set(updated.map(r => r.created_by).filter(Boolean))];
+      const periodLabel = new Date(year, month - 1, 1).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+
+      // In-app notifications
+      await notificationService.notifyFOBulkReviewed({
+        foUserIds: foIds,
+        period: periodLabel,
+        count: updated.length,
+        reviewedByName: reviewerName,
+      });
+
+      // Email notifications to all unique FOs
+      if (foIds.length > 0) {
+        const fos = await employeeRepo.findByIds(foIds);
+        const appUrl = process.env.APP_URL || 'http://localhost:5173';
+        const emailPromises = fos.map(fo => sendFONotification({
+          foEmail: fo.email,
+          foName: fo.full_name,
+          period: periodLabel,
+          status: newStatus,
+          count: updated.filter(r => r.created_by === fo.employee_id).length,
+          reviewedBy: reviewerName,
+          comment,
+          actionUrl: `${appUrl}/hr-review`,
+        }));
+        await Promise.allSettled(emailPromises);
+      }
+    }
+
+    res.json({ success: true, updatedCount: updated.length, records: updated });
+  } catch (error) {
+    next(error);
+  }
+};
 
 export const createSalary = async (req, res, next) => {
   try {
@@ -95,11 +213,26 @@ export const createSalary = async (req, res, next) => {
       };
     }
 
-    return res.status(201).json({
+    // Respond immediately — notifications fire async
+    res.status(201).json({
       message: 'Salary record created successfully',
       data: salaryRecord,
-      emailPreview: emailPreviewData, // Include email preview data
+      emailPreview: emailPreviewData,
     });
+
+    // ── async: notify HR that a salary was computed ──────────────────
+    const computedByName = req.user.fullName || req.user.email || 'Finance Officer';
+    const employeeInfo = emailPreviewData
+      ? { name: emailPreviewData.employeeName, period: emailPreviewData.payPeriod }
+      : { name: `Employee #${payload.employeeId}`, period: payload.payPeriod };
+
+    notificationService.notifySalaryComputed({
+      employeeName: employeeInfo.name,
+      payPeriod: employeeInfo.period,
+      salaryId: salaryRecord.salary_id,
+      computedByName,
+    }).catch((e) => console.error('[createSalary] notifySalaryComputed failed:', e));
+
   } catch (error) {
     next(error);
   }
@@ -132,6 +265,115 @@ export const getSalary = async (req, res, next) => {
   }
 };
 
+/**
+ * GET /salaries/:salaryId/detail
+ * Returns a fully-decrypted salary breakdown for HR review.
+ * Strategy:
+ *   1. Try to decrypt individual encrypted columns.
+ *   2. Fall back to payroll_snapshot_enc blob (always present, used by payslip PDF).
+ * Accessible to HR, Admin, FinanceOfficer.
+ */
+export const getSalaryDetail = async (req, res, next) => {
+  try {
+    const { salaryId } = salaryIdParams.parse(req.params);
+    const record = await salaryRepo.findByIdWithEmployee(salaryId);
+
+    if (!record) {
+      throw notFound('Salary record not found');
+    }
+
+    // ── Helper: decrypt one field gracefully ──────────────────
+    const safeDecrypt = (col, val) => {
+      if (!val) return null;
+      try { return Number(decryptField(col, val)) || 0; } catch { return null; }
+    };
+
+    // Initialize variables as null
+    let baseSalary = null;
+    let transportAllowance = null;
+    let housingAllowance = null;
+    let variableAllowance = null;
+    let performanceAllowance = null;
+    let netPaid = null;
+
+    // ── Primary Source: payroll_snapshot_enc ─────────────────
+    // This blob contains all computed values and is the most reliable source.
+    if (record.payroll_snapshot_enc) {
+      try {
+        const raw = decryptField('payroll_snapshot_enc', record.payroll_snapshot_enc);
+        if (raw) {
+          const snap = JSON.parse(raw);
+          const sa = snap.allowances || snap;
+
+          baseSalary = snap.basicSalary ?? snap.baseSalary ?? snap.base_salary;
+          transportAllowance = sa.transport ?? sa.transportAllowance ?? sa.transport_allowance;
+          housingAllowance = sa.housing ?? sa.housingAllowance ?? sa.housing_allowance;
+          variableAllowance = sa.variable ?? sa.variableAllowance ?? sa.variable_allowance;
+          performanceAllowance = sa.performance ?? sa.performanceAllowance ?? sa.performance_allowance;
+          netPaid = snap.netPaidToBank ?? snap.netSalary ?? snap.net_salary;
+
+          console.log(`[getSalaryDetail] Data loaded from snapshot for salary ${salaryId}`);
+        }
+      } catch (err) {
+        console.warn(`[getSalaryDetail] Snapshot fallback error for ${salaryId}:`, err.message);
+      }
+    }
+
+    // ── Fallback: individual encrypted columns ────────────────
+    // Only used if snapshot was missing or didn't contain specific fields.
+    if (baseSalary === null || baseSalary === undefined) {
+      baseSalary = safeDecrypt('basic_salary_enc', record.basic_salary_enc);
+    }
+    if (transportAllowance === null || transportAllowance === undefined) {
+      transportAllowance = safeDecrypt('transport_allow_enc', record.transport_allow_enc);
+    }
+    if (housingAllowance === null || housingAllowance === undefined) {
+      housingAllowance = safeDecrypt('housing_allow_enc', record.housing_allow_enc);
+    }
+    if (variableAllowance === null || variableAllowance === undefined) {
+      variableAllowance = safeDecrypt('variable_allow_enc', record.variable_allow_enc);
+    }
+    if (performanceAllowance === null || performanceAllowance === undefined) {
+      performanceAllowance = safeDecrypt('performance_allow_enc', record.performance_allow_enc);
+    }
+    if (netPaid === null || netPaid === undefined) {
+      netPaid = safeDecrypt('net_paid_enc', record.net_paid_enc);
+    }
+
+    res.json({
+      salary_id: record.salary_id,
+      pay_period: record.pay_period,
+      pay_frequency: record.pay_frequency,
+      // Employee
+      employee_id: record.employee_id,
+      full_name: record.full_name,
+      email: record.email,
+      // Earnings (decrypted)
+      base_salary: baseSalary,
+      transport_allowance: transportAllowance,
+      housing_allowance: housingAllowance,
+      variable_allowance: variableAllowance,
+      performance_allowance: performanceAllowance,
+      advance_amount: record.advance_amount || 0,
+      // Computed plain columns
+      gross_salary: Number(record.gross_salary) || 0,
+      paye: Number(record.paye) || 0,
+      rssb_pension: Number(record.rssb_pension) || 0,
+      rssb_maternity: Number(record.rssb_maternity) || 0,
+      rama_insurance: Number(record.rama_insurance) || 0,
+      total_employer_contrib: Number(record.total_employer_contrib) || 0,
+      net_salary: netPaid,
+      // HR annotation fields
+      hr_comment: record.hr_comment || null,
+      hr_reviewed_at: record.hr_reviewed_at || null,
+      hr_status: record.hr_status || 'PENDING',
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+
 export const listSalariesByEmployee = async (req, res, next) => {
   try {
     const { employeeId } = salaryListParams.parse(req.params);
@@ -152,7 +394,24 @@ export const getMonthlyReport = async (req, res, next) => {
       frequency: req.query.frequency ?? 'all',
     });
     const report = await salaryRepo.monthlyReport(params);
-    res.json({ data: report });
+
+    // Decrypt net_paid_enc per row — catch decryption failures gracefully
+    // so a single corrupt record doesn't crash the whole report.
+    const decryptedReport = report.map(row => {
+      let net_salary = null;
+      if (row.net_paid_enc) {
+        try {
+          net_salary = decryptField('net_paid_enc', row.net_paid_enc);
+        } catch {
+          // Decryption failed for this row (e.g. key rotation or corrupt data).
+          // Return null and surface the record anyway — better than a 500.
+          net_salary = null;
+        }
+      }
+      return { ...row, net_salary };
+    });
+
+    res.json({ data: decryptedReport });
   } catch (error) {
     next(error);
   }
@@ -255,13 +514,10 @@ export const downloadPayslip = async (req, res, next) => {
     console.log('Decrypted compensation:', decryptedComp);
 
     // FALLBACK: If decryption failed completely, estimate from gross salary
-    // This ensures payslips show SOME data even if encryption is broken
     if (!decryptionSuccessful || decryptedComp.baseSalary === 0) {
       console.warn('⚠ WARNING: Decryption failed or returned zeros. Using fallback estimation.');
       console.warn('  This is a temporary workaround. The encrypted fields may be NULL in the database.');
 
-      // Use gross salary as basic salary if we have nothing else
-      // This is not ideal but better than showing all zeros
       if (record.gross_salary && record.gross_salary > 0) {
         decryptedComp.baseSalary = record.gross_salary;
         console.warn(`  Using gross_salary (${record.gross_salary}) as basic_salary`);
@@ -306,43 +562,18 @@ export const downloadPayslip = async (req, res, next) => {
       salary: {
         payPeriod: record.pay_period,
         frequency: record.pay_frequency,
-        workedDays: 26, // Default to 26, can be made configurable later
+        workedDays: 26,
         ...decryptedComp,
       },
       payrollSnapshot,
     });
 
-    // Optional: Send email if requested via query parameter
-    const sendEmail = req.query.sendEmail === 'true';
-    if (sendEmail && record.email) {
-      const filename = `payslip-${record.full_name.replace(/\s+/g, '-').toLowerCase()}-${record.pay_period}.pdf`;
-
-      // Calculate payment date
-      const payDate = new Date(record.pay_period);
-      payDate.setDate(payDate.getDate() + 2);
-      const formattedPayDate = payDate.toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-      });
-
-      sendPayslipEmail({
-        employeeEmail: record.email,
-        employeeName: record.full_name,
-        employeeId: record.employee_id,
-        payPeriod: new Date(record.pay_period).toLocaleDateString('en-US', { year: 'numeric', month: 'long' }),
-        netSalary: new Intl.NumberFormat('en-RW', { style: 'currency', currency: 'RWF' }).format(payrollSnapshot.netSalary),
-        payDate: formattedPayDate,
-        pdfBuffer,
-        filename,
-      }).catch((err) => console.error('Failed to send payslip email:', err));
-    }
+    // Payslip emails are now sent only after all approvals and after send-to-bank, not here.
 
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader(
       'Content-Disposition',
-      `attachment; filename=\"payslip-${record.full_name.replace(/\s+/g, '-').toLowerCase()}-${record.pay_period
-      }.pdf\"`,
+      `attachment; filename=\"payslip-${record.full_name.replace(/\s+/g, '-').toLowerCase()}-${record.pay_period}.pdf\"`,
     );
     res.send(pdfBuffer);
   } catch (error) {
@@ -486,8 +717,6 @@ export const deleteSalary = async (req, res, next) => {
   }
 };
 
-
-
 export const resetPeriod = async (req, res, next) => {
   try {
     const params = monthlyReportQuery.parse({
@@ -521,4 +750,3 @@ export const resetPeriod = async (req, res, next) => {
     next(error);
   }
 };
-

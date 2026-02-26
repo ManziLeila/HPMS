@@ -218,7 +218,72 @@ export const payslipDeliveryTemplate = ({
   `.trim();
 };
 
+/**
+ * Email template for notifying FO about HR review
+ */
+export const foNotificationTemplate = ({
+  foName,
+  period,
+  status, // 'APPROVED' or 'REJECTED'
+  count,
+  reviewedBy,
+  comment,
+  actionUrl
+}) => {
+  const isApproved = status === 'HR_APPROVED';
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    body { font-family: 'Segoe UI', Arial, sans-serif; line-height: 1.6; color: #1e293b; background-color: #f8fafc; padding: 40px 20px; }
+    .card { max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); border: 1px solid #e2e8f0; }
+    .header { padding: 32px; background: ${isApproved ? '#10b981' : '#ef4444'}; color: #ffffff; text-align: center; }
+    .header h1 { margin: 0; font-size: 24px; }
+    .body { padding: 32px; }
+    .status-badge { display: inline-block; padding: 4px 12px; border-radius: 9999px; font-weight: bold; font-size: 14px; margin-bottom: 16px; 
+                   background: ${isApproved ? '#d1fae5' : '#fee2e2'}; color: ${isApproved ? '#065f46' : '#991b1b'}; }
+    .details { background: #f1f5f9; border-radius: 8px; padding: 20px; margin: 24px 0; }
+    .details p { margin: 8px 0; font-size: 14px; }
+    .details strong { color: #475569; }
+    .footer { padding: 24px; text-align: center; font-size: 12px; color: #94a3b8; border-top: 1px solid #e2e8f0; }
+    .btn { display: inline-block; padding: 12px 24px; background: #003661; color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: bold; margin-top: 16px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="header">
+      <h1>Payroll Review Update</h1>
+    </div>
+    <div class="body">
+      <p>Dear <strong>${foName}</strong>,</p>
+      <div class="status-badge">${isApproved ? '✅ APPROVED' : '❌ REJECTED'}</div>
+      <p>The payroll records you computed for <strong>${period}</strong> have been reviewed by <strong>${reviewedBy}</strong>.</p>
+      
+      <div class="details">
+        <p><strong>Status:</strong> ${isApproved ? 'Approved — Ready for Payslip Emails' : 'Rejected — Action Required'}</p>
+        <p><strong>Records:</strong> ${count} salary record(s)</p>
+        ${comment ? `<p><strong>HR Comment:</strong> "${comment}"</p>` : ''}
+      </div>
+
+      <p>${isApproved ? 'You can now proceed to the system to send payslip emails to the employees.' : 'Please review the comments and adjust the calculations accordingly.'}</p>
+      
+      <div style="text-align: center;">
+        <a href="${actionUrl}" class="btn">View in System →</a>
+      </div>
+    </div>
+    <div class="footer">
+      HC Solutions Payroll Management System · Automated Notification
+    </div>
+  </div>
+</body>
+</html>
+  `.trim();
+};
+
 export default {
   salaryProcessedTemplate,
   payslipDeliveryTemplate,
+  foNotificationTemplate,
 };

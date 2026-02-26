@@ -1,4 +1,4 @@
-// Quick test script to verify the new payslip design works
+cd ~// Quick test script to verify the new payslip design works
 // Run this with: node test-new-payslip.js
 
 import { generatePayslipPdf } from './src/services/payslipService.js';
