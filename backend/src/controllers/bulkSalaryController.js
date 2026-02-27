@@ -96,8 +96,9 @@ export const bulkUploadSalaries = async (req, res, next) => {
                     employeeIncludeMedical = ramaValue === 'yes' || ramaValue === 'true' || ramaValue === '1' || ramaValue === 'y';
                 }
 
-                // Get optional RSSB Number
+                // Get optional RSSB Number and National ID
                 const rssbNumber = row['RSSB Number'] || row['rssbNumber'] || row['rssb_number'] || row['SSB NUMBER'] || row['RSSB'] || null;
+                const nationalId = row['National ID'] || row['nationalId'] || row['national_id'] || row['NAT ID'] || null;
 
                 // Create or get employee
                 let employee;
@@ -109,11 +110,12 @@ export const bulkUploadSalaries = async (req, res, next) => {
                     }
                     if (existingEmployee) {
                         employee = existingEmployee;
-                        // Update RSSB number if provided and employee doesn't have one yet
-                        if (rssbNumber && !existingEmployee.rssb_number) {
+                        // Update RSSB number or National ID if provided and employee doesn't have them yet
+                        if ((rssbNumber && !existingEmployee.rssb_number) || (nationalId && !existingEmployee.national_id)) {
                             await employeeRepo.update({
                                 employeeId: existingEmployee.employee_id,
-                                rssbNumber: String(rssbNumber).trim(),
+                                rssbNumber: rssbNumber && !existingEmployee.rssb_number ? String(rssbNumber).trim() : undefined,
+                                nationalId: nationalId && !existingEmployee.national_id ? String(nationalId).trim() : undefined,
                             });
                         }
                     } else {
@@ -122,6 +124,7 @@ export const bulkUploadSalaries = async (req, res, next) => {
                             email: email || null,
                             role: 'Employee',
                             rssbNumber: rssbNumber ? String(rssbNumber).trim() : null,
+                            nationalId: nationalId ? String(nationalId).trim() : null,
                         });
                     }
                 } catch (err) {

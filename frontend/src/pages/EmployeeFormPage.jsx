@@ -3,13 +3,13 @@ import { calculatePayroll, formatCurrency } from '../utils/payroll';
 import './EmployeeFormPage.css';
 import { apiClient } from '../api/client';
 import useAuth from '../hooks/useAuth.js';
-import EmailPreviewModal from '../components/EmailPreviewModal';
 
 const initialFormState = {
   fullName: '',
   email: '',
   phoneNumber: '',
   rssbNumber: '',
+  nationalId: '',
   role: 'Employee',
   bankName: '',
   accountNumber: '',
@@ -30,8 +30,6 @@ const EmployeeFormPage = () => {
   const [previewStatus, setPreviewStatus] = useState(null);
   const [createStatus, setCreateStatus] = useState(null);
   const [isCreating, setIsCreating] = useState(false);
-  const [emailModalData, setEmailModalData] = useState(null);
-  const [createdSalaryId, setCreatedSalaryId] = useState(null);
   const { token } = useAuth();
 
   const derived = useMemo(() => calculatePayroll({ ...formValues, includeMedical: formValues.includeMedical }), [formValues]);
@@ -103,6 +101,7 @@ const EmployeeFormPage = () => {
           email: formValues.email || undefined,
           role: formValues.role || 'Employee',
           rssbNumber: formValues.rssbNumber || undefined,
+          nationalId: formValues.nationalId || undefined,
         },
         { token }
       );
@@ -130,20 +129,13 @@ const EmployeeFormPage = () => {
 
       console.log('4. Salary response:', salaryResponse);
 
-      // Check if email preview data is available
-      if (salaryResponse.emailPreview) {
-        setEmailModalData(salaryResponse.emailPreview);
-        setCreatedSalaryId(salaryResponse.data.salary_id);
-        setCreateStatus('✅ Salary created! Review email preview below.');
-      } else {
-        setCreateStatus(`✅ Salary created successfully! Go to Reports page to download payslip.`);
-        // Reset form after 2 seconds if no email preview
-        setTimeout(() => {
-          setFormValues(initialFormState);
-          setCreateStatus(null);
-          setPreviewStatus(null);
-        }, 3000);
-      }
+      setCreateStatus(`✅ Salary created successfully! Go to Reports page to download payslip.`);
+      // Reset form after 3 seconds
+      setTimeout(() => {
+        setFormValues(initialFormState);
+        setCreateStatus(null);
+        setPreviewStatus(null);
+      }, 3000);
     } catch (error) {
       setCreateStatus(`❌ Error: ${error.message || 'Failed to create salary'}`);
     } finally {
@@ -151,16 +143,6 @@ const EmployeeFormPage = () => {
     }
   };
 
-  const handleCloseEmailModal = () => {
-    setEmailModalData(null);
-    setCreatedSalaryId(null);
-    // Reset form after closing modal
-    setTimeout(() => {
-      setFormValues(initialFormState);
-      setCreateStatus(null);
-      setPreviewStatus(null);
-    }, 500);
-  };
 
   return (
     <div className="employee-form">
@@ -232,6 +214,15 @@ const EmployeeFormPage = () => {
                 name="rssbNumber"
                 placeholder="e.g. 20655126"
                 value={formValues.rssbNumber}
+                onChange={handleChange}
+              />
+            </label>
+            <label>
+              National ID Number <span style={{ fontSize: '0.8em', color: '#94a3b8' }}>(optional)</span>
+              <input
+                name="nationalId"
+                placeholder="e.g. 1 1990 8 0123456 0 12"
+                value={formValues.nationalId}
                 onChange={handleChange}
               />
             </label>
@@ -448,13 +439,6 @@ const EmployeeFormPage = () => {
         </div>
       </section >
 
-      {/* Email Preview Modal */}
-      <EmailPreviewModal
-        isOpen={!!emailModalData}
-        onClose={handleCloseEmailModal}
-        emailData={emailModalData}
-        salaryId={createdSalaryId}
-      />
     </div >
   );
 };

@@ -50,8 +50,8 @@ const HrReviewPage = () => {
     const [actionLoading, setActionLoading] = useState(false);
     const [bulkConfirm, setBulkConfirm] = useState(null); // null | 'APPROVE' | 'REJECT'
     const [bulkComment, setBulkComment] = useState('');
-    const [emailModal, setEmailModal] = useState(null);  // null | 'individual' | 'batch'
-    const [emailTarget, setEmailTarget] = useState(null);  // specific salary row for individual
+    const [emailModal, setEmailModal] = useState(null);
+    const [emailTarget, setEmailTarget] = useState(null);
     const [emailSending, setEmailSending] = useState(false);
     const [quickReject, setQuickReject] = useState(null);   // salary row being quick-rejected
     const [quickRejectComment, setQuickRejectComment] = useState('');
@@ -192,29 +192,7 @@ const HrReviewPage = () => {
         }
     };
 
-    /* ── Email sending ───────────────────────────────────────────── */
-    const sendEmail = async () => {
-        setEmailSending(true);
-        try {
-            if (emailModal === 'individual' && emailTarget) {
-                await apiClient.post(`/salaries/${emailTarget.salary_id}/send-email`, {}, { token });
-                setMsg({ type: 'ok', text: `Payslip email sent to ${emailTarget.full_name} ✉️` });
-            } else if (emailModal === 'batch') {
-                const approvedIds = salaries
-                    .filter(s => s.hr_status === 'HR_APPROVED')
-                    .map(s => s.salary_id);
-                await Promise.all(approvedIds.map(id =>
-                    apiClient.post(`/salaries/${id}/send-email`, {}, { token })
-                ));
-                setMsg({ type: 'ok', text: `Payslip emails sent to ${approvedIds.length} employee(s) ✉️` });
-            }
-            setEmailModal(null); setEmailTarget(null);
-        } catch (e) {
-            setMsg({ type: 'err', text: e.message || 'Email sending failed' });
-        } finally {
-            setEmailSending(false);
-        }
-    };
+    /* ── Email sending removed ── */
 
     /* ── Batch detail / approve / reject ─────────────────────────── */
     const openDetail = async (batch) => {
@@ -265,14 +243,7 @@ const HrReviewPage = () => {
                 <article className="hrp__stat-card">
                     <p className="hrp__stat-label">HR Approved</p>
                     <p className="hrp__stat-value hrp__stat-value--ok">{approvedInPeriod}</p>
-                    <p className="hrp__stat-sub">
-                        {approvedInPeriod > 0 && (
-                            <button className="hrp__link-btn"
-                                onClick={() => setEmailModal('batch')}>
-                                ✉️ Send all payslip emails
-                            </button>
-                        )}
-                    </p>
+                    <p className="hrp__stat-sub">verified and ready for Finance</p>
                 </article>
                 <article className="hrp__stat-card">
                     <p className="hrp__stat-label">Batch Queue</p>
@@ -361,12 +332,6 @@ const HrReviewPage = () => {
                                         ✓ Approve All {pendingInPeriod} Pending
                                     </button>
                                 ) : null}
-                                {approvedInPeriod > 0 && (
-                                    <button className="hrp__btn hrp__btn--email"
-                                        onClick={() => setEmailModal('batch')}>
-                                        ✉️ Send All Payslip Emails ({approvedInPeriod})
-                                    </button>
-                                )}
                             </div>
                         </div>
                     )}
@@ -438,12 +403,6 @@ const HrReviewPage = () => {
                                                                     ✕
                                                                 </button>
                                                             </>
-                                                        )}
-                                                        {status === 'HR_APPROVED' && (
-                                                            <button className="hrp__btn hrp__btn--email"
-                                                                onClick={() => { setEmailTarget(s); setEmailModal('individual'); }}>
-                                                                ✉️
-                                                            </button>
                                                         )}
                                                     </div>
                                                 </td>
@@ -623,12 +582,6 @@ const HrReviewPage = () => {
                                     </button>
                                 </>
                             )}
-                            {salDetail.hr_status === 'HR_APPROVED' && (
-                                <button className="hrp__btn hrp__btn--email hrp__btn--lg"
-                                    onClick={() => { closeSalDetail(); setEmailTarget(salDetail); setEmailModal('individual'); }}>
-                                    ✉️ Send Payslip Email
-                                </button>
-                            )}
                         </div>
                     </div>
                 </div>
@@ -687,40 +640,7 @@ const HrReviewPage = () => {
                 </div>
             )}
 
-            {/* ════════════════════════════════════════════
-                EMAIL MODAL
-            ════════════════════════════════════════════ */}
-            {emailModal && (
-                <div className="hrp__overlay" onClick={() => { setEmailModal(null); setEmailTarget(null); }}>
-                    <div className="hrp__modal hrp__modal--reject" onClick={e => e.stopPropagation()}>
-                        <button className="hrp__modal-close" onClick={() => { setEmailModal(null); setEmailTarget(null); }}>✕</button>
-                        <div className="hrp__modal-header">
-                            <p className="hrp__eyebrow">Send Payslip Email</p>
-                            <h2>{emailModal === 'individual' ? `✉️ Send to ${emailTarget?.full_name}` : `✉️ Send to All ${approvedInPeriod} Approved`}</h2>
-                            <p className="hrp__modal-meta">
-                                {emailModal === 'individual'
-                                    ? `A payslip email will be sent to ${emailTarget?.email}`
-                                    : `Payslip emails will be sent to all ${approvedInPeriod} HR-approved employees for ${salFilters.month}/${salFilters.year}`}
-                            </p>
-                        </div>
-                        <div style={{ padding: '20px 28px' }}>
-                            <div className="hrp__email-preview">
-                                <span>📄</span>
-                                <div>
-                                    <strong>What gets sent:</strong>
-                                    <p>Each employee receives their personally addressed payslip attached to the email, with salary breakdown and net pay amount.</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div className="hrp__modal-footer">
-                            <button className="hrp__btn" onClick={() => { setEmailModal(null); setEmailTarget(null); }}>Cancel</button>
-                            <button className="hrp__btn hrp__btn--email hrp__btn--lg" disabled={emailSending} onClick={sendEmail}>
-                                {emailSending ? 'Sending…' : `✉️ Send ${emailModal === 'batch' ? 'All ' + approvedInPeriod + ' Emails' : 'Email'}`}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
+            {/* ── Email modal removed ── */}
 
             {/* ════════════════════════════════════════════
                 BATCH DETAIL MODAL

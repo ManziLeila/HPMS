@@ -38,6 +38,7 @@ const EmployeesPage = () => {
             phoneNumber: employee.phone_number || '',
             bankName: employee.bank_name || '',
             accountHolderName: employee.account_holder_name || '',
+            nationalId: employee.national_id || '',
         });
     };
 
@@ -51,6 +52,7 @@ const EmployeesPage = () => {
                     phoneNumber: editingEmployee.phoneNumber,
                     bankName: editingEmployee.bankName,
                     accountHolderName: editingEmployee.accountHolderName,
+                    nationalId: editingEmployee.nationalId,
                     role: editingEmployee.role,
                 },
                 { token }
@@ -107,6 +109,7 @@ const EmployeesPage = () => {
                             <th>{t('role')}</th>
                             <th>{t('phone')}</th>
                             <th>{t('bank')}</th>
+                            <th>National ID</th>
                             <th>{t('created')}</th>
                             <th>{t('actions')}</th>
                         </tr>
@@ -124,6 +127,7 @@ const EmployeesPage = () => {
                                 </td>
                                 <td>{employee.phone_number || '—'}</td>
                                 <td>{employee.bank_name || '—'}</td>
+                                <td>{employee.national_id || '—'}</td>
                                 <td>{new Date(employee.created_at).toLocaleDateString()}</td>
                                 <td className="actions">
                                     <button
@@ -215,6 +219,18 @@ const EmployeesPage = () => {
                                 onChange={(e) => setEditingEmployee({
                                     ...editingEmployee,
                                     accountHolderName: e.target.value
+                                })}
+                            />
+                        </div>
+
+                        <div className="form-group">
+                            <label>National ID <span style={{ fontSize: '0.8em', color: '#94a3b8' }}>(optional)</span></label>
+                            <input
+                                type="text"
+                                value={editingEmployee.nationalId}
+                                onChange={(e) => setEditingEmployee({
+                                    ...editingEmployee,
+                                    nationalId: e.target.value
                                 })}
                             />
                         </div>

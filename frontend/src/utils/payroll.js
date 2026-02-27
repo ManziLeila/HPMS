@@ -125,3 +125,19 @@ export const calculatePayroll = (payload) => {
 
 export const formatCurrency = (value) => currency(Math.max(clampNumber(value), 0));
 
+/**
+ * Format date string (YYYY-MM-DD) to MM/YYYY for display
+ */
+export const formatPeriod = (dateString) => {
+  if (!dateString) return '—';
+  try {
+    const d = new Date(dateString);
+    if (isNaN(d.getTime())) return dateString;
+    // For ISO strings like '2026-01-31T22:00:00.000Z', this will show '02/2026' or '01/2026' depending on timezone.
+    // However, pay_period is usually a fixed date.
+    return (d.getUTCMonth() + 1).toString().padStart(2, '0') + '/' + d.getUTCFullYear();
+  } catch (e) {
+    return dateString;
+  }
+};
+

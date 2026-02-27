@@ -1,14 +1,14 @@
 import db from './db.js';
 
 const employeeRepo = {
-  async create({ fullName, email, bankAccountEnc, role, passwordHash, mfaSecret, bankName, accountNumberEnc, accountHolderName, phoneNumber, department, dateOfJoining, rssbNumber }) {
+  async create({ fullName, email, bankAccountEnc, role, passwordHash, mfaSecret, bankName, accountNumberEnc, accountHolderName, phoneNumber, department, dateOfJoining, rssbNumber, nationalId }) {
     const { rows } = await db.query(
       `INSERT INTO hpms_core.employees
         (full_name, email, bank_account_enc, role, password_hash, mfa_secret, 
-         bank_name, account_number_enc, account_holder_name, phone_number, department, date_of_joining, rssb_number)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
-       RETURNING employee_id, full_name, email, role, department, date_of_joining, rssb_number, created_at`,
-      [fullName, email || null, bankAccountEnc, role, passwordHash, mfaSecret, bankName, accountNumberEnc, accountHolderName, phoneNumber, department, dateOfJoining, rssbNumber || null],
+         bank_name, account_number_enc, account_holder_name, phone_number, department, date_of_joining, rssb_number, national_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+       RETURNING employee_id, full_name, email, role, department, date_of_joining, rssb_number, national_id, created_at`,
+      [fullName, email || null, bankAccountEnc, role, passwordHash, mfaSecret, bankName, accountNumberEnc, accountHolderName, phoneNumber, department, dateOfJoining, rssbNumber || null, nationalId || null],
     );
     return rows[0];
   },
@@ -19,7 +19,7 @@ const employeeRepo = {
       `SELECT employee_id, full_name, email, role, password_hash, mfa_secret,
               bank_name, account_number_enc, account_holder_name, phone_number,
               email_notifications_enabled, sms_notifications_enabled,
-              department, date_of_joining, rssb_number
+              department, date_of_joining, rssb_number, national_id
        FROM hpms_core.employees
        WHERE email = $1`,
       [email],
@@ -31,7 +31,7 @@ const employeeRepo = {
     const { rows } = await db.query(
       `SELECT employee_id, full_name, email, role, created_at,
               bank_name, account_holder_name, phone_number,
-              department, date_of_joining, rssb_number
+              department, date_of_joining, rssb_number, national_id
        FROM hpms_core.employees
        ORDER BY created_at DESC
        LIMIT $1 OFFSET $2`,
@@ -72,7 +72,7 @@ const employeeRepo = {
       `SELECT employee_id, full_name, email, role, created_at,
               bank_name, account_number_enc, account_holder_name, phone_number,
               email_notifications_enabled, sms_notifications_enabled,
-              department, date_of_joining, rssb_number
+              department, date_of_joining, rssb_number, national_id
        FROM hpms_core.employees
        WHERE employee_id = $1`,
       [employeeId],
@@ -80,7 +80,7 @@ const employeeRepo = {
     return rows[0];
   },
 
-  async update({ employeeId, fullName, email, role, phoneNumber, bankName, accountHolderName, department, dateOfJoining, rssbNumber }) {
+  async update({ employeeId, fullName, email, role, phoneNumber, bankName, accountHolderName, department, dateOfJoining, rssbNumber, nationalId }) {
     const { rows } = await db.query(
       `UPDATE hpms_core.employees
        SET full_name = COALESCE($2, full_name),
@@ -92,10 +92,11 @@ const employeeRepo = {
            department = COALESCE($8, department),
            date_of_joining = COALESCE($9, date_of_joining),
            rssb_number = COALESCE($10, rssb_number),
+           national_id = COALESCE($11, national_id),
            updated_at = NOW()
        WHERE employee_id = $1
-       RETURNING employee_id, full_name, email, role, phone_number, bank_name, account_holder_name, department, date_of_joining, rssb_number, updated_at`,
-      [employeeId, fullName, email, role, phoneNumber, bankName, accountHolderName, department, dateOfJoining, rssbNumber],
+       RETURNING employee_id, full_name, email, role, phone_number, bank_name, account_holder_name, department, date_of_joining, rssb_number, national_id, updated_at`,
+      [employeeId, fullName, email, role, phoneNumber, bankName, accountHolderName, department, dateOfJoining, rssbNumber, nationalId],
     );
     return rows[0];
   },

@@ -86,6 +86,14 @@ export const generatePayslipPdf = ({ employee, salary, payrollSnapshot }) =>
       .font('Helvetica-Bold')
       .text(employee.department || 'N/A', rightColX + 120, infoStartY + 40);
 
+    if (employee.nationalId) {
+      doc.fontSize(10).font('Helvetica').text('National ID', leftColX, infoStartY + 60);
+      doc
+        .fontSize(11)
+        .font('Helvetica-Bold')
+        .text(employee.nationalId, leftColX + 120, infoStartY + 60);
+    }
+
     doc.moveDown(4);
 
     // ========================================

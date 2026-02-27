@@ -4,7 +4,7 @@ import employeeRepo from '../repositories/employeeRepo.js';
 import { encryptField } from './encryptionService.js';
 
 const userService = {
-  async createEmployee({ fullName, email, password, bankAccountEnc, role = 'Admin', rssbNumber }) {
+  async createEmployee({ fullName, email, password, bankAccountEnc, role = 'Admin', rssbNumber, nationalId }) {
     const passwordHash = await bcrypt.hash(password, 12);
     const mfaSecret = authenticator.generateSecret();
     return employeeRepo.create({
@@ -15,6 +15,7 @@ const userService = {
       passwordHash,
       mfaSecret,
       rssbNumber,
+      nationalId,
     });
   },
 

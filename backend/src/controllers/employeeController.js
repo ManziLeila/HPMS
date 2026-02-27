@@ -13,6 +13,7 @@ const createEmployeeSchema = z.object({
   bankAccountNumber: z.string().min(6).optional(),
   temporaryPassword: z.string().min(10).optional(),
   rssbNumber: z.string().max(20).optional(),
+  nationalId: z.string().max(50).optional(),
 });
 
 export const createEmployee = async (req, res, next) => {
@@ -38,6 +39,7 @@ export const createEmployee = async (req, res, next) => {
       bankAccountEnc: encryptedBank,
       role: payload.role,
       rssbNumber: payload.rssbNumber,
+      nationalId: payload.nationalId,
     });
 
     await auditService.log({
@@ -113,6 +115,7 @@ const updateEmployeeSchema = z.object({
   bankName: z.string().optional(),
   accountHolderName: z.string().optional(),
   rssbNumber: z.string().max(20).optional(),
+  nationalId: z.string().max(50).optional(),
 });
 
 export const updateEmployee = async (req, res, next) => {

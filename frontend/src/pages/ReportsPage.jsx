@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import './ReportsPage.css';
 import { apiClient, API_BASE_URL } from '../api/client';
 import useAuth from '../hooks/useAuth.js';
-import { formatCurrency } from '../utils/payroll';
+import { formatCurrency, formatPeriod } from '../utils/payroll';
 
 const current = new Date();
 
@@ -19,16 +19,17 @@ const Badge = ({ status }) => {
   const m = STATUS_META[status] || { label: status, color: '#94a3b8' };
   return (
     <span className="reports-page__badge" style={{
-      background: m.color + '22',
+      background: m.color + '15',
       color: m.color,
-      borderColor: m.color + '55',
-      padding: '2px 8px',
-      borderRadius: '12px',
-      fontSize: '0.7rem',
-      fontWeight: '700',
-      border: '1px solid',
-      textTransform: 'uppercase'
+      border: `1.5px solid ${m.color}35`,
     }}>
+      <span style={{
+        width: '6px',
+        height: '6px',
+        borderRadius: '50%',
+        background: m.color,
+        display: 'inline-block'
+      }}></span>
       {m.label}
     </span>
   );
@@ -277,15 +278,16 @@ const ReportsPage = () => {
             </select>
           </label>
           <button type="button" onClick={loadMonthlyReport} disabled={loading}>
-            {loading ? 'Refreshing…' : 'Refresh'}
+            {loading ? '↻' : '↻'} {loading ? 'Refreshing…' : 'Refresh Data'}
           </button>
+
           <button
             type="button"
             onClick={handleExportToExcel}
             disabled={loading || monthlyReport.length === 0}
             style={{ backgroundColor: '#10b981', marginLeft: '8px' }}
           >
-            Export to Excel
+            📊 Export Excel
           </button>
 
           <button
@@ -295,7 +297,7 @@ const ReportsPage = () => {
             style={{ backgroundColor: '#3b82f6', marginLeft: '8px' }}
             title="Download all archived payslips as a ZIP"
           >
-            📦 Download All (ZIP)
+            📦 Download ZIP
           </button>
 
         </div>
@@ -382,7 +384,7 @@ const ReportsPage = () => {
                     <p className="reports-page__employee-name">{row.full_name}</p>
                     <span>{row.email}</span>
                   </td>
-                  <td>{row.pay_period}</td>
+                  <td>{formatPeriod(row.pay_period)}</td>
                   <td>{row.pay_frequency}</td>
                   <td>{formatCurrency(row.gross_salary)}</td>
                   <td>{formatCurrency(row.paye)}</td>
@@ -396,7 +398,7 @@ const ReportsPage = () => {
                         className="reports-page__download"
                         title="Download payslip PDF"
                       >
-                        📄 Download
+                        📥 Download
                       </button>
                     </div>
                   </td>
@@ -438,7 +440,7 @@ const ReportsPage = () => {
                     <p className="reports-page__employee-name">{salary.full_name}</p>
                     <span>{salary.email}</span>
                   </td>
-                  <td>{salary.pay_period}</td>
+                  <td>{formatPeriod(salary.pay_period)}</td>
                   <td>{salary.pay_frequency}</td>
                   <td>{formatCurrency(salary.gross_salary)}</td>
                   <td>{formatCurrency(salary.paye)}</td>

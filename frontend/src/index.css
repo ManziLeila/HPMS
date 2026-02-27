@@ -34,11 +34,13 @@ body {
   margin: 0;
   background: linear-gradient(135deg, #003661 0%, #004d8a 100%);
   min-height: 100vh;
+  overflow-x: hidden;
 }
 
 #root {
   min-height: 100vh;
   background: linear-gradient(135deg, #003661 0%, #004d8a 100%);
+  overflow-x: hidden;
 }
 
 input,

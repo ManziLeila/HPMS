@@ -182,25 +182,40 @@ const MdApprovalPage = () => {
             {/* ── KPI row ──────────────────────────────────────────────── */}
             <section className="mdp__kpis">
                 <article className="mdp__kpi">
-                    <p className="mdp__kpi-label">Pending Payroll Value</p>
-                    <p className="mdp__kpi-value">{formatCurrency(summary.currentMonth)}</p>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                        <div>
+                            <p className="mdp__kpi-label">Pending Payroll Value</p>
+                            <p className="mdp__kpi-value">{formatCurrency(summary.currentMonth)}</p>
+                        </div>
+                        <span style={{ fontSize: '1.5rem', opacity: 0.8 }}>💰</span>
+                    </div>
                     {variance && (
                         <p className={`mdp__kpi-variance ${Number(variance) > 0 ? 'up' : 'down'}`}>
-                            {Number(variance) > 0 ? '▲' : '▼'} {Math.abs(Number(variance))}% vs last month
+                            {Number(variance) > 0 ? '↗' : '↘'} {Math.abs(Number(variance))}% vs last month
                         </p>
                     )}
                 </article>
                 <article className="mdp__kpi">
-                    <p className="mdp__kpi-label">Batches Awaiting Auth.</p>
-                    <p className="mdp__kpi-value mdp__kpi-value--pending">{summary.totalPending}</p>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                        <div>
+                            <p className="mdp__kpi-label">Batches Awaiting Auth.</p>
+                            <p className="mdp__kpi-value mdp__kpi-value--pending">{summary.totalPending}</p>
+                        </div>
+                        <span style={{ fontSize: '1.5rem', opacity: 0.8 }}>📋</span>
+                    </div>
                 </article>
                 <article className="mdp__kpi">
-                    <p className="mdp__kpi-label">HR Verification Status</p>
-                    <p className="mdp__kpi-value" style={{ fontSize: '1rem', marginTop: 6 }}>
-                        {allHrApproved
-                            ? <span className="mdp__pill mdp__pill--ok">✓ All HR-verified</span>
-                            : <span className="mdp__pill mdp__pill--warn">⏳ Awaiting HR</span>}
-                    </p>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                        <div>
+                            <p className="mdp__kpi-label">HR Verification Status</p>
+                            <p className="mdp__kpi-value" style={{ fontSize: '1rem', marginTop: 12 }}>
+                                {allHrApproved
+                                    ? <span className="mdp__pill mdp__pill--ok">✓ All HR-Verified</span>
+                                    : <span className="mdp__pill mdp__pill--warn">⏳ Awaiting HR</span>}
+                            </p>
+                        </div>
+                        <span style={{ fontSize: '1.5rem', opacity: 0.8 }}>🛡️</span>
+                    </div>
                 </article>
             </section>
 

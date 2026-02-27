@@ -132,9 +132,9 @@ const BulkUploadPage = () => {
 
     const downloadTemplate = () => {
         // Create a sample Excel template with Include RAMA and RSSB Number columns
-        const csvContent = `Full Name,Email,Basic Salary,Transport Allowance,Housing Allowance,Performance Allowance,Variable Allowance,Advance Amount,Include RAMA,RSSB Number
-John Doe,john.doe@example.com,1000000,50000,100000,50000,0,0,Yes,20655126
-Jane Smith,jane.smith@example.com,1200000,60000,120000,60000,0,0,No,`;
+        const csvContent = `Full Name,Email,Basic Salary,Transport Allowance,Housing Allowance,Performance Allowance,Variable Allowance,Advance Amount,Include RAMA,RSSB Number,National ID
+John Doe,john.doe@example.com,1000000,50000,100000,50000,0,0,Yes,20655126,1 1990 8 0123456 0 12
+Jane Smith,jane.smith@example.com,1200000,60000,120000,60000,0,0,No,,`;
 
         const blob = new Blob([csvContent], { type: 'text/csv' });
         const link = document.createElement('a');
@@ -179,6 +179,7 @@ Jane Smith,jane.smith@example.com,1200000,60000,120000,60000,0,0,No,`;
                             <li>Advance Amount (optional)</li>
                             <li><strong>Include RAMA</strong> (optional: Yes/No - overrides global setting)</li>
                             <li><strong>RSSB Number</strong> (optional: employee's RSSB social security number)</li>
+                            <li><strong>National ID</strong> (optional: employee's national identity number)</li>
                         </ul>
                         <button
                             type="button"
