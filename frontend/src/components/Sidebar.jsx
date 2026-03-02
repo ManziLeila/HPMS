@@ -1,16 +1,24 @@
 import { NavLink } from 'react-router-dom';
 import {
-  LayoutDashboard, Users, UserPlus, Upload,
-  FileText, CheckSquare, ShieldCheck, FileSignature, Pencil,
-  Layers, Settings, Mail, Calculator
+  LayoutDashboard,
+  Users,
+  UserPlus,
+  Upload,
+  FileText,
+  CheckSquare,
+  ShieldCheck,
+  FileSignature,
+  Pencil,
+  Layers,
+  Settings,
+  Mail,
+  Calculator,
+  X,
 } from 'lucide-react';
 import useAuth from '../hooks/useAuth';
-import { useLanguage } from '../context/LanguageContext';
 import './Sidebar.css';
 
-/* ── Route definitions per role ─────────────────────────────────── */
 const ROUTE_MAP = {
-  // Finance Officer — full access
   FinanceOfficer: [
     { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { path: '/employees', label: 'Employees', icon: Users },
@@ -18,32 +26,31 @@ const ROUTE_MAP = {
     { path: '/bulk-upload', label: 'Bulk Upload', icon: Upload },
     { path: '/payroll-run', label: 'Payroll Run', icon: Calculator },
     { path: '/my-batches', label: 'My Batches', icon: Layers },
-    { path: '/hr-review', label: 'Review Queue', icon: CheckSquare },
     { path: '/contracts', label: 'Contracts', icon: FileSignature },
+    { path: '/contract-templates', label: 'Contract Templates', icon: Pencil },
+    { path: '/hr-review', label: 'HR Review', icon: CheckSquare },
+    { path: '/md-approval', label: 'MD Approval', icon: ShieldCheck },
     { path: '/reports', label: 'Reports', icon: FileText },
     { path: '/email-settings', label: 'Email Settings', icon: Mail },
     { path: '/settings', label: 'Settings', icon: Settings },
   ],
-  // HR — auditor view
   HR: [
     { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { path: '/employees', label: 'Employees', icon: Users },
     { path: '/contracts', label: 'Contracts', icon: FileSignature },
     { path: '/contract-templates', label: 'Contract Templates', icon: Pencil },
-    { path: '/hr-review', label: 'Review Queue', icon: CheckSquare },
+    { path: '/hr-review', label: 'HR Review', icon: CheckSquare },
     { path: '/reports', label: 'Reports', icon: FileText },
     { path: '/email-settings', label: 'Email Settings', icon: Mail },
     { path: '/settings', label: 'Settings', icon: Settings },
   ],
-  // Managing Director — decision-maker view
   ManagingDirector: [
     { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { path: '/md-approval', label: 'Final Auth.', icon: ShieldCheck },
+    { path: '/md-approval', label: 'MD Approval', icon: ShieldCheck },
     { path: '/contracts', label: 'Contracts', icon: FileSignature },
     { path: '/reports', label: 'Reports', icon: FileText },
     { path: '/settings', label: 'Settings', icon: Settings },
   ],
-  // Admin — same as Finance Officer but with everything
   Admin: [
     { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { path: '/employees', label: 'Employees', icon: Users },
@@ -59,10 +66,9 @@ const ROUTE_MAP = {
     { path: '/email-settings', label: 'Email Settings', icon: Mail },
     { path: '/settings', label: 'Settings', icon: Settings },
   ],
-  // Employee — minimal
   Employee: [
     { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { path: '/reports', label: 'My Payslips', icon: FileText },
+    { path: '/reports', label: 'Reports', icon: FileText },
     { path: '/settings', label: 'Settings', icon: Settings },
   ],
 };
@@ -83,15 +89,25 @@ const STATUS_COLORS = {
   Employee: '#94a3b8',
 };
 
-const Sidebar = () => {
+const Sidebar = ({ onClose }) => {
   const { user } = useAuth();
   const role = user?.role || 'Employee';
   const routes = ROUTE_MAP[role] || ROUTE_MAP.Employee;
 
   return (
     <aside className="sidebar">
+      <button
+        type="button"
+        className="sidebar__close"
+        onClick={() => onClose?.()}
+        aria-label="Close menu"
+      >
+        <X size={20} />
+      </button>
       <div className="sidebar__brand">
-        <img src="/assets/hc-logo.png" alt="HC Solutions" className="sidebar__logo" />
+        <div className="sidebar__logo-wrap">
+          <img src="/assets/hc-logo.png" alt="HC Solutions" className="sidebar__logo" />
+        </div>
         <p className="sidebar__subtitle">Payroll Suite</p>
       </div>
 
@@ -104,6 +120,7 @@ const Sidebar = () => {
             className={({ isActive }) =>
               isActive ? 'sidebar__link sidebar__link--active' : 'sidebar__link'
             }
+            onClick={() => onClose?.()}
           >
             <route.icon className="sidebar__link-icon" size={18} />
             <span>{route.label}</span>

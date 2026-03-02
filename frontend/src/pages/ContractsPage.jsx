@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { Mail, FileText, Save, CheckCircle, X, Pencil, AlertTriangle, ChevronRight } from 'lucide-react';
 import { apiClient } from '../api/client';
 import useAuth from '../hooks/useAuth';
 import './ContractsPage.css';
@@ -113,10 +114,10 @@ const ContractsPage = () => {
             };
             if (editing) {
                 await apiClient.patch(`/contracts/${editing}`, payload, { token });
-                setMsg({ type: 'ok', text: 'Contract updated ✅' });
+                setMsg({ type: 'ok', text: 'Contract updated' });
             } else {
                 await apiClient.post('/contracts', payload, { token });
-                setMsg({ type: 'ok', text: 'Contract created ✅' });
+                setMsg({ type: 'ok', text: 'Contract created' });
             }
             setShowForm(false);
             load();
@@ -130,7 +131,7 @@ const ContractsPage = () => {
     const sendNotifications = async () => {
         try {
             await apiClient.post('/contracts/notify', {}, { token });
-            setMsg({ type: 'ok', text: 'Expiry notifications sent to employees & HR ✅' });
+            setMsg({ type: 'ok', text: 'Expiry notifications sent to employees & HR' });
         } catch (e) {
             setMsg({ type: 'err', text: e.message });
         }
@@ -157,14 +158,14 @@ const ContractsPage = () => {
             {/* ── expiry alert banner ──────────────────────────────────── */}
             {expiring.length > 0 && (
                 <div className="cp__alert-banner">
-                    <span>⚠️</span>
+                    <AlertTriangle size={20} aria-hidden />
                     <div>
                         <strong>{expiring.length} contract{expiring.length > 1 ? 's' : ''} expiring in the next 30 days</strong>
                         <p>{expiring.slice(0, 3).map(c => c.full_name).join(', ')}{expiring.length > 3 ? ` and ${expiring.length - 3} more` : ''}</p>
                     </div>
                     {canEdit && (
                         <button className="cp__alert-btn" onClick={sendNotifications}>
-                            📧 Send Reminders
+                            <Mail size={18} aria-hidden /> Send Reminders
                         </button>
                     )}
                 </div>
@@ -173,7 +174,7 @@ const ContractsPage = () => {
             {/* ── message ─────────────────────────────────────────────── */}
             {msg && (
                 <div className={`cp__msg cp__msg--${msg.type}`} onClick={() => setMsg(null)}>
-                    {msg.text} <span>✕</span>
+                    {msg.text} <button type="button" className="cp__msg-close" onClick={() => setMsg(null)} aria-label="Dismiss"><X size={16} /></button>
                 </div>
             )}
 
@@ -181,7 +182,7 @@ const ContractsPage = () => {
             <section className="cp__toolbar">
                 <input
                     className="cp__search"
-                    placeholder="🔍  Search employee, position, department…"
+                    placeholder="Search employee, position, department…"
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                 />
@@ -204,8 +205,8 @@ const ContractsPage = () => {
                     <p className="cp__empty">Loading contracts…</p>
                 ) : visible.length === 0 ? (
                     <div className="cp__empty-state">
-                        <span>📄</span>
-                        <p>No contracts found. {canEdit && <button className="cp__link" onClick={openCreate}>Create the first one →</button>}</p>
+                        <FileText size={40} className="cp__empty-icon" aria-hidden />
+                        <p>No contracts found. {canEdit && <button className="cp__link" onClick={openCreate}>Create the first one <ChevronRight size={16} style={{ verticalAlign: 'middle' }} /></button>}</p>
                     </div>
                 ) : (
                     <div className="cp__table-wrap">
@@ -274,7 +275,7 @@ const ContractsPage = () => {
             {showForm && (
                 <div className="cp__overlay" onClick={() => setShowForm(false)}>
                     <div className="cp__modal" onClick={(e) => e.stopPropagation()}>
-                        <button className="cp__modal-close" onClick={() => setShowForm(false)}>✕</button>
+                        <button className="cp__modal-close" onClick={() => setShowForm(false)} aria-label="Close"><X size={20} /></button>
                         <div className="cp__modal-header">
                             <p className="cp__eyebrow">{editing ? 'Edit' : 'New'} Contract</p>
                             <h2>{editing ? 'Update Contract' : 'Create Employee Contract'}</h2>
@@ -349,7 +350,7 @@ const ContractsPage = () => {
                             <div className="cp__modal-footer">
                                 <button type="button" className="cp__btn" onClick={() => setShowForm(false)}>Cancel</button>
                                 <button type="submit" className="cp__btn cp__btn--primary cp__btn--lg" disabled={saving}>
-                                    {saving ? 'Saving…' : editing ? '💾 Update Contract' : '✅ Create Contract'}
+                                    {saving ? 'Saving…' : editing ? <><Save size={18} aria-hidden /> Update Contract</> : <><CheckCircle size={18} aria-hidden /> Create Contract</>}
                                 </button>
                             </div>
                         </form>
@@ -363,7 +364,7 @@ const ContractsPage = () => {
             {detail && (
                 <div className="cp__overlay" onClick={() => setDetail(null)}>
                     <div className="cp__modal cp__modal--detail" onClick={(e) => e.stopPropagation()}>
-                        <button className="cp__modal-close" onClick={() => setDetail(null)}>✕</button>
+                        <button className="cp__modal-close" onClick={() => setDetail(null)} aria-label="Close"><X size={20} /></button>
                         <div className="cp__modal-header">
                             <p className="cp__eyebrow">Contract Details</p>
                             <h2>{detail.full_name}</h2>
@@ -397,7 +398,7 @@ const ContractsPage = () => {
                         <div className="cp__modal-footer">
                             {canEdit && (
                                 <button className="cp__btn cp__btn--edit" onClick={() => { setDetail(null); openEdit(detail); }}>
-                                    ✏️ Edit Contract
+                                    <Pencil size={16} aria-hidden /> Edit Contract
                                 </button>
                             )}
                             <button className="cp__btn cp__btn--primary" onClick={() => setDetail(null)}>Close</button>

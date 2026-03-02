@@ -115,6 +115,22 @@
     border: 1px solid #fca5a5;
 }
 
+.cp__msg-close {
+    flex-shrink: 0;
+    padding: 4px;
+    border: none;
+    background: none;
+    cursor: pointer;
+    color: inherit;
+    opacity: 0.8;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+.cp__msg-close:hover {
+    opacity: 1;
+}
+
 /* ── toolbar ─────────────────────────────────────────────────── */
 .cp__toolbar {
     display: flex;
@@ -238,6 +254,12 @@
     font-size: 2.5rem;
     display: block;
     margin-bottom: 10px;
+}
+
+.cp__empty-icon {
+    display: block;
+    margin: 0 auto 10px;
+    color: #94a3b8;
 }
 
 /* ── table ───────────────────────────────────────────────────── */

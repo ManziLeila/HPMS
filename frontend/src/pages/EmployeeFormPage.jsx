@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { Save } from 'lucide-react';
 import { calculatePayroll, formatCurrency } from '../utils/payroll';
 import './EmployeeFormPage.css';
 import { apiClient } from '../api/client';
@@ -134,9 +135,9 @@ const EmployeeFormPage = () => {
       if (salaryResponse.emailPreview) {
         setEmailModalData(salaryResponse.emailPreview);
         setCreatedSalaryId(salaryResponse.data.salary_id);
-        setCreateStatus('✅ Salary created! Review email preview below.');
+        setCreateStatus('Salary created! Review email preview below.');
       } else {
-        setCreateStatus(`✅ Salary created successfully! Go to Reports page to download payslip.`);
+        setCreateStatus('Salary created successfully! Go to Reports page to download payslip.');
         // Reset form after 2 seconds if no email preview
         setTimeout(() => {
           setFormValues(initialFormState);
@@ -145,7 +146,7 @@ const EmployeeFormPage = () => {
         }, 3000);
       }
     } catch (error) {
-      setCreateStatus(`❌ Error: ${error.message || 'Failed to create salary'}`);
+      setCreateStatus(`Error: ${error.message || 'Failed to create salary'}`);
     } finally {
       setIsCreating(false);
     }
@@ -387,13 +388,13 @@ const EmployeeFormPage = () => {
                 opacity: isCreating ? 0.6 : 1
               }}
             >
-              {isCreating ? 'Creating...' : '💾 Create Salary'}
+              {isCreating ? 'Creating...' : <><Save size={18} aria-hidden /> Create Salary</>}
             </button>
           </div>
         </div>
         {previewStatus && <p className="results-panel__status">{previewStatus}</p>}
         {createStatus && <p className="results-panel__status" style={{
-          color: createStatus.includes('✅') ? '#10b981' : createStatus.includes('❌') ? '#ef4444' : '#a5f3fc'
+          color: createStatus?.includes('successfully') || createStatus?.includes('created!') ? '#10b981' : createStatus?.startsWith('Error') ? '#ef4444' : '#a5f3fc'
         }}>{createStatus}</p>}
         <div className="results-panel__grid">
           <article>

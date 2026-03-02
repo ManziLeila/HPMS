@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { FileSpreadsheet, Download, Settings, Upload, FolderOpen, Rocket, Package, Mail, CheckCircle, XCircle, Loader2, BarChart3 } from 'lucide-react';
 import './BulkUploadPage.css';
 import { apiClient, API_BASE_URL } from '../api/client';
 import useAuth from '../hooks/useAuth.js';
@@ -26,7 +27,7 @@ const BulkUploadPage = () => {
                 setFile(selectedFile);
                 setUploadStatus(null);
             } else {
-                setUploadStatus('❌ Please select a valid Excel file (.xls or .xlsx)');
+                setUploadStatus('Error: Please select a valid Excel file (.xls or .xlsx)');
                 setFile(null);
             }
         }
@@ -34,20 +35,20 @@ const BulkUploadPage = () => {
 
     const handleUpload = async () => {
         if (!file) {
-            setUploadStatus('❌ Please select a file to upload');
+            setUploadStatus('Error: Please select a file to upload');
             return;
         }
         if (!payPeriod) {
-            setUploadStatus('❌ Please select a pay period');
+            setUploadStatus('Error: Please select a pay period');
             return;
         }
         if (!token) {
-            setUploadStatus('❌ Please sign in to upload salaries');
+            setUploadStatus('Error: Please sign in to upload salaries');
             return;
         }
 
         setIsUploading(true);
-        setUploadStatus('📤 Uploading and processing file...');
+        setUploadStatus('Uploading and processing file...');
         setUploadResults(null);
 
         try {
@@ -73,9 +74,9 @@ const BulkUploadPage = () => {
             const data = await response.json();
             setUploadResults(data.results);
             setSalaryIds(data.results.successful.map((s) => s.salaryId));
-            setUploadStatus(`✅ ${data.message}`);
+            setUploadStatus(`Success: ${data.message}`);
         } catch (error) {
-            setUploadStatus(`❌ Error: ${error.message}`);
+            setUploadStatus(`Error: ${error.message}`);
         } finally {
             setIsUploading(false);
         }
@@ -85,7 +86,7 @@ const BulkUploadPage = () => {
         if (!token || salaryIds.length === 0) return;
 
         try {
-            setUploadStatus('📦 Generating payslips ZIP file...');
+            setUploadStatus('Generating payslips ZIP file...');
             const response = await fetch(`${API_BASE_URL}/salaries/bulk/download-payslips`, {
                 method: 'POST',
                 headers: {
@@ -107,9 +108,9 @@ const BulkUploadPage = () => {
             link.click();
             link.remove();
             URL.revokeObjectURL(link.href);
-            setUploadStatus('✅ Payslips downloaded successfully!');
+            setUploadStatus('Success: Payslips downloaded successfully!');
         } catch (error) {
-            setUploadStatus(`❌ Error downloading payslips: ${error.message}`);
+            setUploadStatus(`Error downloading payslips: ${error.message}`);
         }
     };
 
@@ -117,16 +118,16 @@ const BulkUploadPage = () => {
         if (!token || salaryIds.length === 0) return;
 
         try {
-            setUploadStatus('📧 Sending emails to all employees...');
+            setUploadStatus('Sending emails to all employees...');
             const response = await apiClient.post(
                 '/salaries/bulk/send-emails',
                 { salaryIds },
                 { token }
             );
 
-            setUploadStatus(`✅ ${response.message}`);
+            setUploadStatus(`Success: ${response.message}`);
         } catch (error) {
-            setUploadStatus(`❌ Error sending emails: ${error.message}`);
+            setUploadStatus(`Error: ${error.message}`);
         }
     };
 
@@ -162,7 +163,7 @@ Jane Smith,jane.smith@example.com,1200000,60000,120000,60000,0,0,No,`;
             <section className="bulk-upload-page__form">
                 <div className="bulk-upload-page__card">
                     <header>
-                        <h3>📄 Step 1: Prepare Your Excel File</h3>
+                        <h3><FileSpreadsheet size={20} aria-hidden /> Step 1: Prepare Your Excel File</h3>
                     </header>
                     <div className="bulk-upload-page__content">
                         <p>
@@ -185,14 +186,14 @@ Jane Smith,jane.smith@example.com,1200000,60000,120000,60000,0,0,No,`;
                             onClick={downloadTemplate}
                             className="bulk-upload-page__template-btn"
                         >
-                            📥 Download Template
+                            <Download size={18} aria-hidden /> Download Template
                         </button>
                     </div>
                 </div>
 
                 <div className="bulk-upload-page__card">
                     <header>
-                        <h3>⚙️ Step 2: Configure Upload Settings</h3>
+                        <h3><Settings size={20} aria-hidden /> Step 2: Configure Upload Settings</h3>
                     </header>
                     <div className="bulk-upload-page__content">
                         <div className="bulk-upload-page__fields">
@@ -229,7 +230,7 @@ Jane Smith,jane.smith@example.com,1200000,60000,120000,60000,0,0,No,`;
 
                 <div className="bulk-upload-page__card">
                     <header>
-                        <h3>📤 Step 3: Upload Excel File</h3>
+                        <h3><Upload size={20} aria-hidden /> Step 3: Upload Excel File</h3>
                     </header>
                     <div className="bulk-upload-page__content">
                         <div className="bulk-upload-page__file-input">
@@ -240,7 +241,7 @@ Jane Smith,jane.smith@example.com,1200000,60000,120000,60000,0,0,No,`;
                                 id="file-upload"
                             />
                             <label htmlFor="file-upload" className="bulk-upload-page__file-label">
-                                {file ? `📄 ${file.name}` : '📁 Choose Excel File'}
+                                {file ? <><FileSpreadsheet size={16} aria-hidden /> {file.name}</> : <><FolderOpen size={16} aria-hidden /> Choose Excel File</>}
                             </label>
                         </div>
 
@@ -250,11 +251,11 @@ Jane Smith,jane.smith@example.com,1200000,60000,120000,60000,0,0,No,`;
                             disabled={isUploading || !file || !payPeriod}
                             className="bulk-upload-page__upload-btn"
                         >
-                            {isUploading ? '⏳ Processing...' : '🚀 Upload & Process'}
+                            {isUploading ? <><Loader2 size={18} className="spin" aria-hidden /> Processing...</> : <><Rocket size={18} aria-hidden /> Upload & Process</>}
                         </button>
 
                         {uploadStatus && (
-                            <p className={`bulk-upload-page__status ${uploadStatus.includes('✅') ? 'success' : uploadStatus.includes('❌') ? 'error' : 'info'}`}>
+                            <p className={`bulk-upload-page__status ${uploadStatus?.startsWith('Success') ? 'success' : uploadStatus?.startsWith('Error') ? 'error' : 'info'}`}>
                                 {uploadStatus}
                             </p>
                         )}
@@ -265,7 +266,7 @@ Jane Smith,jane.smith@example.com,1200000,60000,120000,60000,0,0,No,`;
             {uploadResults && (
                 <section className="bulk-upload-page__results">
                     <header>
-                        <h3>📊 Upload Results</h3>
+                        <h3><BarChart3 size={20} aria-hidden /> Upload Results</h3>
                     </header>
 
                     <div className="bulk-upload-page__stats">
@@ -290,21 +291,21 @@ Jane Smith,jane.smith@example.com,1200000,60000,120000,60000,0,0,No,`;
                                 onClick={handleDownloadPayslips}
                                 className="bulk-upload-page__action-btn download"
                             >
-                                📦 Download All Payslips (ZIP)
+                                <Package size={18} aria-hidden /> Download All Payslips (ZIP)
                             </button>
                             <button
                                 type="button"
                                 onClick={handleSendEmails}
                                 className="bulk-upload-page__action-btn email"
                             >
-                                📧 Send Emails to All Employees
+                                <Mail size={18} aria-hidden /> Send Emails to All Employees
                             </button>
                         </div>
                     )}
 
                     {uploadResults.successful.length > 0 && (
                         <div className="bulk-upload-page__table-section">
-                            <h4>✅ Successfully Processed</h4>
+                            <h4><CheckCircle size={18} aria-hidden /> Successfully Processed</h4>
                             <div className="bulk-upload-page__table-wrapper">
                                 <table>
                                     <thead>
@@ -332,7 +333,7 @@ Jane Smith,jane.smith@example.com,1200000,60000,120000,60000,0,0,No,`;
 
                     {uploadResults.failed.length > 0 && (
                         <div className="bulk-upload-page__table-section">
-                            <h4>❌ Failed Records</h4>
+                            <h4><XCircle size={18} aria-hidden /> Failed Records</h4>
                             <div className="bulk-upload-page__table-wrapper">
                                 <table>
                                     <thead>

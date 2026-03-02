@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Mail, Paperclip, Eye, Pencil, Send, X } from 'lucide-react';
 import { apiClient } from '../api/client';
 import useAuth from '../hooks/useAuth';
 import './EmailPreviewModal.css';
@@ -39,7 +40,7 @@ Thank you for your continued dedication to HC Solutions.`;
 
             setMessage({
                 type: 'success',
-                text: `✅ Payslip email sent successfully to ${emailData.employeeEmail}!`
+                text: `Payslip email sent successfully to ${emailData.employeeEmail}!`
             });
 
             // Close modal after 2 seconds
@@ -49,7 +50,7 @@ Thank you for your continued dedication to HC Solutions.`;
         } catch (err) {
             setMessage({
                 type: 'error',
-                text: `❌ Failed to send email: ${err.message || 'Unknown error'}`
+                text: `Failed to send email: ${err.message || 'Unknown error'}`
             });
         } finally {
             setSending(false);
@@ -71,8 +72,8 @@ Thank you for your continued dedication to HC Solutions.`;
         <div className="modal-overlay" onClick={onClose}>
             <div className="modal-content" onClick={(e) => e.stopPropagation()}>
                 <div className="modal-header">
-                    <h2>📧 Send Payslip Email</h2>
-                    <button className="close-btn" onClick={onClose}>×</button>
+                    <h2><Mail size={22} aria-hidden /> Send Payslip Email</h2>
+                    <button className="close-btn" onClick={onClose} aria-label="Close"><X size={20} /></button>
                 </div>
 
                 <div className="modal-body">
@@ -94,7 +95,7 @@ Thank you for your continued dedication to HC Solutions.`;
                             <span className="value">{emailData.payDate}</span>
                         </div>
                         <div className="info-row attachment">
-                            <span className="label">📎 Attachment:</span>
+                            <span className="label"><Paperclip size={14} aria-hidden /> Attachment:</span>
                             <span className="value">{emailData.pdfFilename}</span>
                         </div>
                     </div>
@@ -107,7 +108,7 @@ Thank you for your continued dedication to HC Solutions.`;
                                 onClick={handleEditToggle}
                                 type="button"
                             >
-                                {isEditing ? '👁️ Preview' : '✏️ Edit Message'}
+                                {isEditing ? <><Eye size={16} aria-hidden /> Preview</> : <><Pencil size={16} aria-hidden /> Edit Message</>}
                             </button>
                         </div>
 
@@ -153,7 +154,7 @@ Thank you for your continued dedication to HC Solutions.`;
                         onClick={handleSendEmail}
                         disabled={sending}
                     >
-                        {sending ? '📤 Sending...' : '📧 Send Email'}
+                        {sending ? <><Send size={18} aria-hidden /> Sending...</> : <><Mail size={18} aria-hidden /> Send Email</>}
                     </button>
                 </div>
             </div>

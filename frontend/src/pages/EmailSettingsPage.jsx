@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Mail, Send, AlertTriangle, CheckCircle, XCircle } from 'lucide-react';
 import { apiClient } from '../api/client';
 import useAuth from '../hooks/useAuth';
 import './EmailSettingsPage.css';
@@ -71,12 +72,12 @@ const EmailSettingsPage = () => {
 
             setMessage({
                 type: 'success',
-                text: `✅ Test email sent successfully to ${testEmail}! Check your inbox.`
+                text: `Test email sent successfully to ${testEmail}! Check your inbox.`
             });
         } catch (err) {
             setMessage({
                 type: 'error',
-                text: `❌ Failed to send email: ${err.message || 'Unknown error'}`
+                text: `Failed to send email: ${err.message || 'Unknown error'}`
             });
         } finally {
             setSending(false);
@@ -94,7 +95,7 @@ const EmailSettingsPage = () => {
     return (
         <div className="email-settings-page">
             <header className="page-header">
-                <h1>📧 Email Settings</h1>
+                <h1><Mail size={28} aria-hidden /> Email Settings</h1>
                 <p>Test and preview email templates</p>
             </header>
 
@@ -105,7 +106,7 @@ const EmailSettingsPage = () => {
                     <div className="status-item">
                         <span className="label">Status:</span>
                         <span className={`status-badge ${emailStatus?.configured ? 'success' : 'error'}`}>
-                            {emailStatus?.configured ? '✅ Connected' : '❌ Not Configured'}
+                            {emailStatus?.configured ? <><CheckCircle size={14} aria-hidden /> Connected</> : <><XCircle size={14} aria-hidden /> Not Configured</>}
                         </span>
                     </div>
                     {emailStatus?.configured && (
@@ -212,7 +213,7 @@ const EmailSettingsPage = () => {
                         className="btn-send"
                         disabled={sending || !emailStatus?.configured}
                     >
-                        {sending ? '📤 Sending...' : '📧 Send Test Email'}
+                        {sending ? <><Send size={18} aria-hidden /> Sending...</> : <><Mail size={18} aria-hidden /> Send Test Email</>}
                     </button>
                 </form>
 
@@ -224,7 +225,7 @@ const EmailSettingsPage = () => {
 
                 {!emailStatus?.configured && (
                     <div className="warning-box">
-                        ⚠️ SMTP is not configured. Please update your .env file with SMTP credentials.
+                        <AlertTriangle size={18} aria-hidden /> SMTP is not configured. Please update your .env file with SMTP credentials.
                     </div>
                 )}
             </div>

@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { Lock, Zap, BarChart3, CheckCircle, KeyRound, ArrowRight, ArrowLeft } from "lucide-react";
 import "./LoginPage.css";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:4000/api";
@@ -125,10 +126,10 @@ export default function LoginPage() {
           <h2 className="lp-tagline">Payroll,<br /><em>done right.</em></h2>
           <p className="lp-tagline-sub">Automated · RSSB-compliant · Audit-ready</p>
           <ul className="lp-perks">
-            <li><span>🔒</span> Bank-grade security</li>
-            <li><span>⚡</span> Real-time payroll runs</li>
-            <li><span>📊</span> Instant payslip reports</li>
-            <li><span>✅</span> Multi-level approvals</li>
+            <li><span><Lock size={18} aria-hidden /></span> Bank-grade security</li>
+            <li><span><Zap size={18} aria-hidden /></span> Real-time payroll runs</li>
+            <li><span><BarChart3 size={18} aria-hidden /></span> Instant payslip reports</li>
+            <li><span><CheckCircle size={18} aria-hidden /></span> Multi-level approvals</li>
           </ul>
         </div>
         <div className="lp-blob" />
@@ -178,7 +179,7 @@ export default function LoginPage() {
 
               <button type="submit" className="lp-submit" disabled={loading}>
                 {loading ? <span className="lp-spin" /> : null}
-                {loading ? "Verifying…" : "Sign In Securely →"}
+                {loading ? "Verifying…" : <>Sign In Securely <ArrowRight size={16} style={{ verticalAlign: 'middle' }} /></>}
               </button>
             </form>
           )}
@@ -186,7 +187,7 @@ export default function LoginPage() {
           {/* ── STEP 2: OTP ── */}
           {step === "otp" && (
             <div>
-              <div className="lp-otp-icon">🔐</div>
+              <div className="lp-otp-icon"><KeyRound size={32} aria-hidden /></div>
               <h1 className="lp-title">Two-step verification</h1>
               <p className="lp-sub">Enter the 6-digit code from your authenticator app for<br /><strong>{email}</strong></p>
 
@@ -210,7 +211,7 @@ export default function LoginPage() {
               </button>
 
               <button className="lp-back" onClick={() => { setStep("creds"); setError(""); setOtp(["", "", "", "", "", ""]); }}>
-                ← Back to login
+                <ArrowLeft size={16} style={{ verticalAlign: 'middle' }} /> Back to login
               </button>
             </div>
           )}

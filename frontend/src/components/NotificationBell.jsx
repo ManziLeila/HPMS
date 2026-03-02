@@ -1,5 +1,19 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import {
+    Bell,
+    ClipboardList,
+    CheckCircle,
+    XCircle,
+    Building2,
+    Ban,
+    DollarSign,
+    Clock,
+    Trash2,
+    User,
+    PartyPopper,
+    Pencil,
+} from 'lucide-react';
 import { apiClient } from '../api/client';
 import useAuth from '../hooks/useAuth';
 import './NotificationBell.css';
@@ -7,17 +21,17 @@ import './NotificationBell.css';
 const POLL_INTERVAL = 30_000; // 30 s
 
 const TYPE_ICON = {
-    PAYROLL_SUBMITTED: '📋',
-    PAYROLL_HR_APPROVED: '✅',
-    PAYROLL_HR_REJECTED: '❌',
-    PAYROLL_MD_APPROVED: '🏦',
-    PAYROLL_MD_REJECTED: '🚫',
-    PAYROLL_SENT_TO_BANK: '💸',
-    APPROVAL_REMINDER: '⏰',
-    BATCH_CANCELLED: '🗑️',
-    EMPLOYEE_ADDED: '👤',
-    EMPLOYEE_WELCOME: '🎉',
-    EMPLOYEE_UPDATED: '✏️',
+    PAYROLL_SUBMITTED: ClipboardList,
+    PAYROLL_HR_APPROVED: CheckCircle,
+    PAYROLL_HR_REJECTED: XCircle,
+    PAYROLL_MD_APPROVED: Building2,
+    PAYROLL_MD_REJECTED: Ban,
+    PAYROLL_SENT_TO_BANK: DollarSign,
+    APPROVAL_REMINDER: Clock,
+    BATCH_CANCELLED: Trash2,
+    EMPLOYEE_ADDED: User,
+    EMPLOYEE_WELCOME: PartyPopper,
+    EMPLOYEE_UPDATED: Pencil,
 };
 
 const timeAgo = (dateStr) => {
@@ -132,7 +146,7 @@ const NotificationBell = () => {
 
                         {!loading && items.length === 0 && (
                             <div className="nbell__empty">
-                                <span className="nbell__empty-icon">🔔</span>
+                                <Bell size={32} className="nbell__empty-icon" aria-hidden />
                                 <p>You're all caught up!</p>
                             </div>
                         )}
@@ -164,19 +178,22 @@ const NotificationBell = () => {
 };
 
 /* ── single notification row ────────────────────────────────── */
-const NotifItem = ({ n, onClick }) => (
-    <button
-        className={`nbell__item ${!n.is_read ? 'nbell__item--unread' : ''} ${n.priority === 'HIGH' || n.priority === 'URGENT' ? 'nbell__item--high' : ''}`}
-        onClick={onClick}
-    >
-        <span className="nbell__item-icon">{TYPE_ICON[n.type] ?? '🔔'}</span>
-        <div className="nbell__item-body">
-            <p className="nbell__item-title">{n.title}</p>
-            <p className="nbell__item-msg">{n.message}</p>
-            <p className="nbell__item-time">{timeAgo(n.created_at)}</p>
-        </div>
-        {!n.is_read && <span className="nbell__dot" />}
-    </button>
-);
+const NotifItem = ({ n, onClick }) => {
+    const Icon = TYPE_ICON[n.type] ?? Bell;
+    return (
+        <button
+            className={`nbell__item ${!n.is_read ? 'nbell__item--unread' : ''} ${n.priority === 'HIGH' || n.priority === 'URGENT' ? 'nbell__item--high' : ''}`}
+            onClick={onClick}
+        >
+            <span className="nbell__item-icon"><Icon size={18} aria-hidden /></span>
+            <div className="nbell__item-body">
+                <p className="nbell__item-title">{n.title}</p>
+                <p className="nbell__item-msg">{n.message}</p>
+                <p className="nbell__item-time">{timeAgo(n.created_at)}</p>
+            </div>
+            {!n.is_read && <span className="nbell__dot" />}
+        </button>
+    );
+};
 
 export default NotificationBell;

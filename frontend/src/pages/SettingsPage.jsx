@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { KeyRound, X } from 'lucide-react';
 import { apiClient } from '../api/client';
 import useAuth from '../hooks/useAuth';
 import './SettingsPage.css';
@@ -31,7 +32,7 @@ const SettingsPage = () => {
                 currentPassword: pwForm.currentPassword,
                 newPassword: pwForm.newPassword,
             }, { token });
-            setPwMsg({ type: 'ok', text: '✅ Password changed successfully! Please log in again on your next session.' });
+            setPwMsg({ type: 'ok', text: 'Password changed successfully! Please log in again on your next session.' });
             setPwForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
         } catch (err) {
             setPwMsg({ type: 'err', text: err.message || 'Failed to change password.' });
@@ -76,7 +77,7 @@ const SettingsPage = () => {
                     className={`settings__tab ${tab === 'password' ? 'settings__tab--active' : ''}`}
                     onClick={() => setTab('password')}
                 >
-                    🔐 Change Password
+                    <KeyRound size={18} aria-hidden /> Change Password
                 </button>
             </div>
 
@@ -90,7 +91,7 @@ const SettingsPage = () => {
 
                     {pwMsg && (
                         <div className={`settings__msg settings__msg--${pwMsg.type}`} onClick={() => setPwMsg(null)}>
-                            {pwMsg.text} <span>✕</span>
+                            {pwMsg.text} <button type="button" className="settings__msg-close" onClick={() => setPwMsg(null)} aria-label="Dismiss"><X size={16} /></button>
                         </div>
                     )}
 
@@ -157,7 +158,7 @@ const SettingsPage = () => {
                             className="settings__btn settings__btn--primary"
                             disabled={pwLoading}
                         >
-                            {pwLoading ? 'Changing…' : '🔐 Update Password'}
+                            {pwLoading ? 'Changing…' : <><KeyRound size={18} aria-hidden /> Update Password</>}
                         </button>
                     </form>
                 </section>

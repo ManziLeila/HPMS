@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { KeyRound, Building2, CheckCircle, Clock, AlertTriangle, Lock } from 'lucide-react';
 import { apiClient } from '../api/client';
 import useAuth from '../hooks/useAuth';
 import { formatCurrency } from '../utils/payroll';
@@ -54,7 +55,7 @@ const PinModal = ({ onConfirm, onCancel, loading }) => {
     return (
         <div className="mdp__overlay" onClick={onCancel}>
             <div className="mdp__pin-modal" onClick={(e) => e.stopPropagation()}>
-                <p className="mdp__pin-icon">🔐</p>
+                <p className="mdp__pin-icon" aria-hidden><KeyRound size={40} /></p>
                 <h2>Confirm Final Approval</h2>
                 <p className="mdp__pin-sub">
                     Enter your 4-digit PIN to authorise this payroll disbursement.
@@ -84,7 +85,7 @@ const PinModal = ({ onConfirm, onCancel, loading }) => {
                         disabled={complete.length < 4 || loading}
                         onClick={() => onConfirm(complete)}
                     >
-                        {loading ? 'Authorising…' : '🏦 Authorise Payroll'}
+                        {loading ? 'Authorising…' : <><Building2 size={18} style={{ verticalAlign: 'middle' }} /> Authorise Payroll</>}
                     </button>
                 </div>
                 <p className="mdp__pin-hint">Your PIN is your last 4 login digits or set in HR settings</p>
@@ -139,7 +140,7 @@ const MdApprovalPage = () => {
                 { batchId: batchInfo.batchId ?? batchInfo, action, comments },
                 { token }
             );
-            setMsg({ type: 'ok', text: `Payroll batch${batchInfo.batchId === 'ALL' ? 'es' : ''} ${action === 'APPROVE' ? 'approved and authorised ✅' : 'rejected ❌'}` });
+            setMsg({ type: 'ok', text: `Payroll batch${batchInfo.batchId === 'ALL' ? 'es' : ''} ${action === 'APPROVE' ? 'approved and authorised' : 'rejected'}` });
             setPinTarget(null);
             setRejectTarget(null);
             setRejectReason('');
@@ -198,8 +199,8 @@ const MdApprovalPage = () => {
                     <p className="mdp__kpi-label">HR Verification Status</p>
                     <p className="mdp__kpi-value" style={{ fontSize: '1rem', marginTop: 6 }}>
                         {allHrApproved
-                            ? <span className="mdp__pill mdp__pill--ok">✓ All HR-verified</span>
-                            : <span className="mdp__pill mdp__pill--warn">⏳ Awaiting HR</span>}
+                            ? <span className="mdp__pill mdp__pill--ok"><CheckCircle size={14} style={{ verticalAlign: 'middle' }} /> All HR-verified</span>
+                            : <span className="mdp__pill mdp__pill--warn"><Clock size={14} style={{ verticalAlign: 'middle' }} /> Awaiting HR</span>}
                     </p>
                 </article>
             </section>
@@ -228,7 +229,7 @@ const MdApprovalPage = () => {
                         <p className="mdp__empty">Loading…</p>
                     ) : batches.length === 0 ? (
                         <div className="mdp__empty-state">
-                            <span>✅</span>
+                            <span aria-hidden><CheckCircle size={20} /></span>
                             <p>No batches pending your approval.</p>
                         </div>
                     ) : (
@@ -246,7 +247,7 @@ const MdApprovalPage = () => {
                                         <div className="mdp__batch-amount">
                                             <p>{formatCurrency(b.total_amount || 0)}</p>
                                             <span className={b.status === 'HR_APPROVED' ? 'mdp__pill mdp__pill--ok' : 'mdp__pill mdp__pill--warn'}>
-                                                {b.status === 'HR_APPROVED' ? '✓ HR Verified' : '⏳ Awaiting HR'}
+                                                {b.status === 'HR_APPROVED' ? <><CheckCircle size={14} style={{ verticalAlign: 'middle' }} /> HR Verified</> : <><Clock size={14} style={{ verticalAlign: 'middle' }} /> Awaiting HR</>}
                                             </span>
                                         </div>
                                     </div>
@@ -264,12 +265,12 @@ const MdApprovalPage = () => {
                                             onClick={() => setPinTarget(b)}
                                             title={b.status !== 'HR_APPROVED' ? 'HR must verify first' : ''}
                                         >
-                                            🔐 Final Approve
+                                            <KeyRound size={16} style={{ verticalAlign: 'middle' }} /> Final Approve
                                         </button>
                                     </div>
                                     {b.status !== 'HR_APPROVED' && (
                                         <p className="mdp__batch-lock">
-                                            ⚠️ This batch must be verified by HR before you can approve it.
+                                            <AlertTriangle size={16} style={{ verticalAlign: 'middle' }} /> This batch must be verified by HR before you can approve it.
                                         </p>
                                     )}
                                 </div>
@@ -286,7 +287,7 @@ const MdApprovalPage = () => {
                                     onClick={() => setPinTarget({ batch_id: 'ALL', batch_name: 'ALL BATCHES' })}
                                     disabled={actionLoading}
                                 >
-                                    <span>🏦</span>
+                                    <span aria-hidden><Building2 size={20} /></span>
                                     <div>
                                         <p>Approve All Batches</p>
                                         <small>
@@ -297,7 +298,7 @@ const MdApprovalPage = () => {
                                 </button>
                             ) : (
                                 <div className="mdp__master-btn mdp__master-btn--locked">
-                                    <span>🔒</span>
+                                    <span aria-hidden><Lock size={20} /></span>
                                     <div>
                                         <p>Approve All Batches</p>
                                         <small>Waiting for HR to verify all records first</small>

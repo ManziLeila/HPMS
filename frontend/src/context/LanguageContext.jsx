@@ -13,6 +13,13 @@ const translations = {
         heroSubtitle: 'Manage employee compensation with precision. Automated calculations, RSSB compliance, and instant payslip generation—all from your dashboard.',
         getStartedFree: 'Get Started Free',
         contactSales: 'Contact Sales',
+        bookADemo: 'Book a Demo',
+
+        // Hero trust chips
+        trustBankSecurity: 'Bank-grade security',
+        trustRssbCompliant: 'RSSB compliant',
+        trustPayslipsSeconds: 'Payslips in seconds',
+        trustHrMdApprovals: 'HR & MD approvals',
 
         // Benefits
         benefit1: '500+ Companies Trust Us',
@@ -211,6 +218,13 @@ const translations = {
         heroSubtitle: 'Gérez la rémunération des employés avec précision. Calculs automatisés, conformité RSSB et génération instantanée de bulletins de paie—le tout depuis votre tableau de bord.',
         getStartedFree: 'Commencer Gratuitement',
         contactSales: 'Contacter les Ventes',
+        bookADemo: 'Réserver une Démo',
+
+        // Hero trust chips
+        trustBankSecurity: 'Sécurité bancaire',
+        trustRssbCompliant: 'Conforme RSSB',
+        trustPayslipsSeconds: 'Bulletins en secondes',
+        trustHrMdApprovals: 'Validations HR et direction',
 
         // Benefits
         benefit1: '500+ Entreprises Nous Font Confiance',

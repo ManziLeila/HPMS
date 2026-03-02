@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { Pencil, Trash2, Eye, Pin, Save, AlertTriangle, X } from 'lucide-react';
 import { apiClient, API_BASE_URL } from '../api/client';
 import useAuth from '../hooks/useAuth';
 import './ContractTemplatesPage.css';
@@ -137,15 +138,15 @@ const ContractTemplatesPage = () => {
             setSaving(true);
             if (editing === 'new') {
                 await apiClient.post('/contract-templates', form, { token });
-                flash('✅ Template created!');
+                flash('Template created!');
             } else {
                 await apiClient.patch(`/contract-templates/${editing.template_id}`, form, { token });
-                flash('✅ Template updated!');
+                flash('Template updated!');
             }
             setEditing(null);
             fetchTemplates();
         } catch (e) {
-            flash('❌ ' + (e.message || 'Save failed'), true);
+            flash((e.message || 'Save failed'), true);
         } finally {
             setSaving(false);
         }
@@ -159,7 +160,7 @@ const ContractTemplatesPage = () => {
             setDelConfirm(null);
             fetchTemplates();
         } catch (e) {
-            flash('❌ ' + (e.message || 'Delete failed'), true);
+            flash((e.message || 'Delete failed'), true);
         }
     };
 
@@ -179,9 +180,9 @@ const ContractTemplatesPage = () => {
             w.document.write(`<pre style="font-family:Georgia,serif;max-width:800px;margin:40px auto;white-space:pre-wrap;line-height:1.6">${result.body}</pre>`);
             w.document.close();
             w.print();
-            flash('✅ Preview opened — use your browser Print to PDF');
+            flash('Preview opened — use your browser Print to PDF');
         } catch (e) {
-            flash('❌ ' + (e.message || 'Preview failed'), true);
+            flash((e.message || 'Preview failed'), true);
         }
     };
 
@@ -230,13 +231,13 @@ const ContractTemplatesPage = () => {
                                 <div className="ctp__card-actions">
                                     <button className="ctp__btn ctp__btn--ghost" onClick={() => handleDownloadBlankPDF(t)}
                                         title="Preview filled with sample data">
-                                        👁 Preview
+                                        <Eye size={14} aria-hidden /> Preview
                                     </button>
                                     {canEdit && (
                                         <>
-                                            <button className="ctp__btn ctp__btn--edit" onClick={() => openEdit(t)}>✏️ Edit</button>
+                                            <button className="ctp__btn ctp__btn--edit" onClick={() => openEdit(t)}><Pencil size={14} aria-hidden /> Edit</button>
                                             {!t.is_default && (
-                                                <button className="ctp__btn ctp__btn--danger" onClick={() => setDelConfirm(t)}>🗑️</button>
+                                                <button className="ctp__btn ctp__btn--danger" onClick={() => setDelConfirm(t)} aria-label="Delete"><Trash2 size={14} /></button>
                                             )}
                                         </>
                                     )}
@@ -264,9 +265,9 @@ const ContractTemplatesPage = () => {
                                     className={`ctp__btn ${preview ? 'ctp__btn--primary' : 'ctp__btn--ghost'}`}
                                     onClick={() => setPreview((p) => !p)}
                                 >
-                                    {preview ? '◀ Editor' : '👁 Live Preview'}
+                                    {preview ? <><Pencil size={14} /> Editor</> : <><Eye size={14} /> Live Preview</>}
                                 </button>
-                                <button className="ctp__btn ctp__btn--icon" onClick={() => setEditing(null)}>✕</button>
+                                <button className="ctp__btn ctp__btn--icon" onClick={() => setEditing(null)} aria-label="Close"><X size={16} /></button>
                             </div>
                         </div>
 
@@ -308,7 +309,7 @@ const ContractTemplatesPage = () => {
 
                                 {/* Placeholder toolbar */}
                                 <div className="ctp__ph-section">
-                                    <p className="ctp__ph-label">📌 Click to insert placeholder at cursor position:</p>
+                                    <p className="ctp__ph-label"><Pin size={14} style={{ verticalAlign: 'middle' }} /> Click to insert placeholder at cursor position:</p>
                                     <div className="ctp__ph-chips">
                                         {PLACEHOLDER_LIST.map((p) => (
                                             <button key={p.key} className="ctp__chip" onClick={() => insertPlaceholder(p.key)}
@@ -336,7 +337,7 @@ const ContractTemplatesPage = () => {
                                         Cancel
                                     </button>
                                     <button className="ctp__btn ctp__btn--primary" onClick={handleSave} disabled={saving}>
-                                        {saving ? 'Saving…' : '💾 Save Template'}
+                                        {saving ? 'Saving…' : <><Save size={14} aria-hidden /> Save Template</>}
                                     </button>
                                 </div>
                             </div>
@@ -357,7 +358,7 @@ const ContractTemplatesPage = () => {
             {delConfirm && (
                 <div className="ctp__overlay" onClick={() => setDelConfirm(null)}>
                     <div className="ctp__confirm" onClick={(e) => e.stopPropagation()}>
-                        <h3>⚠️ Delete Template?</h3>
+                        <h3><AlertTriangle size={20} style={{ verticalAlign: 'middle' }} /> Delete Template?</h3>
                         <p>Are you sure you want to delete <strong>{delConfirm.name}</strong>?</p>
                         <p className="ctp__confirm-warn">This cannot be undone. Existing contracts using this template will keep their data.</p>
                         <div className="ctp__confirm-actions">

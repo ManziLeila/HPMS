@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import './ReportsPage.css'; // Shared styles
+import { Send, Trash2, Eye, Pencil, AlertTriangle } from 'lucide-react';
+import './ReportsPage.css';
 import { apiClient, API_BASE_URL } from '../api/client';
 import useAuth from '../hooks/useAuth.js';
 import { formatCurrency } from '../utils/payroll';
@@ -80,11 +81,11 @@ const PayrollManagementPage = () => {
         try {
             setActionMsg('Submitting to HR…');
             await apiClient.post(`/salaries/reports/monthly/submit`, { year, month }, { token });
-            setActionMsg('✅ Monthly payroll submitted to HR successfully');
+            setActionMsg('Monthly payroll submitted to HR successfully');
             setTimeout(() => setActionMsg(null), 5000);
             loadData();
         } catch (err) {
-            setActionMsg(`❌ ${err.response?.data?.message || err.message}`);
+            setActionMsg(`${err.response?.data?.message || err.message}`);
             setTimeout(() => setActionMsg(null), 8000);
         }
     };
@@ -146,12 +147,12 @@ const PayrollManagementPage = () => {
                 },
                 { token }
             );
-            setActionMsg('✅ Salary record updated!');
+            setActionMsg('Salary record updated!');
             setTimeout(() => setActionMsg(null), 4000);
             setEditingSalary(null);
             loadData();
         } catch (err) {
-            setActionMsg('❌ Failed to update: ' + (err.message || 'Unknown error'));
+            setActionMsg('Failed to update: ' + (err.message || 'Unknown error'));
         } finally {
             setEditLoading(false);
         }
@@ -162,12 +163,12 @@ const PayrollManagementPage = () => {
         try {
             setActionMsg('Deleting salary record…');
             await apiClient.delete(`/salaries/${salaryId}`, { token });
-            setActionMsg('✅ Record deleted!');
+            setActionMsg('Record deleted!');
             setTimeout(() => setActionMsg(null), 3000);
             setDeleteConfirm(null);
             loadData();
         } catch (err) {
-            setActionMsg('❌ Failed to delete: ' + (err.message || 'Unknown error'));
+            setActionMsg('Failed to delete: ' + (err.message || 'Unknown error'));
         }
     };
 
@@ -177,12 +178,12 @@ const PayrollManagementPage = () => {
             setActionMsg('Resetting period…');
             const query = new URLSearchParams({ year, month, frequency: filters.frequency }).toString();
             await apiClient.delete(`/salaries/reports/monthly/reset?${query}`, { token });
-            setActionMsg(`✅ Period reset successfully`);
+            setActionMsg('Period reset successfully');
             setTimeout(() => setActionMsg(null), 4000);
             setResetConfirm(false);
             loadData();
         } catch (err) {
-            setActionMsg('❌ Failed to reset: ' + (err.message || 'Unknown error'));
+            setActionMsg('Failed to reset: ' + (err.message || 'Unknown error'));
         }
     };
 
@@ -210,7 +211,7 @@ const PayrollManagementPage = () => {
                         disabled={loading || monthlyReport.length === 0}
                         style={{ backgroundColor: '#10b981', color: 'white' }}
                     >
-                        ✅ Submit Month to HR
+                        <Send size={16} aria-hidden /> Submit Month to HR
                     </button>
 
                     <button
@@ -219,7 +220,7 @@ const PayrollManagementPage = () => {
                         disabled={loading || monthlyReport.length === 0}
                         style={{ backgroundColor: '#dc2626', color: 'white' }}
                     >
-                        🗑️ Reset Period
+                        <Trash2 size={16} aria-hidden /> Reset Period
                     </button>
                 </div>
             </section>
@@ -254,11 +255,11 @@ const PayrollManagementPage = () => {
                                     <td><Badge status={row.hr_status || 'PENDING'} /></td>
                                     <td>
                                         <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
-                                            <button onClick={() => handleViewDetails(row)} className="reports-page__action-btn" style={{ background: '#3b82f6', color: 'white' }}>🔍 Details</button>
+                                            <button onClick={() => handleViewDetails(row)} className="reports-page__action-btn" style={{ background: '#3b82f6', color: 'white' }}><Eye size={16} aria-hidden /> Details</button>
                                             {row.hr_status !== 'HR_APPROVED' && (
-                                                <button onClick={() => handleEditSalary(row)} className="reports-page__action-btn" style={{ background: '#f59e0b', color: 'white' }}>✏️ Edit</button>
+                                                <button onClick={() => handleEditSalary(row)} className="reports-page__action-btn" style={{ background: '#f59e0b', color: 'white' }}><Pencil size={16} aria-hidden /> Edit</button>
                                             )}
-                                            <button onClick={() => setDeleteConfirm(row)} className="reports-page__action-btn" style={{ background: '#ef4444', color: 'white' }}>🗑️ Delete</button>
+                                            <button onClick={() => setDeleteConfirm(row)} className="reports-page__action-btn" style={{ background: '#ef4444', color: 'white' }}><Trash2 size={16} aria-hidden /> Delete</button>
                                         </div>
                                     </td>
                                 </tr>
@@ -336,7 +337,7 @@ const PayrollManagementPage = () => {
             {resetConfirm && (
                 <div className="modal-overlay" onClick={() => setResetConfirm(false)}>
                     <div className="modal-content" style={{ maxWidth: '400px' }}>
-                        <h3>⚠️ Wipe All Data?</h3>
+                        <h3><AlertTriangle size={20} aria-hidden /> Wipe All Data?</h3>
                         <p>This will delete ALL payroll records for {year}/{month}. This cannot be undone.</p>
                         <div className="modal-actions">
                             <button onClick={() => setResetConfirm(false)}>Cancel</button>

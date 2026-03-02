@@ -4,6 +4,10 @@ import bcrypt from 'bcryptjs';
 import { authenticator } from 'otplib';
 import { encryptField } from '../src/services/encryptionService.js';
 
+// Usage: node scripts/resetAdmin.js [email] [password]
+// In zsh, quote passwords that contain ! or other special chars, e.g.:
+//   node scripts/resetAdmin.js sysadmin@hcsolutions.com 'ChangeMeNow!2025'
+
 const [emailArg, passwordArg] = process.argv.slice(2);
 
 const ADMIN_EMAIL = (emailArg || 'sysadmin@hcsolutions.com').toLowerCase();

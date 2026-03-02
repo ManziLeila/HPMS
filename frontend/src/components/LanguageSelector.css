@@ -89,14 +89,14 @@
 
 /* Landing Page Specific Styles */
 .landing__nav .language-selector__button {
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    color: white;
-    backdrop-filter: blur(10px);
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    color: #0f172a;
+    backdrop-filter: none;
 }
 
 .landing__nav .language-selector__button:hover {
-    background: rgba(255, 255, 255, 0.15);
-    border-color: rgba(255, 255, 255, 0.3);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }

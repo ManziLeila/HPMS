@@ -26,14 +26,13 @@ export const getDashboardStats = async (req, res, next) => {
       [currentYear, currentMonth],
     );
 
-    // Get last 6 months data for chart
+    // Get all-time data for chart
     const chartData = await db.query(
       `SELECT
           DATE_TRUNC('month', pay_period) as month,
           COALESCE(SUM(gross_salary), 0) as payroll,
           COALESCE(SUM(gross_salary - paye), 0) as net
        FROM hpms_core.salaries
-       WHERE pay_period >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '5 months')
        GROUP BY DATE_TRUNC('month', pay_period)
        ORDER BY month ASC`,
     );

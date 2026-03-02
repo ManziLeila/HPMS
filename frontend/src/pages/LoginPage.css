@@ -1,17 +1,19 @@
 /* ═══════════════════════════════════════════════════
    LOGIN PAGE — HC Solutions HPMS
    Zero-scroll split layout: left brand | right form
+   Scope root/body overrides to login layout only so dashboard stays edge-to-edge.
 ═══════════════════════════════════════════════════ */
 
-/* Force the whole page to never scroll */
-
-html,
-body,
-#root {
+/* Only when login layout is mounted: constrain root for fixed full-viewport layout */
+body:has(.lp) {
   height: 100%;
   margin: 0;
   padding: 0;
   background: #f0f4f8;
+}
+
+html:has(.lp) {
+  height: 100%;
 }
 
 /* ── Root layout ────────────────────────────────── */
@@ -490,9 +492,8 @@ body,
 
 /* ── Mobile ─────────────────────────────────────── */
 @media (max-width: 700px) {
-  html,
-  body,
-  #root {
+  html:has(.lp),
+  body:has(.lp) {
     overflow: auto;
   }
   .lp {

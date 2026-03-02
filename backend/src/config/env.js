@@ -126,10 +126,27 @@ const config = {
 };
 
 if (config.isDevelopment) {
+  const dbUrl = config.database.url;
+  let maskUrl = dbUrl;
+  try {
+    const u = new URL(dbUrl);
+    if (u.password) {
+      maskUrl = dbUrl.replace(/^(.*:\/\/[^:]*:)([^@]+)(@.*)$/, '$1***$3');
+    }
+  } catch {
+    maskUrl = dbUrl.replace(/:[^:@]+@/, ':***@');
+  }
+  let dbUser = '';
+  try {
+    dbUser = new URL(config.database.url).username || '(none)';
+  } catch {
+    dbUser = '(parse failed)';
+  }
   console.warn('\n📋 Configuration loaded:');
   console.warn(`  Environment: ${config.nodeEnv}`);
   console.warn(`  Port: ${config.port}`);
-  console.warn(`  Database: ${config.database.url.replace(/:[^:@]+@/, ':***@')}`);
+  console.warn(`  Database: ${maskUrl}`);
+  console.warn(`  DB user: ${dbUser}`);
   console.warn(`  JWT: ${jwtConfig.secret ? 'Secret-based' : 'Key-based'}`);
   console.warn(`  CORS Origins: ${corsOrigins.join(', ')}`);
   console.warn(`  Log Level: ${config.logging.level}\n`);

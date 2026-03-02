@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Package, FileDown, Info, AlertTriangle } from 'lucide-react';
 import './ReportsPage.css';
 import { apiClient, API_BASE_URL } from '../api/client';
 import useAuth from '../hooks/useAuth.js';
@@ -134,10 +135,10 @@ const ReportsPage = () => {
       link.click();
       link.remove();
       URL.revokeObjectURL(link.href);
-      setActionMsg(`✅ Payslip ready for ${salary.full_name}`);
+      setActionMsg(`Success: Payslip ready for ${salary.full_name}`);
       setTimeout(() => setActionMsg(null), 4000);
     } catch (err) {
-      setActionMsg(`❌ ${err.message || 'Unable to download payslip'}`);
+      setActionMsg(`Error: ${err.message || 'Unable to download payslip'}`);
     }
   };
 
@@ -158,10 +159,10 @@ const ReportsPage = () => {
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);
-      setActionMsg('✅ Excel report downloaded');
+      setActionMsg('Success: Excel report downloaded');
       setTimeout(() => setActionMsg(null), 4000);
     } catch (err) {
-      setActionMsg(`❌ ${err.message || 'Unable to export report'}`);
+      setActionMsg(`Error: ${err.message || 'Unable to export report'}`);
       setTimeout(() => setActionMsg(null), 4000);
     }
   };
@@ -190,10 +191,10 @@ const ReportsPage = () => {
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);
-      setActionMsg('✅ Payslip archive downloaded');
+      setActionMsg('Success: Payslip archive downloaded');
       setTimeout(() => setActionMsg(null), 4000);
     } catch (err) {
-      setActionMsg(`❌ ${err.message || 'Unable to download archive'}`);
+      setActionMsg(`Error: ${err.message || 'Unable to download archive'}`);
       setTimeout(() => setActionMsg(null), 6000);
     }
   };
@@ -218,7 +219,7 @@ const ReportsPage = () => {
           alignItems: 'flex-start',
           gap: '10px',
         }}>
-          <span style={{ fontSize: '1.1rem', marginTop: '1px' }}>ℹ️</span>
+          <Info size={18} style={{ flexShrink: 0, marginTop: '1px' }} aria-hidden />
           <div>
             <strong>HR Workflow:</strong> This page shows individual salary records computed by the Finance Officer — for reference only.
             {' '}Your action is in <strong>Review Queue</strong>: once the Finance Officer groups salaries into a payroll batch and submits it, it will appear there for your verification.
@@ -295,7 +296,7 @@ const ReportsPage = () => {
             style={{ backgroundColor: '#3b82f6', marginLeft: '8px' }}
             title="Download all archived payslips as a ZIP"
           >
-            📦 Download All (ZIP)
+            <Package size={18} aria-hidden /> Download All (ZIP)
           </button>
 
         </div>
@@ -305,9 +306,9 @@ const ReportsPage = () => {
         <div
           style={{
             padding: '10px 16px', borderRadius: '8px', marginBottom: '16px',
-            background: actionMsg.startsWith('❌') ? '#fef2f2' : actionMsg.startsWith('✅') ? '#f0fdf4' : '#eff6ff',
-            border: `1px solid ${actionMsg.startsWith('❌') ? '#fca5a5' : actionMsg.startsWith('✅') ? '#86efac' : '#bfdbfe'}`,
-            color: actionMsg.startsWith('❌') ? '#991b1b' : actionMsg.startsWith('✅') ? '#166534' : '#1d4ed8',
+            background: actionMsg.startsWith('Error') ? '#fef2f2' : actionMsg.startsWith('Success') ? '#f0fdf4' : '#eff6ff',
+            border: `1px solid ${actionMsg.startsWith('Error') ? '#fca5a5' : actionMsg.startsWith('Success') ? '#86efac' : '#bfdbfe'}`,
+            color: actionMsg.startsWith('Error') ? '#991b1b' : actionMsg.startsWith('Success') ? '#166534' : '#1d4ed8',
             fontSize: '0.85rem', fontWeight: 500, cursor: 'pointer',
           }}
           onClick={() => setActionMsg(null)}
@@ -344,7 +345,7 @@ const ReportsPage = () => {
             <h3>Employee Payroll Details</h3>
           </div>
           {error && (
-            <p className="reports-page__status" style={{ color: '#dc2626' }}>⚠️ {error}</p>
+            <p className="reports-page__status" style={{ color: '#dc2626' }}><AlertTriangle size={16} aria-hidden /> {error}</p>
           )}
           {actionMsg && (
             <p className="reports-page__status">{actionMsg}</p>
@@ -396,7 +397,7 @@ const ReportsPage = () => {
                         className="reports-page__download"
                         title="Download payslip PDF"
                       >
-                        📄 Download
+                        <FileDown size={16} aria-hidden /> Download
                       </button>
                     </div>
                   </td>

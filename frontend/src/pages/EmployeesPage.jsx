@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Pencil, Trash2, AlertTriangle } from 'lucide-react';
 import { apiClient } from '../api/client';
 import useAuth from '../hooks/useAuth';
 import { useLanguage } from '../context/LanguageContext';
@@ -130,13 +131,13 @@ const EmployeesPage = () => {
                                         className="btn-edit"
                                         onClick={() => handleEdit(employee)}
                                     >
-                                        ✏️ {t('edit')}
+                                        <Pencil size={16} aria-hidden /> {t('edit')}
                                     </button>
                                     <button
                                         className="btn-delete"
                                         onClick={() => setDeleteConfirm(employee)}
                                     >
-                                        🗑️ {t('delete')}
+                                        <Trash2 size={16} aria-hidden /> {t('delete')}
                                     </button>
                                 </td>
                             </tr>
@@ -257,7 +258,7 @@ const EmployeesPage = () => {
             {deleteConfirm && (
                 <div className="modal-overlay" onClick={() => setDeleteConfirm(null)}>
                     <div className="modal-content modal-confirm" onClick={(e) => e.stopPropagation()}>
-                        <h2>⚠️ {t('confirmDelete')}</h2>
+                        <h2><AlertTriangle size={20} aria-hidden /> {t('confirmDelete')}</h2>
                         <p>
                             {t('deleteConfirmation')} <strong>{deleteConfirm.full_name}</strong>?
                         </p>

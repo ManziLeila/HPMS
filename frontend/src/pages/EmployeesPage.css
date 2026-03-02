@@ -293,8 +293,18 @@
         padding: 1rem;
     }
 
+    .page-header h1 {
+        font-size: 1.6rem;
+    }
+
+    .employees-table-container {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
     .employees-table {
         font-size: 0.875rem;
+        min-width: 600px;
     }
 
     .employees-table th,
@@ -309,5 +319,15 @@
     .btn-edit,
     .btn-delete {
         width: 100%;
+    }
+}
+
+@media (max-width: 480px) {
+    .employees-page {
+        padding: 0.75rem;
+    }
+
+    .page-header h1 {
+        font-size: 1.35rem;
     }
 }

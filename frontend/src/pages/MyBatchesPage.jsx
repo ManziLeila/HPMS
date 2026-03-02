@@ -1,22 +1,23 @@
 import { useCallback, useEffect, useState } from 'react';
+import { ClipboardList, Building2, Mail, Trash2, X, CheckCircle, Clock, XCircle, DollarSign } from 'lucide-react';
 import { apiClient } from '../api/client';
 import useAuth from '../hooks/useAuth';
 import { formatCurrency } from '../utils/payroll';
 import './MyBatchesPage.css';
 
 const STATUS_META = {
-    PENDING: { label: 'Awaiting HR', color: '#f59e0b', icon: '⏳' },
-    HR_APPROVED: { label: 'HR Verified', color: '#6366f1', icon: '✅' },
-    APPROVED: { label: 'MD Approved', color: '#10b981', icon: '🏦' },
-    REJECTED: { label: 'Rejected', color: '#ef4444', icon: '❌' },
-    SENT_TO_BANK: { label: 'Paid', color: '#0ea5e9', icon: '💸' },
+    PENDING: { label: 'Awaiting HR', color: '#f59e0b', Icon: Clock },
+    HR_APPROVED: { label: 'HR Verified', color: '#6366f1', Icon: CheckCircle },
+    APPROVED: { label: 'MD Approved', color: '#10b981', Icon: Building2 },
+    REJECTED: { label: 'Rejected', color: '#ef4444', Icon: XCircle },
+    SENT_TO_BANK: { label: 'Paid', color: '#0ea5e9', Icon: DollarSign },
 };
 
 const Badge = ({ status }) => {
-    const m = STATUS_META[status] || { label: status, color: '#94a3b8', icon: '•' };
+    const m = STATUS_META[status] || { label: status, color: '#94a3b8', Icon: null };
     return (
         <span className="mb__badge" style={{ background: m.color + '18', color: m.color, borderColor: m.color + '44' }}>
-            {m.icon} {m.label}
+            {m.Icon && <m.Icon size={14} aria-hidden />} {m.label}
         </span>
     );
 };
@@ -51,7 +52,7 @@ const MyBatchesPage = () => {
         setSendLoading(true);
         try {
             await apiClient.post('/payroll-batches/send-to-bank', { batchId }, { token });
-            setMsg({ type: 'ok', text: `✅ "${batchName}" sent to bank successfully!` });
+            setMsg({ type: 'ok', text: `"${batchName}" sent to bank successfully!` });
             load();
         } catch (e) {
             setMsg({ type: 'err', text: e.message || 'Failed to send to bank' });
@@ -67,7 +68,7 @@ const MyBatchesPage = () => {
         setEmailLoading(true);
         try {
             const res = await apiClient.post(`/payroll-batches/${batchId}/send-emails`, {}, { token });
-            setMsg({ type: 'ok', text: `✉️ ${res.message || 'Emails sent successfully!'}` });
+            setMsg({ type: 'ok', text: res.message || 'Emails sent successfully!' });
         } catch (e) {
             setMsg({ type: 'err', text: e.message || 'Failed to send emails' });
         } finally {
@@ -114,7 +115,7 @@ const MyBatchesPage = () => {
             {/* ── Message banner ─────────────────────────────────── */}
             {msg && (
                 <div className={`mb__msg mb__msg--${msg.type}`} onClick={() => setMsg(null)}>
-                    {msg.text} <span>✕</span>
+                    {msg.text} <button type="button" className="mb__msg-close" onClick={() => setMsg(null)} aria-label="Dismiss"><X size={16} /></button>
                 </div>
             )}
 
@@ -134,7 +135,7 @@ const MyBatchesPage = () => {
                     <p className="mb__empty">Loading your batches…</p>
                 ) : sorted.length === 0 ? (
                     <div className="mb__empty-state">
-                        <span>📋</span>
+                        <ClipboardList size={40} className="mb__empty-icon" aria-hidden />
                         <p>No batches yet. Go to <strong>Reports</strong> to create your first payroll batch.</p>
                     </div>
                 ) : (
@@ -168,7 +169,7 @@ const MyBatchesPage = () => {
                                                         disabled={sendLoading}
                                                         onClick={() => handleSendToBank(b.batch_id, b.batch_name)}
                                                     >
-                                                        🏦 Send to Bank
+                                                        <Building2 size={16} aria-hidden /> Send to Bank
                                                     </button>
                                                 )}
                                                 {['APPROVED', 'SENT_TO_BANK'].includes(b.status) && (
@@ -178,7 +179,7 @@ const MyBatchesPage = () => {
                                                         onClick={() => handleSendEmails(b.batch_id, b.batch_name)}
                                                         title="Send payslip emails to all employees"
                                                     >
-                                                        ✉️ Send Payslips
+                                                        <Mail size={16} aria-hidden /> Send Payslips
                                                     </button>
                                                 )}
                                                 {b.status === 'PENDING' && (
@@ -186,7 +187,7 @@ const MyBatchesPage = () => {
                                                         className="mb__btn mb__btn--del"
                                                         onClick={() => handleDelete(b.batch_id, b.batch_name)}
                                                     >
-                                                        🗑 Delete
+                                                        <Trash2 size={16} aria-hidden /> Delete
                                                     </button>
                                                 )}
                                                 {!['PENDING', 'APPROVED'].includes(b.status) && (

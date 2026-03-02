@@ -1,5 +1,6 @@
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
+import { Menu, X, AlertTriangle } from 'lucide-react';
 import Sidebar from './Sidebar';
 import LanguageSelector from './LanguageSelector';
 import NotificationBell from './NotificationBell';
@@ -14,6 +15,9 @@ const ShellLayout = () => {
   const { user, logout } = useAuth();
   const { t } = useLanguage();
   const [sessionWarn, setSessionWarn] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  const closeMenu = useCallback(() => setMenuOpen(false), []);
 
   const pageTitle = (() => {
     if (location.pathname === '/dashboard') return t('dashboard');
@@ -43,20 +47,43 @@ const ShellLayout = () => {
   });
 
   return (
-    <div className="app-shell">
-      <Sidebar />
-      <main className="app-shell__content">
+    <div className={`app-shell flex w-screen min-h-screen m-0 p-0${menuOpen ? ' app-shell--menu-open' : ''}`}>
+      <button
+        type="button"
+        className="app-shell__menu-btn"
+        onClick={() => setMenuOpen((o) => !o)}
+        aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+        aria-expanded={menuOpen}
+      >
+        {menuOpen ? <X size={24} /> : <Menu size={24} />}
+      </button>
+      <div
+        className="app-shell__overlay"
+        aria-hidden="true"
+        onClick={closeMenu}
+      />
+      <Sidebar onClose={closeMenu} />
+      <main className="app-shell__content flex-1 min-w-0 w-full m-0 p-0">
         <header className="app-shell__header">
           <div>
-            <p className="app-shell__eyebrow">{t('payrollManagementSystem')}</p>
+            <p className="app-shell__eyebrow">PAYROLL MANAGEMENT SYSTEM</p>
             <h1 className="app-shell__title">{pageTitle}</h1>
           </div>
           <div className="app-shell__user">
             <LanguageSelector />
             <NotificationBell />
-            <div>
+            <div className="app-shell__user-info">
               <p className="app-shell__user-email">{user?.email}</p>
               <p className="app-shell__user-session">Session: {user?.sessionId?.slice(0, 8)}</p>
+            </div>
+            <div
+              className="app-shell__avatar"
+              title={user?.fullName || user?.email}
+              aria-hidden
+            >
+              {user?.fullName
+                ? user.fullName.split(/\s+/).map((n) => n[0]).join('').slice(0, 2).toUpperCase()
+                : user?.email?.slice(0, 2).toUpperCase() || '?'}
             </div>
             <button type="button" className="app-shell__logout" onClick={handleLogout}>
               {t('logout')}
@@ -67,7 +94,7 @@ const ShellLayout = () => {
         {/* ── Session expiry warning banner ──────────────────── */}
         {sessionWarn && (
           <div className="app-shell__session-warn">
-            <span>⚠️</span>
+            <AlertTriangle size={20} className="app-shell__session-warn-icon" aria-hidden />
             <span>Your session will expire in <strong>2 minutes</strong> due to inactivity.</span>
             <button onClick={() => setSessionWarn(false)}>Stay Logged In</button>
           </div>

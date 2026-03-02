@@ -184,7 +184,7 @@ class PayrollBatchRepository {
     let query;
     let params;
 
-    if (userRole === 'FinanceOfficer') {
+    if (userRole === 'FinanceOfficer' || userRole === 'Admin') {
       query = `
         SELECT 
           COUNT(*) FILTER (WHERE status = 'PENDING') as pending_hr_review,

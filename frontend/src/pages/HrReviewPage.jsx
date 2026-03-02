@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { BarChart3, ClipboardList, Inbox, PartyPopper, DollarSign, Building2, MessageSquare, Check, X, FileText, Mail } from 'lucide-react';
 import { apiClient } from '../api/client';
 import useAuth from '../hooks/useAuth';
 import { formatCurrency } from '../utils/payroll';
@@ -145,7 +146,7 @@ const HrReviewPage = () => {
         try {
             await apiClient.post(`/salaries/${salaryId}/hr-review`, { action, comment }, { token });
             const approved = action === 'APPROVE';
-            setMsg({ type: 'ok', text: `Salary ${approved ? 'approved ✅' : 'rejected ❌'} — Finance Officer notified` });
+            setMsg({ type: 'ok', text: `Salary ${approved ? 'approved' : 'rejected'} — Finance Officer notified` });
 
             // Success: close and reload
             setSalDetail(null);
@@ -182,7 +183,7 @@ const HrReviewPage = () => {
             }
             const count = res?.updatedCount ?? selected.size;
             const action = bulkConfirm;
-            setMsg({ type: 'ok', text: `${count} salary record(s) ${action === 'APPROVE' ? 'approved ✅' : 'rejected ❌'} — Finance Officer(s) notified` });
+            setMsg({ type: 'ok', text: `${count} salary record(s) ${action === 'APPROVE' ? 'approved' : 'rejected'} — Finance Officer(s) notified` });
             setBulkConfirm(null); setBulkComment(''); setSelected(new Set());
             loadSalaries();
         } catch (e) {
@@ -198,7 +199,7 @@ const HrReviewPage = () => {
         try {
             if (emailModal === 'individual' && emailTarget) {
                 await apiClient.post(`/salaries/${emailTarget.salary_id}/send-email`, {}, { token });
-                setMsg({ type: 'ok', text: `Payslip email sent to ${emailTarget.full_name} ✉️` });
+                setMsg({ type: 'ok', text: `Payslip email sent to ${emailTarget.full_name}` });
             } else if (emailModal === 'batch') {
                 const approvedIds = salaries
                     .filter(s => s.hr_status === 'HR_APPROVED')
@@ -206,7 +207,7 @@ const HrReviewPage = () => {
                 await Promise.all(approvedIds.map(id =>
                     apiClient.post(`/salaries/${id}/send-email`, {}, { token })
                 ));
-                setMsg({ type: 'ok', text: `Payslip emails sent to ${approvedIds.length} employee(s) ✉️` });
+                setMsg({ type: 'ok', text: `Payslip emails sent to ${approvedIds.length} employee(s)` });
             }
             setEmailModal(null); setEmailTarget(null);
         } catch (e) {
@@ -231,7 +232,7 @@ const HrReviewPage = () => {
         setBatchActionLoading(true);
         try {
             await apiClient.post('/payroll-batches/hr-review', { batchId, action, comments }, { token });
-            setMsg({ type: 'ok', text: `Batch ${action === 'APPROVE' ? 'verified ✅' : 'rejected ❌'} successfully` });
+            setMsg({ type: 'ok', text: `Batch ${action === 'APPROVE' ? 'verified' : 'rejected'} successfully` });
             setDetail(null); setRejectTarget(null); setRejectReason('');
             loadBatches();
         } catch (e) {
@@ -269,7 +270,7 @@ const HrReviewPage = () => {
                         {approvedInPeriod > 0 && (
                             <button className="hrp__link-btn"
                                 onClick={() => setEmailModal('batch')}>
-                                ✉️ Send all payslip emails
+                                <Mail size={16} style={{ verticalAlign: 'middle' }} /> Send all payslip emails
                             </button>
                         )}
                     </p>
@@ -285,18 +286,18 @@ const HrReviewPage = () => {
 
             {msg && (
                 <div className={`hrp__msg hrp__msg--${msg.type}`} onClick={() => setMsg(null)}>
-                    {msg.text} <span className="hrp__msg-close">✕</span>
+                    {msg.text} <span className="hrp__msg-close" aria-hidden><X size={14} /></span>
                 </div>
             )}
 
             {/* ── Tabs ────────────────────────────────────────── */}
             <div className="hrp__tabs">
                 <button className={`hrp__tab ${tab === 'salaries' ? 'hrp__tab--active' : ''}`} onClick={() => setTab('salaries')}>
-                    📊 Individual Salary Records
+                    <BarChart3 size={18} aria-hidden /> Individual Salary Records
                     {pendingInPeriod > 0 && <span className="hrp__tab-badge hrp__tab-badge--warn">{pendingInPeriod} pending</span>}
                 </button>
                 <button className={`hrp__tab ${tab === 'batches' ? 'hrp__tab--active' : ''}`} onClick={() => setTab('batches')}>
-                    📋 Payroll Batches
+                    <ClipboardList size={18} aria-hidden /> Payroll Batches
                     {pendingBatches > 0 && <span className="hrp__tab-badge hrp__tab-badge--warn">{pendingBatches}</span>}
                 </button>
             </div>
@@ -345,11 +346,11 @@ const HrReviewPage = () => {
                                     <>
                                         <button className="hrp__btn hrp__btn--ok"
                                             onClick={() => { setBulkConfirm('APPROVE'); setBulkComment(''); }}>
-                                            ✓ Approve {selected.size} Selected
+                                            <Check size={16} aria-hidden /> Approve {selected.size} Selected
                                         </button>
                                         <button className="hrp__btn hrp__btn--err"
                                             onClick={() => { setBulkConfirm('REJECT'); setBulkComment(''); }}>
-                                            ✕ Reject {selected.size} Selected
+                                            <X size={16} aria-hidden /> Reject {selected.size} Selected
                                         </button>
                                     </>
                                 ) : pendingInPeriod > 0 ? (
@@ -358,13 +359,13 @@ const HrReviewPage = () => {
                                             setSelected(new Set(allPending.map(s => s.salary_id)));
                                             setBulkConfirm('APPROVE'); setBulkComment('');
                                         }}>
-                                        ✓ Approve All {pendingInPeriod} Pending
+                                        <Check size={16} aria-hidden /> Approve All {pendingInPeriod} Pending
                                     </button>
                                 ) : null}
                                 {approvedInPeriod > 0 && (
                                     <button className="hrp__btn hrp__btn--email"
                                         onClick={() => setEmailModal('batch')}>
-                                        ✉️ Send All Payslip Emails ({approvedInPeriod})
+                                        <Mail size={16} style={{ verticalAlign: 'middle' }} /> Send All Payslip Emails ({approvedInPeriod})
                                     </button>
                                 )}
                             </div>
@@ -375,7 +376,7 @@ const HrReviewPage = () => {
                         <p className="hrp__empty">Loading salary records…</p>
                     ) : salaries.length === 0 ? (
                         <div className="hrp__empty-state">
-                            <span>📭</span>
+                            <span aria-hidden><Inbox size={20} /></span>
                             <p>No salary records found for {salFilters.month}/{salFilters.year}.</p>
                             <small>Try a different month or ask the Finance Officer to compute salaries.</small>
                         </div>
@@ -430,19 +431,19 @@ const HrReviewPage = () => {
                                                                 <button className="hrp__btn hrp__btn--ok"
                                                                     disabled={actionLoading}
                                                                     onClick={() => reviewSingle(s.salary_id, 'APPROVE', '')}>
-                                                                    ✓
+                                                                    <Check size={16} aria-hidden />
                                                                 </button>
                                                                 <button className="hrp__btn hrp__btn--err"
                                                                     disabled={actionLoading}
                                                                     onClick={() => { setQuickReject(s); setQuickRejectComment(''); }}>
-                                                                    ✕
+                                                                    <X size={16} aria-hidden />
                                                                 </button>
                                                             </>
                                                         )}
                                                         {status === 'HR_APPROVED' && (
                                                             <button className="hrp__btn hrp__btn--email"
                                                                 onClick={() => { setEmailTarget(s); setEmailModal('individual'); }}>
-                                                                ✉️
+                                                                <Mail size={16} aria-hidden />
                                                             </button>
                                                         )}
                                                     </div>
@@ -471,7 +472,7 @@ const HrReviewPage = () => {
                     {batchLoading ? <p className="hrp__empty">Loading queue…</p>
                         : batches.length === 0 ? (
                             <div className="hrp__empty-state">
-                                <span>🎉</span>
+                                <span aria-hidden><PartyPopper size={20} /></span>
                                 <p>No pending batches — you're all caught up!</p>
                             </div>
                         ) : (
@@ -496,9 +497,9 @@ const HrReviewPage = () => {
                                                     <div className="hrp__actions">
                                                         <button className="hrp__btn hrp__btn--view" onClick={() => openDetail(b)}>View</button>
                                                         <button className="hrp__btn hrp__btn--ok" disabled={batchActionLoading}
-                                                            onClick={() => submitBatch(b.batch_id, 'APPROVE')}>✓ Verify</button>
+                                                            onClick={() => submitBatch(b.batch_id, 'APPROVE')}><Check size={14} aria-hidden /> Verify</button>
                                                         <button className="hrp__btn hrp__btn--err" disabled={batchActionLoading}
-                                                            onClick={() => { setRejectTarget(b); setRejectReason(''); }}>✕ Reject</button>
+                                                            onClick={() => { setRejectTarget(b); setRejectReason(''); }}><X size={14} aria-hidden /> Reject</button>
                                                     </div>
                                                 </td>
                                             </tr>
@@ -516,7 +517,7 @@ const HrReviewPage = () => {
             {salDetail && (
                 <div className="hrp__overlay" onClick={closeSalDetail}>
                     <div className="hrp__modal hrp__modal--salary-full" onClick={e => e.stopPropagation()}>
-                        <button className="hrp__modal-close" onClick={closeSalDetail}>✕</button>
+                        <button className="hrp__modal-close" onClick={closeSalDetail} aria-label="Close"><X size={20} /></button>
                         <div className="hrp__modal-header">
                             <p className="hrp__eyebrow">Salary Record — Full Breakdown</p>
                             <h2>{salDetail.full_name}</h2>
@@ -530,7 +531,7 @@ const HrReviewPage = () => {
                             <div className="hrp__sal-full-body">
                                 {/* EARNINGS */}
                                 <div className="hrp__breakdown-section">
-                                    <p className="hrp__breakdown-title">💰 Earnings</p>
+                                    <p className="hrp__breakdown-title"><DollarSign size={16} style={{ verticalAlign: 'middle' }} /> Earnings</p>
                                     <div className="hrp__breakdown-grid">
                                         {[['Basic Salary', d?.base_salary],
                                         ['Transport Allowance', d?.transport_allowance],
@@ -553,7 +554,7 @@ const HrReviewPage = () => {
                                 </div>
                                 {/* DEDUCTIONS */}
                                 <div className="hrp__breakdown-section">
-                                    <p className="hrp__breakdown-title">📋 Employee Deductions</p>
+                                    <p className="hrp__breakdown-title"><ClipboardList size={16} style={{ verticalAlign: 'middle' }} /> Employee Deductions</p>
                                     <div className="hrp__breakdown-grid">
                                         {[['PAYE Tax', d?.paye ?? salDetail.paye],
                                         ['RSSB Pension (5%)', d?.rssb_pension],
@@ -578,7 +579,7 @@ const HrReviewPage = () => {
                                 </div>
                                 {/* EMPLOYER */}
                                 <div className="hrp__breakdown-section">
-                                    <p className="hrp__breakdown-title">🏢 Employer Contributions</p>
+                                    <p className="hrp__breakdown-title"><Building2 size={16} style={{ verticalAlign: 'middle' }} /> Employer Contributions</p>
                                     <div className="hrp__breakdown-grid">
                                         <div className="hrp__bd-row hrp__bd-row--total">
                                             <span className="hrp__bd-label">Total Employer Contribution</span>
@@ -591,7 +592,7 @@ const HrReviewPage = () => {
                                 {/* HR COMMENT */}
                                 <div className="hrp__breakdown-section">
                                     <p className="hrp__breakdown-title">
-                                        💬 Note to Finance Officer
+                                        <MessageSquare size={14} style={{ verticalAlign: 'middle' }} /> Note to Finance Officer
                                         <span style={{ fontWeight: 400, color: '#94a3b8', marginLeft: 8 }}>(optional)</span>
                                     </p>
                                     <div style={{ padding: '12px 16px' }}>
@@ -614,19 +615,19 @@ const HrReviewPage = () => {
                                     <button className="hrp__btn hrp__btn--err hrp__btn--lg"
                                         disabled={actionLoading}
                                         onClick={() => reviewSingle(salDetail.salary_id, 'REJECT', hrComment)}>
-                                        {actionLoading ? '…' : '✕ Reject'}
+                                        {actionLoading ? '…' : <><X size={14} /> Reject</>}
                                     </button>
                                     <button className="hrp__btn hrp__btn--ok hrp__btn--lg"
                                         disabled={actionLoading}
                                         onClick={() => reviewSingle(salDetail.salary_id, 'APPROVE', hrComment)}>
-                                        {actionLoading ? '…' : '✓ Approve'}
+                                        {actionLoading ? '…' : <><Check size={14} /> Approve</>}
                                     </button>
                                 </>
                             )}
                             {salDetail.hr_status === 'HR_APPROVED' && (
                                 <button className="hrp__btn hrp__btn--email hrp__btn--lg"
                                     onClick={() => { closeSalDetail(); setEmailTarget(salDetail); setEmailModal('individual'); }}>
-                                    ✉️ Send Payslip Email
+                                    <Mail size={16} style={{ verticalAlign: 'middle' }} /> Send Payslip Email
                                 </button>
                             )}
                         </div>
@@ -640,10 +641,10 @@ const HrReviewPage = () => {
             {bulkConfirm && (
                 <div className="hrp__overlay" onClick={() => setBulkConfirm(null)}>
                     <div className="hrp__modal hrp__modal--reject" onClick={e => e.stopPropagation()}>
-                        <button className="hrp__modal-close" onClick={() => setBulkConfirm(null)}>✕</button>
+                        <button className="hrp__modal-close" onClick={() => setBulkConfirm(null)} aria-label="Close"><X size={20} /></button>
                         <div className="hrp__modal-header">
                             <p className="hrp__eyebrow">{bulkConfirm === 'APPROVE' ? 'Bulk Approval' : 'Bulk Rejection'}</p>
-                            <h2>{bulkConfirm === 'APPROVE' ? '✓ Approve' : '✕ Reject'} {selected.size} Record(s)</h2>
+                            <h2>{bulkConfirm === 'APPROVE' ? <><Check size={18} /> Approve</> : <><X size={18} /> Reject</>} {selected.size} Record(s)</h2>
                             <p className="hrp__modal-meta">
                                 {salFilters.month}/{salFilters.year} · The Finance Officer(s) will be notified immediately.
                             </p>
@@ -679,8 +680,8 @@ const HrReviewPage = () => {
                                 onClick={reviewBulk}>
                                 {actionLoading ? 'Processing…'
                                     : bulkConfirm === 'APPROVE'
-                                        ? `✓ Confirm Approve ${selected.size}`
-                                        : `✕ Confirm Reject ${selected.size}`}
+                                        ? <><Check size={14} /> Confirm Approve {selected.size}</>
+                                        : <><X size={14} /> Confirm Reject {selected.size}</>}
                             </button>
                         </div>
                     </div>
@@ -693,10 +694,10 @@ const HrReviewPage = () => {
             {emailModal && (
                 <div className="hrp__overlay" onClick={() => { setEmailModal(null); setEmailTarget(null); }}>
                     <div className="hrp__modal hrp__modal--reject" onClick={e => e.stopPropagation()}>
-                        <button className="hrp__modal-close" onClick={() => { setEmailModal(null); setEmailTarget(null); }}>✕</button>
+                        <button className="hrp__modal-close" onClick={() => { setEmailModal(null); setEmailTarget(null); }} aria-label="Close"><X size={20} /></button>
                         <div className="hrp__modal-header">
                             <p className="hrp__eyebrow">Send Payslip Email</p>
-                            <h2>{emailModal === 'individual' ? `✉️ Send to ${emailTarget?.full_name}` : `✉️ Send to All ${approvedInPeriod} Approved`}</h2>
+                            <h2>{emailModal === 'individual' ? <><Mail size={18} /> Send to {emailTarget?.full_name}</> : <><Mail size={18} /> Send to All {approvedInPeriod} Approved</>}</h2>
                             <p className="hrp__modal-meta">
                                 {emailModal === 'individual'
                                     ? `A payslip email will be sent to ${emailTarget?.email}`
@@ -705,7 +706,7 @@ const HrReviewPage = () => {
                         </div>
                         <div style={{ padding: '20px 28px' }}>
                             <div className="hrp__email-preview">
-                                <span>📄</span>
+                                <span aria-hidden><FileText size={20} /></span>
                                 <div>
                                     <strong>What gets sent:</strong>
                                     <p>Each employee receives their personally addressed payslip attached to the email, with salary breakdown and net pay amount.</p>
@@ -715,7 +716,7 @@ const HrReviewPage = () => {
                         <div className="hrp__modal-footer">
                             <button className="hrp__btn" onClick={() => { setEmailModal(null); setEmailTarget(null); }}>Cancel</button>
                             <button className="hrp__btn hrp__btn--email hrp__btn--lg" disabled={emailSending} onClick={sendEmail}>
-                                {emailSending ? 'Sending…' : `✉️ Send ${emailModal === 'batch' ? 'All ' + approvedInPeriod + ' Emails' : 'Email'}`}
+                                {emailSending ? 'Sending…' : <><Mail size={14} /> Send {emailModal === 'batch' ? 'All ' + approvedInPeriod + ' Emails' : 'Email'}</>}
                             </button>
                         </div>
                     </div>
@@ -728,7 +729,7 @@ const HrReviewPage = () => {
             {detail && (
                 <div className="hrp__overlay" onClick={() => setDetail(null)}>
                     <div className="hrp__modal hrp__modal--detail" onClick={e => e.stopPropagation()}>
-                        <button className="hrp__modal-close" onClick={() => setDetail(null)}>✕</button>
+                        <button className="hrp__modal-close" onClick={() => setDetail(null)} aria-label="Close"><X size={20} /></button>
                         <div className="hrp__modal-header">
                             <p className="hrp__eyebrow">HR Audit View</p>
                             <h2>{detail.batch_name}</h2>
@@ -767,11 +768,11 @@ const HrReviewPage = () => {
                         <div className="hrp__modal-footer">
                             <button className="hrp__btn hrp__btn--err hrp__btn--lg"
                                 onClick={() => { setRejectTarget(detail); setDetail(null); }} disabled={batchActionLoading}>
-                                ✕ Reject Batch
+                                <X size={16} style={{ verticalAlign: 'middle' }} /> Reject Batch
                             </button>
                             <button className="hrp__btn hrp__btn--ok hrp__btn--lg"
                                 onClick={() => submitBatch(detail.batch_id, 'APPROVE')} disabled={batchActionLoading}>
-                                {batchActionLoading ? 'Processing…' : '✓ Verify & Approve'}
+                                {batchActionLoading ? 'Processing…' : <><Check size={14} /> Verify & Approve</>}
                             </button>
                         </div>
                     </div>
@@ -784,10 +785,10 @@ const HrReviewPage = () => {
             {quickReject && (
                 <div className="hrp__overlay" onClick={() => setQuickReject(null)}>
                     <div className="hrp__modal hrp__modal--reject" onClick={e => e.stopPropagation()}>
-                        <button className="hrp__modal-close" onClick={() => setQuickReject(null)}>✕</button>
+                        <button className="hrp__modal-close" onClick={() => setQuickReject(null)} aria-label="Close"><X size={20} /></button>
                         <div className="hrp__modal-header">
                             <p className="hrp__eyebrow">Reject Salary Record</p>
-                            <h2>✕ Reject — {quickReject.full_name}</h2>
+                            <h2><X size={18} style={{ verticalAlign: 'middle' }} /> Reject — {quickReject.full_name}</h2>
                             <p className="hrp__modal-meta">
                                 {fmtPeriod(quickReject.pay_period)} &nbsp;·&nbsp; Gross: <strong>{formatCurrency(quickReject.gross_salary)}</strong>
                             </p>
@@ -818,7 +819,7 @@ const HrReviewPage = () => {
                                     setQuickReject(null);
                                     await reviewSingle(s.salary_id, 'REJECT', quickRejectComment);
                                 }}>
-                                {actionLoading ? 'Rejecting…' : '✕ Confirm Rejection'}
+                                {actionLoading ? 'Rejecting…' : <><X size={14} /> Confirm Rejection</>}
                             </button>
                         </div>
                     </div>
@@ -831,7 +832,7 @@ const HrReviewPage = () => {
             {rejectTarget && (
                 <div className="hrp__overlay" onClick={() => setRejectTarget(null)}>
                     <div className="hrp__modal hrp__modal--reject" onClick={e => e.stopPropagation()}>
-                        <button className="hrp__modal-close" onClick={() => setRejectTarget(null)}>✕</button>
+                        <button className="hrp__modal-close" onClick={() => setRejectTarget(null)} aria-label="Close"><X size={20} /></button>
                         <div className="hrp__modal-header">
                             <p className="hrp__eyebrow">Rejection Notice</p>
                             <h2>Reject Batch</h2>
@@ -856,7 +857,7 @@ const HrReviewPage = () => {
                             <button className="hrp__btn hrp__btn--err hrp__btn--lg"
                                 disabled={!rejectReason.trim() || batchActionLoading}
                                 onClick={() => submitBatch(rejectTarget.batch_id, 'REJECT', rejectReason)}>
-                                {batchActionLoading ? 'Sending…' : '✕ Confirm Rejection'}
+                                {batchActionLoading ? 'Sending…' : <><X size={14} /> Confirm Rejection</>}
                             </button>
                         </div>
                     </div>
