@@ -16,6 +16,8 @@ import EmailSettingsPage from './pages/EmailSettingsPage.jsx';
 import SettingsPage from './pages/SettingsPage.jsx';
 import MyBatchesPage from './pages/MyBatchesPage.jsx';
 import PayrollManagementPage from './pages/PayrollManagementPage.jsx';
+import ClientsPage from './pages/ClientsPage.jsx';
+import ClientEmployeesPage from './pages/ClientEmployeesPage.jsx';
 import './App.css';
 
 const App = () => (
@@ -31,6 +33,8 @@ const App = () => (
     >
       <Route path="/home" element={<Navigate to="/dashboard" replace />} />
       <Route path="/dashboard" element={<DashboardPage />} />
+      <Route path="/clients" element={<ClientsPage />} />
+      <Route path="/clients/:clientId" element={<ClientEmployeesPage />} />
       <Route path="/employees" element={<EmployeesPage />} />
       <Route path="/employees/new" element={<EmployeeFormPage />} />
       <Route path="/payroll-run" element={<PayrollManagementPage />} />

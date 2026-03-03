@@ -57,7 +57,11 @@ const contractRepo = {
     /* ── Expiring within N days ─────────────────────────────────── */
     async findExpiring(days = 30) {
         const { rows } = await db.query(
-            `SELECT c.*, e.full_name, e.email, e.department AS emp_department
+            `SELECT c.*,
+                    e.full_name,
+                    e.email,
+                    e.department AS emp_department,
+                    GREATEST(0, (c.end_date::date - CURRENT_DATE))::int AS days_remaining
        FROM hpms_core.contracts c
        JOIN hpms_core.employees e ON e.employee_id = c.employee_id
        WHERE c.status = 'active'

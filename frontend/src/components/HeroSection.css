@@ -125,6 +125,7 @@
   cursor: pointer;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
   border: none;
+  text-decoration: none;
 }
 
 .hero__btn--primary {

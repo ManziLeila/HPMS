@@ -9,8 +9,11 @@ package-lock.json
 # Environment files - NEVER commit these!
 .env
 .env.local
+.env.shared
 .env.*.local
 backend/.env
+backend/.env.shared
+backend/.env.local
 frontend/.env
 
 # Logs

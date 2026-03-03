@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Mail, FileText, Save, CheckCircle, X, Pencil, AlertTriangle, ChevronRight } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Mail, FileText, Save, CheckCircle, X, Pencil, AlertTriangle, ChevronRight, Building2 } from 'lucide-react';
 import { apiClient } from '../api/client';
 import useAuth from '../hooks/useAuth';
 import './ContractsPage.css';
@@ -36,12 +37,16 @@ const BLANK = {
 /* ── main ─────────────────────────────────────────────────────── */
 const ContractsPage = () => {
     const { token, user } = useAuth();
+    const navigate = useNavigate();
     const canEdit = ['FinanceOfficer', 'HR', 'Admin'].includes(user?.role);
 
+    const [tab, setTab] = useState('employee'); // 'employee' | 'client'
     const [contracts, setContracts] = useState([]);
+    const [clientContracts, setClientContracts] = useState([]);
     const [stats, setStats] = useState({});
     const [expiring, setExpiring] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [loadingClient, setLoadingClient] = useState(false);
     const [filter, setFilter] = useState('');   // status filter
     const [search, setSearch] = useState('');
     const [msg, setMsg] = useState(null);
@@ -75,6 +80,23 @@ const ContractsPage = () => {
     }, [token]);
 
     useEffect(() => { load(); }, [load]);
+
+    const loadClientContracts = useCallback(async () => {
+        if (!token) return;
+        setLoadingClient(true);
+        try {
+            const res = await apiClient.get('/client-contracts', { token });
+            setClientContracts(res.data || []);
+        } catch (e) {
+            setMsg({ type: 'err', text: e.message });
+        } finally {
+            setLoadingClient(false);
+        }
+    }, [token]);
+
+    useEffect(() => {
+        if (tab === 'client') loadClientContracts();
+    }, [tab, loadClientContracts]);
 
     /* ── filter + search ──────────────────────────────────────────── */
     const visible = contracts.filter((c) => {
@@ -139,6 +161,86 @@ const ContractsPage = () => {
 
     return (
         <div className="cp">
+            {/* ── tabs ──────────────────────────────────────────────────── */}
+            <div className="cp__tabs">
+                <button
+                    type="button"
+                    className={`cp__tab ${tab === 'employee' ? 'cp__tab--active' : ''}`}
+                    onClick={() => setTab('employee')}
+                >
+                    <FileText size={18} aria-hidden /> Employee contracts
+                </button>
+                <button
+                    type="button"
+                    className={`cp__tab ${tab === 'client' ? 'cp__tab--active' : ''}`}
+                    onClick={() => setTab('client')}
+                >
+                    <Building2 size={18} aria-hidden /> Client contracts
+                </button>
+            </div>
+
+            {tab === 'client' ? (
+                /* ── client contracts table ───────────────────────────── */
+                <section className="cp__section">
+                    {loadingClient ? (
+                        <p className="cp__empty">Loading client contracts…</p>
+                    ) : clientContracts.length === 0 ? (
+                        <div className="cp__empty-state">
+                            <Building2 size={40} className="cp__empty-icon" aria-hidden />
+                            <p>No client contracts. Add one from a client&apos;s page (Clients → select client → Add client contract).</p>
+                            <button type="button" className="cp__btn cp__btn--primary" style={{ marginTop: 12 }} onClick={() => navigate('/clients')}>
+                                Go to Clients
+                            </button>
+                        </div>
+                    ) : (
+                        <div className="cp__table-wrap">
+                            <table className="cp__table">
+                                <thead>
+                                    <tr>
+                                        <th>Client</th>
+                                        <th>Type</th>
+                                        <th>Start</th>
+                                        <th>Ends</th>
+                                        <th>Days Left</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {clientContracts.map((c) => {
+                                        const days = daysUntil(c.end_date);
+                                        const meta = STATUS_META[c.status] || { label: c.status, color: '#94a3b8' };
+                                        return (
+                                            <tr key={`${c.client_id}-${c.contract_id}`}>
+                                                <td><p className="cp__name">{c.client_name}</p></td>
+                                                <td><span className="cp__type-badge">{c.contract_type}</span></td>
+                                                <td>{c.start_date?.slice(0, 10)}</td>
+                                                <td>{c.end_date ? c.end_date.slice(0, 10) : <em>—</em>}</td>
+                                                <td>
+                                                    {days !== null ? (
+                                                        <span className={`cp__expiry ${urgencyClass(days)}`}>
+                                                            {days < 0 ? `${Math.abs(days)}d ago` : `${days}d`}
+                                                        </span>
+                                                    ) : <em>—</em>}
+                                                </td>
+                                                <td>
+                                                    <span className="cp__status-badge" style={{ color: meta.color, background: meta.color + '18', borderColor: meta.color + '44' }}>
+                                                        {meta.label}
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <button className="cp__btn cp__btn--sm" onClick={() => navigate(`/clients/${c.client_id}`)}>View client</button>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+                </section>
+            ) : (
+                <>
             {/* ── stat cards ──────────────────────────────────────────── */}
             <section className="cp__stats">
                 {[
@@ -405,6 +507,8 @@ const ContractsPage = () => {
                         </div>
                     </div>
                 </div>
+            )}
+                </>
             )}
         </div>
     );

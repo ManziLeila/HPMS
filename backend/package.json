@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "cross-env NODE_ENV=development nodemon src/server.js",
     "start": "cross-env NODE_ENV=production node src/server.js",
+    "env:shared": "node scripts/use-env.js shared",
+    "env:local": "node scripts/use-env.js local",
     "lint": "eslint \"src/**/*.{js,jsx}\"",
     "format": "prettier --write \"src/**/*.{js,jsx,json}\"",
     "test": "cross-env NODE_ENV=test jest --runInBand",
@@ -23,6 +25,7 @@
     "dotenv": "^17.2.3",
     "exceljs": "^4.4.0",
     "express": "^5.1.0",
+    "express-rate-limit": "^8.2.1",
     "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.2",
     "jszip": "^3.10.1",

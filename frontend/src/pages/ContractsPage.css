@@ -13,6 +13,38 @@
     margin: 0 0 4px;
 }
 
+/* ── tabs ────────────────────────────────────────────────────── */
+.cp__tabs {
+    display: flex;
+    gap: 8px;
+    border-bottom: 1px solid #e2e8f0;
+    padding-bottom: 0;
+}
+
+.cp__tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 20px;
+    background: none;
+    border: none;
+    border-bottom: 3px solid transparent;
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: #64748b;
+    cursor: pointer;
+    margin-bottom: -1px;
+}
+
+.cp__tab:hover {
+    color: #1e293b;
+}
+
+.cp__tab--active {
+    color: #f5911f;
+    border-bottom-color: #f5911f;
+}
+
 /* ── stat cards ──────────────────────────────────────────────── */
 .cp__stats {
     display: grid;

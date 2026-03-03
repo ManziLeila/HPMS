@@ -1,4 +1,5 @@
 import contractRepo from '../repositories/contractRepo.js';
+import clientContractRepo from '../repositories/clientContractRepo.js';
 import nodemailer from 'nodemailer';
 import logger from '../config/logger.js';
 
@@ -101,7 +102,48 @@ const contractService = {
     stats: () => contractRepo.stats(),
 
     /* Expiring contracts dashboard endpoint */
-    expiring: (days = 30) => contractRepo.findExpiring(days),
+    async expiring(days = 30) {
+        const [employeeContracts, clientContracts] = await Promise.all([
+            contractRepo.findExpiring(days),
+            clientContractRepo.findExpiring(days),
+        ]);
+
+        const normalized = [
+            // Employee contracts
+            ...employeeContracts.map((c) => ({
+                type: 'employee',
+                contract_id: c.contract_id,
+                employee_id: c.employee_id,
+                employee_name: c.full_name,
+                client_id: c.client_id ?? null,
+                contract_type: c.contract_type,
+                start_date: c.start_date,
+                end_date: c.end_date,
+                status: c.status,
+                days_remaining: c.days_remaining ?? null,
+            })),
+            // Client contracts
+            ...clientContracts.map((c) => ({
+                type: 'client',
+                contract_id: c.contract_id,
+                client_id: c.client_id,
+                client_name: c.client_name,
+                contract_type: c.contract_type,
+                start_date: c.start_date,
+                end_date: c.end_date,
+                status: c.status,
+                days_remaining: c.days_remaining ?? null,
+            })),
+        ];
+
+        // Sort by soonest end date first
+        normalized.sort((a, b) => {
+            if (!a.end_date || !b.end_date) return 0;
+            return new Date(a.end_date) - new Date(b.end_date);
+        });
+
+        return normalized;
+    },
 
     /* ── Run expiry notifications (call via job / endpoint) ────── */
     async runNotifications() {

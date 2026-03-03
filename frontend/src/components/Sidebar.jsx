@@ -1,4 +1,4 @@
-import { NavLink } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
   Users,
@@ -21,7 +21,7 @@ import './Sidebar.css';
 const ROUTE_MAP = {
   FinanceOfficer: [
     { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { path: '/employees', label: 'Employees', icon: Users },
+    { path: '/clients', label: 'Clients', icon: Users },
     { path: '/employees/new', label: 'Employee Form', icon: UserPlus },
     { path: '/bulk-upload', label: 'Bulk Upload', icon: Upload },
     { path: '/payroll-run', label: 'Payroll Run', icon: Calculator },
@@ -36,7 +36,7 @@ const ROUTE_MAP = {
   ],
   HR: [
     { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { path: '/employees', label: 'Employees', icon: Users },
+    { path: '/clients', label: 'Clients', icon: Users },
     { path: '/contracts', label: 'Contracts', icon: FileSignature },
     { path: '/contract-templates', label: 'Contract Templates', icon: Pencil },
     { path: '/hr-review', label: 'HR Review', icon: CheckSquare },
@@ -46,6 +46,7 @@ const ROUTE_MAP = {
   ],
   ManagingDirector: [
     { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { path: '/clients', label: 'Clients', icon: Users },
     { path: '/md-approval', label: 'MD Approval', icon: ShieldCheck },
     { path: '/contracts', label: 'Contracts', icon: FileSignature },
     { path: '/reports', label: 'Reports', icon: FileText },
@@ -53,7 +54,7 @@ const ROUTE_MAP = {
   ],
   Admin: [
     { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { path: '/employees', label: 'Employees', icon: Users },
+    { path: '/clients', label: 'Clients', icon: Users },
     { path: '/employees/new', label: 'Employee Form', icon: UserPlus },
     { path: '/bulk-upload', label: 'Bulk Upload', icon: Upload },
     { path: '/payroll-run', label: 'Payroll Run', icon: Calculator },
@@ -91,6 +92,7 @@ const STATUS_COLORS = {
 
 const Sidebar = ({ onClose }) => {
   const { user } = useAuth();
+  const location = useLocation();
   const role = user?.role || 'Employee';
   const routes = ROUTE_MAP[role] || ROUTE_MAP.Employee;
 
@@ -116,10 +118,11 @@ const Sidebar = ({ onClose }) => {
           <NavLink
             key={route.path}
             to={route.path}
-            end={route.path === '/employees'}
-            className={({ isActive }) =>
-              isActive ? 'sidebar__link sidebar__link--active' : 'sidebar__link'
-            }
+            end={route.path === '/clients'}
+            className={({ isActive }) => {
+              const clientsActive = route.path === '/clients' && (isActive || location.pathname.startsWith('/clients/'));
+              return clientsActive || isActive ? 'sidebar__link sidebar__link--active' : 'sidebar__link';
+            }}
             onClick={() => onClose?.()}
           >
             <route.icon className="sidebar__link-icon" size={18} />

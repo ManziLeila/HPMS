@@ -1,9 +1,11 @@
 .employees-page {
     padding: 2.5rem 1.5rem 3rem 1.5rem;
-    max-width: 1400px;
-    margin: 0 auto;
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
     background: linear-gradient(120deg, #f8fafc 60%, #e0e7ef 100%);
     min-height: 100vh;
+    box-sizing: border-box;
 }
 
 .page-header {

@@ -13,6 +13,10 @@ const createEmployeeSchema = z.object({
   bankAccountNumber: z.string().min(6).optional(),
   temporaryPassword: z.string().min(10).optional(),
   rssbNumber: z.string().max(20).optional(),
+  clientId: z.coerce.number().int().positive().optional().nullable(),
+  phoneNumber: z.string().max(50).optional().nullable().transform(v => v || null),
+  bankName: z.string().max(200).optional().nullable().transform(v => v || null),
+  accountHolderName: z.string().max(200).optional().nullable().transform(v => v || null),
 });
 
 export const createEmployee = async (req, res, next) => {
@@ -38,6 +42,10 @@ export const createEmployee = async (req, res, next) => {
       bankAccountEnc: encryptedBank,
       role: payload.role,
       rssbNumber: payload.rssbNumber,
+      clientId: payload.clientId ?? undefined,
+      phoneNumber: payload.phoneNumber,
+      bankName: payload.bankName,
+      accountHolderName: payload.accountHolderName,
     });
 
     await auditService.log({
@@ -86,6 +94,18 @@ export const listEmployees = async (req, res, next) => {
   }
 };
 
+export const listEmployeesByClient = async (req, res, next) => {
+  try {
+    const clientId = Number(req.params.clientId);
+    const limit = Number(req.query.limit) || 25;
+    const offset = Number(req.query.offset) || 0;
+    const employees = await userService.listEmployeesByClient(clientId, { limit, offset });
+    res.json({ data: employees, pagination: { limit, offset } });
+  } catch (error) {
+    next(error);
+  }
+};
+
 const employeeIdSchema = z.object({
   employeeId: z.coerce.number(),
 });
@@ -113,6 +133,7 @@ const updateEmployeeSchema = z.object({
   bankName: z.string().optional(),
   accountHolderName: z.string().optional(),
   rssbNumber: z.string().max(20).optional(),
+  clientId: z.coerce.number().int().positive().optional().nullable(),
 });
 
 export const updateEmployee = async (req, res, next) => {

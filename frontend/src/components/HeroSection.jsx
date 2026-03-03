@@ -1,5 +1,4 @@
 import { useRef, useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { motion, useScroll, useTransform } from 'framer-motion';
 import { Lock, CheckCircle, FileText, Users, ChevronRight, Check, ShieldCheck, Calendar, DollarSign, CalendarClock, XCircle, MessageSquare } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
@@ -217,7 +216,6 @@ function HeroCardsCarousel() {
 }
 
 export default function HeroSection() {
-  const navigate = useNavigate();
   const { t } = useLanguage();
   const sectionRef = useRef(null);
 
@@ -227,6 +225,9 @@ export default function HeroSection() {
   });
   const bgY = useTransform(scrollYProgress, [0, 0.5], [0, 80]);
   const glowOpacity = useTransform(scrollYProgress, [0, 0.4], [0.6, 0.2]);
+
+  const { scrollY } = useScroll();
+  const cardsY = useTransform(scrollY, [0, 500], [0, 80]);
 
   return (
     <section ref={sectionRef} className="hero" aria-label="Hero">
@@ -246,25 +247,31 @@ export default function HeroSection() {
         >
           <span className="hero__pill">HC SOLUTIONS</span>
           <h1 className="hero__headline">
-            Streamlined Payroll
+            Enterprise Payroll Outsourcing
             <br />
-            <span className="hero__headline-accent">Anytime, Anywhere</span>
+            <span className="hero__headline-accent">Powered by Secure Internal Systems</span>
           </h1>
           <p className="hero__subtext">
-            Rwanda-ready payroll with automated calculations, audit trails, and multi-level approvals — built for RSSB, RAMA & PAYE.
+            We manage your payroll with multi-level approval controls, encrypted processing, and full Rwanda compliance — so you eliminate risk, errors, and audit stress.
           </p>
           <div className="hero__cta">
-            <button
-              type="button"
+            <a
+              href="mailto:info@hcsolutionsrw.rw?subject=Payroll%20inquiry"
               className="hero__btn hero__btn--primary"
-              onClick={() => navigate('/login')}
             >
-              {t('getStartedFree')}
+              Talk to Our Payroll Team
               <ChevronRight size={20} strokeWidth={2.5} />
-            </button>
-            <button type="button" className="hero__btn hero__btn--secondary">
-              {t('bookADemo')}
-            </button>
+            </a>
+            <a
+              href="#how-it-works"
+              className="hero__btn hero__btn--secondary"
+              onClick={(e) => {
+                e.preventDefault();
+                document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' });
+              }}
+            >
+              See How It Works
+            </a>
           </div>
           <ul className="hero__trust" aria-label="Trust indicators">
             {trustChips.map(({ key, icon: Icon }) => (
@@ -277,10 +284,10 @@ export default function HeroSection() {
         </motion.div>
 
         <div className="hero__right">
-          <div className="hero__cards-wrap">
+          <motion.div className="hero__cards-wrap" style={{ y: cardsY }}>
             <div className="hero__cards-glow" aria-hidden="true" />
             <HeroCardsCarousel />
-          </div>
+          </motion.div>
         </div>
       </div>
     </section>

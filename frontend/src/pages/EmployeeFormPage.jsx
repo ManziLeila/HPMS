@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Save } from 'lucide-react';
 import { calculatePayroll, formatCurrency } from '../utils/payroll';
 import './EmployeeFormPage.css';
@@ -12,6 +13,7 @@ const initialFormState = {
   phoneNumber: '',
   rssbNumber: '',
   role: 'Employee',
+  clientId: '',
   bankName: '',
   accountNumber: '',
   accountHolderName: '',
@@ -27,13 +29,35 @@ const initialFormState = {
 };
 
 const EmployeeFormPage = () => {
+  const [searchParams] = useSearchParams();
+  const urlClientId = searchParams.get('clientId');
   const [formValues, setFormValues] = useState(initialFormState);
+  const [clients, setClients] = useState([]);
   const [previewStatus, setPreviewStatus] = useState(null);
   const [createStatus, setCreateStatus] = useState(null);
   const [isCreating, setIsCreating] = useState(false);
   const [emailModalData, setEmailModalData] = useState(null);
   const [createdSalaryId, setCreatedSalaryId] = useState(null);
   const { token } = useAuth();
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const res = await apiClient.get('/clients', { token });
+        const list = res.data || [];
+        setClients(list);
+        if (urlClientId && list.length > 0) {
+          const id = Number(urlClientId);
+          if (id && list.some((c) => c.client_id === id)) {
+            setFormValues((prev) => ({ ...prev, clientId: id }));
+          }
+        }
+      } catch (_) {
+        setClients([]);
+      }
+    };
+    if (token) load();
+  }, [token, urlClientId]);
 
   const derived = useMemo(() => calculatePayroll({ ...formValues, includeMedical: formValues.includeMedical }), [formValues]);
 
@@ -104,6 +128,11 @@ const EmployeeFormPage = () => {
           email: formValues.email || undefined,
           role: formValues.role || 'Employee',
           rssbNumber: formValues.rssbNumber || undefined,
+          clientId: formValues.clientId ? Number(formValues.clientId) : undefined,
+          phoneNumber: formValues.phoneNumber || undefined,
+          bankName: formValues.bankName || undefined,
+          accountHolderName: formValues.accountHolderName || undefined,
+          bankAccountNumber: formValues.accountNumber && formValues.accountNumber.length >= 6 ? formValues.accountNumber : undefined,
         },
         { token }
       );
@@ -198,6 +227,15 @@ const EmployeeFormPage = () => {
                 <option value="Admin">Admin (Legacy)</option>
                 <option value="HR">HR</option>
                 <option value="FinanceOfficer">Finance Officer</option>
+              </select>
+            </label>
+            <label>
+              Client
+              <select name="clientId" value={formValues.clientId ?? ''} onChange={handleChange}>
+                <option value="">— No client —</option>
+                {clients.map((c) => (
+                  <option key={c.client_id} value={c.client_id}>{c.name}</option>
+                ))}
               </select>
             </label>
             <label>

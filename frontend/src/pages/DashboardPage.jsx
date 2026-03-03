@@ -75,7 +75,8 @@ const DashboardPage = () => {
         const data = await apiClient.get('/dashboard/stats', { token });
         setStats(data);
         try {
-          const exp = await apiClient.get('/contracts/expiring?days=14', { token });
+          // Contracts (employee & client) expiring soon for Upcoming Dates
+          const exp = await apiClient.get('/contracts/expiring?days=30', { token });
           const list = Array.isArray(exp) ? exp : exp?.data || [];
           setExpiringContracts(list);
         } catch {
@@ -122,12 +123,26 @@ const DashboardPage = () => {
     { name: 'Net pay', value: netPay, fill: '#22c55e' },
   ];
 
-  const upcomingList = expiringContracts.slice(0, 6).map((c) => ({
-    title: 'Contract Expiring',
-    date: new Date(c.end_date).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
-    meta: c.days_remaining != null ? `${c.days_remaining} days left` : '',
-    icon: FileText,
-  }));
+  const upcomingList = expiringContracts.slice(0, 6).map((c) => {
+    const isClient = c.type === 'client';
+    const name = isClient
+      ? c.client_name || 'Client contract'
+      : c.employee_name || c.full_name || 'Employee contract';
+
+    const dateLabel = c.end_date
+      ? new Date(c.end_date).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })
+      : 'No end date';
+
+    const days = typeof c.days_remaining === 'number' ? c.days_remaining : null;
+    const daysText = days != null ? `${days} day${days === 1 ? '' : 's'}` : 'soon';
+
+    return {
+      title: `Contract expires in ${daysText}`,
+      date: dateLabel,
+      meta: name,
+      icon: isClient ? Calendar : FileText,
+    };
+  });
 
   if (loading) {
     return (
@@ -289,7 +304,7 @@ const DashboardPage = () => {
                 <Calendar size={18} className="dash-v2__upcoming-icon" />
                 <div className="dash-v2__upcoming-text">
                   <span className="dash-v2__upcoming-name">No upcoming dates</span>
-                  <span className="dash-v2__upcoming-date">Contracts expiring in the next 14 days will appear here</span>
+                  <span className="dash-v2__upcoming-date">Contracts expiring in the next 30 days will appear here</span>
                 </div>
               </li>
             ) : (
