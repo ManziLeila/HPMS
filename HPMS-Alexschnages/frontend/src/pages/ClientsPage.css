@@ -1,0 +1,298 @@
+.clients-page {
+    padding: 24px;
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+.clients-page .page-header {
+    margin-bottom: 28px;
+}
+
+.clients-page .page-header--row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.btn-add-client {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 18px;
+    background: #f5911f;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.95rem;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.btn-add-client:hover {
+    background: #e08218;
+}
+
+.btn-add-client--secondary {
+    margin-top: 16px;
+    background: #64748b;
+}
+
+.btn-add-client--secondary:hover {
+    background: #475569;
+}
+
+.clients-page .page-header h1 {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--shell-heading-color, #1e293b);
+    margin: 0 0 8px 0;
+}
+
+.clients-page .page-header p {
+    font-size: 0.95rem;
+    color: var(--shell-muted-color, #64748b);
+    margin: 0;
+}
+
+.clients-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.client-card {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    width: 100%;
+    padding: 16px 20px;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    cursor: pointer;
+    text-align: left;
+    font-family: inherit;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+.client-card:hover {
+    border-color: #f5911f;
+    box-shadow: 0 4px 12px rgba(245, 145, 31, 0.12);
+}
+
+.client-card__icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 10px;
+    background: rgba(245, 145, 31, 0.12);
+    color: #f5911f;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.client-card__body {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.client-card__name {
+    font-weight: 600;
+    font-size: 1rem;
+    color: #1e293b;
+}
+
+.client-card__meta {
+    font-size: 0.85rem;
+    color: #64748b;
+}
+
+.client-card__actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.client-card__btn {
+    padding: 8px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    color: #64748b;
+    transition: background 0.15s, color 0.15s;
+}
+
+.client-card__btn:hover {
+    background: #f1f5f9;
+    color: #0f172a;
+}
+
+.client-card__btn--edit:hover {
+    background: #dbeafe;
+    color: #1d4ed8;
+}
+
+.client-card__btn--delete:hover {
+    background: #fee2e2;
+    color: #dc2626;
+}
+
+.client-card__arrow {
+    color: #94a3b8;
+    flex-shrink: 0;
+}
+
+.clients-page .empty-state {
+    text-align: center;
+    padding: 48px 24px;
+    color: #64748b;
+}
+
+.clients-page .empty-state .empty-icon {
+    color: #cbd5e1;
+    margin-bottom: 16px;
+}
+
+.clients-page .loading,
+.clients-page .error {
+    text-align: center;
+    padding: 24px;
+    color: #64748b;
+}
+
+.clients-page .error {
+    color: #dc2626;
+}
+
+.clients-page .error + button {
+    margin-top: 12px;
+    padding: 10px 20px;
+    background: #f5911f;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.clients-page .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 16px;
+}
+
+.clients-page .modal-content {
+    background: #fff;
+    border-radius: 12px;
+    padding: 24px;
+    max-width: 420px;
+    width: 100%;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+}
+
+.clients-page .modal-content--client-form {
+    max-width: 480px;
+}
+
+.clients-page .form-group--row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+
+.clients-page .form-group textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 1rem;
+    resize: vertical;
+}
+
+.clients-page .form-hint {
+    display: block;
+    font-size: 0.85rem;
+    color: #64748b;
+    margin-top: 4px;
+}
+
+.clients-page .modal-content h2 {
+    margin: 0 0 20px 0;
+    font-size: 1.25rem;
+}
+
+.clients-page .form-group {
+    margin-bottom: 16px;
+}
+
+.clients-page .form-group label {
+    display: block;
+    font-weight: 500;
+    margin-bottom: 6px;
+    font-size: 0.9rem;
+}
+
+.clients-page .form-group input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 1rem;
+}
+
+.clients-page .modal-error {
+    color: #dc2626;
+    font-size: 0.9rem;
+    margin: 0 0 12px 0;
+}
+
+.clients-page .modal-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    margin-top: 20px;
+}
+
+.clients-page .btn-cancel {
+    padding: 10px 18px;
+    border: 1px solid #e2e8f0;
+    background: #fff;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 500;
+}
+
+.clients-page .btn-save {
+    padding: 10px 18px;
+    background: #f5911f;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.clients-page .btn-delete-confirm {
+    padding: 10px 18px;
+    background: #dc2626;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+}
