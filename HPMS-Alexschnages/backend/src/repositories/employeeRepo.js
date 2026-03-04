@@ -132,6 +132,18 @@ const employeeRepo = {
     return rows[0];
   },
 
+  /** Delete employee and all dependent records (salaries, contracts, etc.) */
+  async deleteWithDependencies(employeeId) {
+    await db.query('DELETE FROM hpms_core.salaries WHERE employee_id = $1', [employeeId]);
+    await db.query('DELETE FROM hpms_core.contracts WHERE employee_id = $1', [employeeId]);
+    await db.query('DELETE FROM hpms_core.notifications WHERE user_type = $1 AND user_id = $2', ['employee', employeeId]);
+    const { rows } = await db.query(
+      `DELETE FROM hpms_core.employees WHERE employee_id = $1 RETURNING employee_id, full_name, email`,
+      [employeeId],
+    );
+    return rows[0];
+  },
+
   async updateMfaSecret({ employeeId, mfaSecret }) {
     const { rows } = await db.query(
       `UPDATE hpms_core.employees

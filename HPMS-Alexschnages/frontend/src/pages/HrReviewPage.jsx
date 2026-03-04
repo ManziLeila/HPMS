@@ -39,6 +39,7 @@ const HrReviewPage = () => {
     const [reviewAction, setReviewAction] = useState(null); // 'APPROVE' | 'REJECT'
     const [reviewComment, setReviewComment] = useState('');
     const [reviewLoading, setReviewLoading] = useState(false);
+    const [hrReviewLoading, setHrReviewLoading] = useState(false);
 
     /* tab */
     const [tab, setTab] = useState('pending');
@@ -109,6 +110,24 @@ const HrReviewPage = () => {
         setReviewComment('');
     };
 
+    // ── Per-employee HR approve/reject ─────────────────────────────────
+    const handleHrReviewSalary = async (salaryId, action, comment, onDone) => {
+        setHrReviewLoading(true);
+        try {
+            await apiClient.post(`/salaries/${salaryId}/hr-review`, { action, comment: comment || undefined }, { token });
+            setMsg({ type: 'ok', text: `Employee ${action === 'APPROVE' ? 'approved' : 'rejected'} ✓` });
+            if (onDone) onDone();
+            if (expanded && detail) {
+                const res = await apiClient.get(`/payroll-periods/${expanded}`, { token });
+                setDetail(res.data);
+            }
+        } catch (e) {
+            setMsg({ type: 'err', text: e.message || 'Action failed' });
+        } finally {
+            setHrReviewLoading(false);
+        }
+    };
+
     // ── Download computation summary PDF ─────────────────────────────────
     const downloadComputationSummary = async (period) => {
         setDownloadSummaryLoading(true);
@@ -140,10 +159,36 @@ const QUICK_REASONS = [
     'Housing allowance mismatch',
 ];
 
-/* ── Expandable employee row with full salary breakdown + computation formulas ───────────────────── */
-const EmployeeSalaryRow = ({ s, formatCurrency }) => {
+/* ── Expandable employee row with full salary breakdown + computation formulas + per-employee Approve/Reject ───────────────────── */
+const EmployeeSalaryRow = ({ s, formatCurrency, onHrReview, hrReviewLoading, onRefresh }) => {
     const [open, setOpen] = useState(false);
+    const [rejectReason, setRejectReason] = useState('');
+    const [showRejectInput, setShowRejectInput] = useState(false);
     const formulas = getComputationFormulas(s);
+    const status = s.hr_status || 'PENDING';
+    const isPending = status === 'PENDING' || status === 'pending';
+    const isApproved = status === 'HR_APPROVED';
+    const isRejected = status === 'HR_REJECTED';
+
+    const handleApprove = (e) => {
+        e.stopPropagation();
+        if (!isPending || hrReviewLoading) return;
+        onHrReview(s.salary_id, 'APPROVE', null, onRefresh);
+    };
+    const handleReject = (e) => {
+        e.stopPropagation();
+        if (!isPending || hrReviewLoading) return;
+        if (showRejectInput) {
+            onHrReview(s.salary_id, 'REJECT', rejectReason.trim() || 'Rejected by HR', () => {
+                setShowRejectInput(false);
+                setRejectReason('');
+                onRefresh?.();
+            });
+        } else {
+            setShowRejectInput(true);
+        }
+    };
+
     return (
         <>
             <tr className="hrp__emp-row" onClick={() => setOpen(!open)}>
@@ -153,6 +198,11 @@ const EmployeeSalaryRow = ({ s, formatCurrency }) => {
                         <p className="hrp__emp-name">{s.full_name}</p>
                         <span className="hrp__emp-email">{s.email}</span>
                         {s.department && <span className="hrp__emp-dept"> · {s.department}</span>}
+                        {!isPending && (
+                            <span className={`hrp__emp-status hrp__emp-status--${isApproved ? 'ok' : 'err'}`}>
+                                {isApproved ? '✓ Approved' : '✕ Rejected'}
+                            </span>
+                        )}
                     </div>
                 </td>
                 <td><strong>{formatCurrency(s.gross_salary)}</strong></td>
@@ -175,6 +225,53 @@ const EmployeeSalaryRow = ({ s, formatCurrency }) => {
                                         <span className="hrp__formula-result">= {formatCurrency(item.amount)}</span>
                                     </div>
                                 ))}
+                            </div>
+                            <div className="hrp__emp-actions" onClick={e => e.stopPropagation()}>
+                                <h4 className="hrp__formula-title">Review this employee</h4>
+                                {isPending ? (
+                                    <div className="hrp__emp-action-btns">
+                                        <button
+                                            className="hrp__btn hrp__btn--ok"
+                                            onClick={handleApprove}
+                                            disabled={hrReviewLoading}
+                                        >
+                                            <Check size={14} /> Approve
+                                        </button>
+                                        {showRejectInput ? (
+                                            <div className="hrp__reject-inline">
+                                                <textarea
+                                                    placeholder="Reason for rejection (required)"
+                                                    value={rejectReason}
+                                                    onChange={e => setRejectReason(e.target.value)}
+                                                    rows={2}
+                                                    className="hrp__reject-inline-ta"
+                                                />
+                                                <div className="hrp__reject-inline-btns">
+                                                    <button className="hrp__btn" onClick={() => setShowRejectInput(false)}>Cancel</button>
+                                                    <button
+                                                        className="hrp__btn hrp__btn--err"
+                                                        onClick={handleReject}
+                                                        disabled={hrReviewLoading}
+                                                    >
+                                                        <X size={14} /> Confirm Reject
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <button
+                                                className="hrp__btn hrp__btn--err"
+                                                onClick={handleReject}
+                                                disabled={hrReviewLoading}
+                                            >
+                                                <X size={14} /> Reject
+                                            </button>
+                                        )}
+                                    </div>
+                                ) : (
+                                    <p className="hrp__emp-status-msg">
+                                        {isApproved ? '✓ This employee has been approved.' : '✕ This employee has been rejected.'}
+                                    </p>
+                                )}
                             </div>
                             <div className="hrp__emp-detail-grid">
                                 <section>
@@ -331,7 +428,21 @@ const EmployeeSalaryRow = ({ s, formatCurrency }) => {
                                                             </thead>
                                                             <tbody>
                                                                 {(detail?.salaries || []).map(s => (
-                                                                    <EmployeeSalaryRow key={s.salary_id} s={s} formatCurrency={formatCurrency} />
+                                                                    <EmployeeSalaryRow
+                                                                        key={s.salary_id}
+                                                                        s={s}
+                                                                        formatCurrency={formatCurrency}
+                                                                        onHrReview={handleHrReviewSalary}
+                                                                        hrReviewLoading={hrReviewLoading}
+                                                                        onRefresh={async () => {
+                                                                            if (expanded) {
+                                                                                try {
+                                                                                    const res = await apiClient.get(`/payroll-periods/${expanded}`, { token });
+                                                                                    setDetail(res.data);
+                                                                                } catch (_) {}
+                                                                            }
+                                                                        }}
+                                                                    />
                                                                 ))}
                                                             </tbody>
                                                         </table>

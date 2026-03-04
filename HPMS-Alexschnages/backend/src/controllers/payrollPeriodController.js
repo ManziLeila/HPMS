@@ -180,6 +180,23 @@ export const sendToBank = async (req, res, next) => {
     } catch (err) { next(err); }
 };
 
+// ── Get ready-to-submit detail (FO preview before submit) ────────────────────
+export const getReadyDetail = async (req, res, next) => {
+    try {
+        if (req.user.role !== ROLES.FINANCE_OFFICER) {
+            throw forbidden('Only Finance Officers can preview ready-to-submit payroll');
+        }
+        const clientId = Number(req.query.clientId);
+        const periodMonth = Number(req.query.periodMonth);
+        const periodYear = Number(req.query.periodYear);
+        if (!clientId || !periodMonth || !periodYear) {
+            throw badRequest('clientId, periodMonth, periodYear are required');
+        }
+        const detail = await payrollPeriodService.getReadyDetail(clientId, periodMonth, periodYear);
+        res.json({ success: true, data: detail });
+    } catch (err) { next(err); }
+};
+
 // ── Get a single period with its salary records ──────────────────────────────
 export const getPeriod = async (req, res, next) => {
     try {
@@ -214,6 +231,19 @@ export const downloadPeriodPayslips = async (req, res, next) => {
         req.body = { salaryIds };
         const { downloadBulkPayslips } = await import('./bulkSalaryController.js');
         return downloadBulkPayslips(req, res, next);
+    } catch (err) { next(err); }
+};
+
+// ── Finance Officer: unsubmit a period (remove from HR queue, salaries go back to ready) ─
+export const unsubmitPeriod = async (req, res, next) => {
+    try {
+        if (req.user.role !== ROLES.FINANCE_OFFICER) {
+            throw forbidden('Only Finance Officers can unsubmit payroll periods');
+        }
+        const periodId = Number(req.params.id);
+        if (!periodId) throw badRequest('Invalid period ID');
+        await payrollPeriodService.unsubmitPeriod(periodId);
+        res.json({ success: true, message: 'Payroll period removed. Salaries are back in Ready to Submit.' });
     } catch (err) { next(err); }
 };
 

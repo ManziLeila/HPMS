@@ -128,6 +128,15 @@
     margin: 0;
 }
 
+.pp__ready-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    align-items: stretch;
+}
+
+.pp__ready-card .pp__ready-actions .pp__btn { justify-content: center; }
+
 /* ── Table ───────────────────────────────────────────────── */
 .pp__table-wrap {
     overflow-x: auto;
@@ -308,6 +317,73 @@
 
 .pp__modal--detail { max-width: 680px; }
 
+/* ── Confirm modals (Submit / Unsubmit) ───────────────────────────── */
+.pp__modal--confirm {
+    max-width: 420px;
+    text-align: center;
+    padding: 32px 28px 24px;
+}
+
+.pp__confirm-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 20px;
+}
+
+.pp__confirm-icon--submit {
+    background: #ede9fe;
+    color: #5b21b6;
+}
+
+.pp__confirm-icon--unsubmit {
+    background: #fef2f2;
+    color: #b91c1c;
+}
+
+.pp__confirm-title {
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: #1e293b;
+    margin: 0 0 12px;
+}
+
+.pp__confirm-body {
+    font-size: 1rem;
+    color: #334155;
+    margin: 0 0 8px;
+}
+
+.pp__confirm-body strong {
+    color: #1e293b;
+}
+
+.pp__confirm-meta {
+    font-size: 0.9rem;
+    color: #64748b;
+    margin: 0 0 24px;
+}
+
+.pp__modal--confirm .pp__modal-footer {
+    justify-content: center;
+    padding-top: 20px;
+    border-top: 1px solid #f1f5f9;
+}
+
+.pp__btn--unsubmit {
+    background: #fef2f2;
+    color: #b91c1c;
+    border-color: #fecaca;
+}
+
+.pp__btn--unsubmit:hover:not(:disabled) {
+    background: #fee2e2;
+    border-color: #f87171;
+}
+
 .pp__modal-close {
     position: absolute;
     top: 14px;
@@ -352,19 +428,94 @@
     flex: 1;
 }
 
+.pp__detail-hint {
+    font-size: 0.8rem;
+    color: #64748b;
+    margin: 0 0 12px;
+    padding: 8px 12px;
+    background: #f8fafc;
+    border-radius: 8px;
+}
+
+.pp__sal-block {
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.pp__sal-block:last-child { border-bottom: none; }
+
 .pp__sal-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
     padding: 12px 0;
-    border-bottom: 1px solid #f1f5f9;
     gap: 12px;
 }
 
-.pp__sal-row:last-child { border-bottom: none; }
+.pp__sal-row--clickable {
+    cursor: pointer;
+}
+
+.pp__sal-row--clickable:hover {
+    background: #f8fafc;
+    margin: 0 -12px;
+    padding: 12px;
+    border-radius: 8px;
+}
+
+.pp__sal-toggle {
+    flex-shrink: 0;
+    color: #94a3b8;
+}
 
 .pp__sal-name strong { display: block; color: #1e293b; font-size: 0.9rem; }
 .pp__sal-name span   { font-size: 0.8rem; color: #94a3b8; }
+
+.pp__sal-detail {
+    padding: 12px 0 16px 28px;
+    background: #f8fafc;
+    margin: 0 0 8px;
+    border-radius: 0 0 8px 8px;
+}
+
+.pp__formula-title {
+    margin: 0 0 12px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #334155;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.pp__formula-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.pp__formula-item {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: baseline;
+    font-size: 0.82rem;
+}
+
+.pp__formula-label {
+    font-weight: 600;
+    color: #334155;
+    min-width: 120px;
+}
+
+.pp__formula-expr {
+    color: #64748b;
+    flex: 1;
+}
+
+.pp__formula-result {
+    font-weight: 700;
+    color: #10b981;
+}
 
 .pp__sal-nums {
     display: flex;

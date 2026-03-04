@@ -115,11 +115,13 @@ const ClientsPage = () => {
         setDeleteConfirm(client);
     };
 
-    const handleDeleteClient = async () => {
+    const handleDeleteClient = async (deleteEmployees) => {
         if (!deleteConfirm) return;
         setSaving(true);
+        setSubmitError(null);
         try {
-            await apiClient.delete(`/clients/${deleteConfirm.client_id}`, { token });
+            const q = deleteEmployees ? '?deleteEmployees=true' : '';
+            await apiClient.delete(`/clients/${deleteConfirm.client_id}${q}`, { token });
             setDeleteConfirm(null);
             fetchClients();
         } catch (err) {
@@ -291,15 +293,36 @@ const ClientsPage = () => {
 
             {/* Delete confirm modal */}
             {deleteConfirm && (
-                <div className="modal-overlay" onClick={() => setDeleteConfirm(null)}>
-                    <div className="modal-content modal-confirm" onClick={(e) => e.stopPropagation()}>
+                <div className="modal-overlay" onClick={() => { setDeleteConfirm(null); setSubmitError(null); }}>
+                    <div className="modal-content modal-confirm modal-confirm--client" onClick={(e) => e.stopPropagation()}>
                         <h2><AlertTriangle size={20} aria-hidden /> {t('confirmDelete') || 'Confirm delete'}</h2>
-                        <p>{t('deleteClientConfirmation') || 'Delete client'} <strong>{deleteConfirm.name}</strong>? {t('deleteClientWarning') || 'Employees under this client will be unassigned (not deleted).'}</p>
-                        <div className="modal-actions">
-                            <button type="button" className="btn-cancel" onClick={() => setDeleteConfirm(null)} disabled={saving}>{t('cancel')}</button>
-                            <button type="button" className="btn-delete-confirm" onClick={handleDeleteClient} disabled={saving}>
-                                {saving ? (t('deleting') || 'Deleting…') : t('delete')}
+                        <p>{t('deleteClientConfirmation') || 'Delete client'} <strong>{deleteConfirm.name}</strong>?</p>
+                        <p className="modal-confirm__sub">{t('deleteClientChoose') || 'What should happen to the employees under this client?'}</p>
+                        <div className="modal-confirm__options">
+                            <button
+                                type="button"
+                                className="btn-delete-option btn-delete-option--keep"
+                                onClick={() => handleDeleteClient(false)}
+                                disabled={saving}
+                                title={t('deleteClientKeepEmployees') || 'Employees stay in the database, unassigned from any client'}
+                            >
+                                <span className="btn-delete-option__title">{t('deleteClientKeepEmployees') || 'Keep employees'}</span>
+                                <span className="btn-delete-option__desc">{t('deleteClientKeepDesc') || 'Employees stay in the database and will be unassigned (no client).'}</span>
                             </button>
+                            <button
+                                type="button"
+                                className="btn-delete-option btn-delete-option--remove"
+                                onClick={() => handleDeleteClient(true)}
+                                disabled={saving}
+                                title={t('deleteClientDeleteEmployees') || 'Delete all employees and their salary records'}
+                            >
+                                <span className="btn-delete-option__title">{t('deleteClientDeleteEmployees') || 'Delete all employees'}</span>
+                                <span className="btn-delete-option__desc">{t('deleteClientDeleteDesc') || 'Employees and their salary records will be permanently deleted.'}</span>
+                            </button>
+                        </div>
+                        {submitError && <p className="modal-error">{submitError}</p>}
+                        <div className="modal-actions">
+                            <button type="button" className="btn-cancel" onClick={() => { setDeleteConfirm(null); setSubmitError(null); }} disabled={saving}>{t('cancel')}</button>
                         </div>
                     </div>
                 </div>

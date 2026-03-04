@@ -7,7 +7,8 @@ const resolveApiBase = () => {
   }
 
   const origin = window.location.origin;
-  if (origin.includes("localhost:5173") || origin.includes("localhost:5174")) {
+  // Local dev: Vite uses 5173 by default, may use 5174, 5175, etc. if port is busy
+  if (origin.includes("localhost:") || origin.includes("127.0.0.1:")) {
     return "http://localhost:4000/api";
   }
 

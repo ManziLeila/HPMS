@@ -83,6 +83,27 @@ class PayrollPeriodRepository {
     return rows;
   }
 
+  // Returns salary rows for unsubmitted client+month (for FO preview before submit)
+  async getReadySalaries(clientId, periodMonth, periodYear) {
+    const { rows } = await pool.query(
+      `SELECT s.*,
+              e.full_name, e.email, e.department,
+              e.bank_name, e.account_holder_name
+       FROM hpms_core.salaries s
+       JOIN hpms_core.employees e ON e.employee_id = s.employee_id
+       WHERE s.period_id IS NULL
+         AND EXTRACT(MONTH FROM s.pay_period) = $2
+         AND EXTRACT(YEAR FROM s.pay_period) = $3
+         AND (
+           (e.client_id = $1)
+           OR ($1 IN (SELECT client_id FROM hpms_core.clients WHERE name = 'Unassigned') AND e.client_id IS NULL)
+         )
+       ORDER BY e.full_name`,
+      [clientId, periodMonth, periodYear],
+    );
+    return rows;
+  }
+
   // Client+month groups with salary records but not yet submitted
   // Returns ALL unsubmitted groups (any FO can submit)
   // Employees with client_id NULL are grouped under "Unassigned" client (if it exists)
@@ -181,6 +202,12 @@ class PayrollPeriodRepository {
        RETURNING *`,
       [periodId, userId],
     );
+    return rows[0];
+  }
+
+  /** Unsubmit a period: delete period (FKs auto-unlink salaries, cascade delete approval_history) */
+  async unsubmitPeriod(periodId) {
+    const { rows } = await pool.query('DELETE FROM hpms_core.payroll_periods WHERE period_id = $1 RETURNING *', [periodId]);
     return rows[0];
   }
 

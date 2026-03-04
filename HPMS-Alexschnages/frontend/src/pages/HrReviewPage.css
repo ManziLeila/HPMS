@@ -1090,3 +1090,69 @@
     color: #10b981;
     font-variant-numeric: tabular-nums;
 }
+
+/* ── Per-employee Approve/Reject ───────────────────────────────── */
+.hrp__emp-status {
+    display: inline-block;
+    margin-left: 8px;
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 0.72rem;
+    font-weight: 700;
+}
+
+.hrp__emp-status--ok {
+    background: #d1fae5;
+    color: #047857;
+}
+
+.hrp__emp-status--err {
+    background: #fef2f2;
+    color: #b91c1c;
+}
+
+.hrp__emp-actions {
+    margin: 16px 0;
+    padding: 12px 0;
+    border-top: 1px solid #e2e8f0;
+}
+
+.hrp__emp-action-btns {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.hrp__reject-inline {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.hrp__reject-inline-ta {
+    padding: 8px 12px;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-family: inherit;
+    resize: vertical;
+    min-height: 60px;
+}
+
+.hrp__reject-inline-ta:focus {
+    border-color: #ef4444;
+    outline: none;
+}
+
+.hrp__reject-inline-btns {
+    display: flex;
+    gap: 8px;
+}
+
+.hrp__emp-status-msg {
+    margin: 0;
+    font-size: 0.9rem;
+    color: #64748b;
+}

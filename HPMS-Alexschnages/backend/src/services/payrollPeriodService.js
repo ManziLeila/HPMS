@@ -1,4 +1,6 @@
+import pool from '../config/database.js';
 import payrollPeriodRepo from '../repositories/payrollPeriodRepo.js';
+import salaryRepo from '../repositories/salaryRepo.js';
 import approvalHistoryRepo from '../repositories/approvalHistoryRepo.js';
 import notificationService from './notificationService.js';
 import { decryptField } from './encryptionService.js';
@@ -113,6 +115,12 @@ class PayrollPeriodService {
             status: newStatus,
             comments,
         });
+
+        // When HR approves the period, bulk-approve all PENDING salaries in that period
+        // so MD can use per-employee approve/reject
+        if (action === 'APPROVE') {
+            await salaryRepo.bulkHrApproveByPeriod(periodId, reviewedBy);
+        }
 
         await approvalHistoryRepo.create({
             periodId,
@@ -345,6 +353,54 @@ class PayrollPeriodService {
 
     async getReadyToSubmit() {
         return await payrollPeriodRepo.getReadyToSubmit();
+    }
+
+    async getReadyDetail(clientId, periodMonth, periodYear) {
+        const rawSalaries = await payrollPeriodRepo.getReadySalaries(clientId, periodMonth, periodYear);
+        const clientRow = await pool.query(
+            'SELECT name FROM hpms_core.clients WHERE client_id = $1',
+            [clientId],
+        ).then(r => r.rows[0]);
+        const clientName = clientRow?.name || 'Client';
+        const totalGross = rawSalaries.reduce((sum, s) => sum + (Number(s.gross_salary) || 0), 0);
+        const salaryCount = rawSalaries.length;
+        const salaries = rawSalaries.map((row) => {
+            const { payroll_snapshot_enc, net_paid_enc, ...rest } = row;
+            let snapshot = null;
+            let net_salary = null;
+            try {
+                if (payroll_snapshot_enc) {
+                    const raw = decryptField('payroll_snapshot_enc', payroll_snapshot_enc);
+                    snapshot = raw ? JSON.parse(raw) : null;
+                    net_salary = snapshot?.netPaidToBank ?? snapshot?.netSalary ?? null;
+                }
+                if (net_salary == null && net_paid_enc) {
+                    net_salary = decryptField('net_paid_enc', net_paid_enc);
+                }
+            } catch (err) {
+                console.warn(`[getReadyDetail] Decrypt failed for salary ${row.salary_id}:`, err.message);
+            }
+            return {
+                ...rest,
+                net_salary: net_salary != null ? Number(net_salary) : null,
+                snapshot,
+            };
+        });
+        return {
+            client_id: clientId,
+            client_name: clientName,
+            period_month: periodMonth,
+            period_year: periodYear,
+            salary_count: salaryCount,
+            total_gross: totalGross,
+            salaries,
+        };
+    }
+
+    async unsubmitPeriod(periodId) {
+        const period = await payrollPeriodRepo.getById(periodId);
+        if (!period) throw notFound('Payroll period not found');
+        return await payrollPeriodRepo.unsubmitPeriod(periodId);
     }
 
     // For Approval Dashboard: return periods relevant to each role

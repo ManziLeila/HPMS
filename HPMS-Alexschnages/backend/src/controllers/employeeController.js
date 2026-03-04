@@ -173,8 +173,8 @@ export const deleteEmployee = async (req, res, next) => {
     console.log('=== DELETE EMPLOYEE DEBUG ===');
     console.log('Employee ID from params:', employeeId, 'Type:', typeof employeeId);
 
-    // Prevent deleting yourself
-    if (employeeId === req.user.id) {
+    // Prevent employees from deleting their own record (system users have user_id, not employee_id)
+    if (req.user.userType === 'employee' && Number(employeeId) === Number(req.user.id)) {
       throw badRequest('Cannot delete your own account');
     }
 

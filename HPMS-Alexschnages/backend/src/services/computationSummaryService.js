@@ -20,22 +20,24 @@ const getFormulas = (s) => {
   const rssb = Number(snap.rssbEePension ?? s.rssb_pension) || 0;
   const maternity = Number(snap.rssbEeMaternity) || 0;
   const rama = Number(snap.ramaInsuranceEmployee) || 0;
+  const includeMedical = snap.includeMedical !== false;
   const netBeforeCbhi = Number(snap.netBeforeCbhi) || 0;
   const cbhi = Number(snap.cbhiEmployee) || 0;
   const advance = Number(snap.advanceAmount) || 0;
   const net = Number(s.net_salary ?? snap.netPaidToBank ?? snap.netSalary) || 0;
 
-  return [
+  const baseItems = [
     { label: 'Gross Salary', formula: `Basic (${basic.toLocaleString()}) + Transport (${transport.toLocaleString()}) + Housing (${housing.toLocaleString()}) + Performance (${performance.toLocaleString()})`, amount: gross },
     { label: 'PAYE', formula: 'Progressive tax: 0% on first 60,000 RWF, 10% on next 40,000, 20% on next 100,000, 30% above 200,000', amount: paye },
     { label: 'RSSB Pension', formula: '6% of Gross Salary', amount: rssb },
     { label: 'RSSB Maternity', formula: '0.3% of Basic Salary', amount: maternity },
-    { label: 'RAMA (Medical)', formula: '7.5% of Basic Salary', amount: rama },
-    { label: 'NET (before CBHI)', formula: 'Gross − PAYE − RSSB Pension − Maternity − RAMA', amount: netBeforeCbhi },
+    ...(includeMedical ? [{ label: 'RAMA (Medical)', formula: '7.5% of Basic Salary', amount: rama }] : []),
+    { label: 'NET (before CBHI)', formula: includeMedical ? 'Gross − PAYE − RSSB Pension − Maternity − RAMA' : 'Gross − PAYE − RSSB Pension − Maternity', amount: netBeforeCbhi },
     { label: 'CBHI', formula: '0.5% of NET (before CBHI)', amount: cbhi },
     { label: 'Advance', formula: 'Deducted amount', amount: advance },
     { label: 'Net Pay', formula: 'NET (before CBHI) − CBHI − Advance', amount: net },
   ];
+  return baseItems;
 };
 
 /**

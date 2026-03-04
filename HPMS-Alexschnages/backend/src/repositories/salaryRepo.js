@@ -139,7 +139,11 @@ const salaryRepo = {
               e.email_notifications_enabled,
               e.bank_name,
               e.account_holder_name,
-              e.account_number_enc
+              e.account_number_enc,
+              e.role,
+              e.department,
+              e.date_of_joining,
+              e.created_at AS employee_created_at
        FROM hpms_core.salaries s
        INNER JOIN hpms_core.employees e ON e.employee_id = s.employee_id
        WHERE s.salary_id = $1`,
@@ -283,6 +287,48 @@ const salaryRepo = {
       [salaryId, status, comment || null, reviewedBy],
     );
     return rows[0];
+  },
+
+  /**
+   * Set MD review status on a single salary record.
+   * Applies when salary is HR_APPROVED, or when it belongs to an HR_APPROVED period
+   * (period-level HR approval may not have set individual hr_status before bulk update).
+   */
+  async mdReview({ salaryId, status, comment, reviewedBy }) {
+    const { rows } = await db.query(
+      `UPDATE hpms_core.salaries s
+       SET md_status      = $2,
+           md_comment     = $3,
+           md_reviewed_at = NOW(),
+           md_reviewed_by = $4,
+           updated_at     = NOW()
+       FROM hpms_core.payroll_periods pp
+       WHERE s.salary_id = $1
+         AND s.period_id = pp.period_id
+         AND pp.status = 'HR_APPROVED'
+         AND (s.hr_status = 'HR_APPROVED' OR s.hr_status = 'PENDING')
+       RETURNING s.salary_id, s.employee_id, s.pay_period, s.gross_salary, s.hr_status, s.md_status, s.md_comment`,
+      [salaryId, status, comment || null, reviewedBy],
+    );
+    return rows[0];
+  },
+
+  /**
+   * Bulk set hr_status = 'HR_APPROVED' for all PENDING salaries in a payroll period.
+   * Called when HR approves the period at the period level (not per-employee).
+   */
+  async bulkHrApproveByPeriod(periodId, reviewedBy) {
+    const { rowCount } = await db.query(
+      `UPDATE hpms_core.salaries
+       SET hr_status      = 'HR_APPROVED',
+           hr_reviewed_at = NOW(),
+           hr_reviewed_by = $2,
+           updated_at     = NOW()
+       WHERE period_id = $1
+         AND hr_status = 'PENDING'`,
+      [periodId, reviewedBy],
+    );
+    return rowCount;
   },
 
   /**

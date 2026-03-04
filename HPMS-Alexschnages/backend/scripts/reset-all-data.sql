@@ -28,8 +28,8 @@ DELETE FROM hpms_core.contracts;
 -- 5. Client contracts
 DELETE FROM hpms_core.client_contracts;
 
--- 6. Notifications (may reference employees via user_id + user_type)
-DELETE FROM hpms_core.notifications WHERE user_type = 'employee';
+-- 6. Notifications (delete all so sequence reset doesn't cause duplicate key)
+DELETE FROM hpms_core.notifications;
 
 -- 7. Audit logs (optional - clears history; user_id can reference employees)
 DELETE FROM hpms_core.audit_logs;

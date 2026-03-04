@@ -1,5 +1,6 @@
 import clientRepo from '../repositories/clientRepo.js';
 import clientContractRepo from '../repositories/clientContractRepo.js';
+import employeeRepo from '../repositories/employeeRepo.js';
 import fileStorageService from '../services/fileStorageService.js';
 import { notFound, badRequest } from '../utils/httpError.js';
 
@@ -90,11 +91,28 @@ export const updateClient = async (req, res, next) => {
 export const deleteClient = async (req, res, next) => {
   try {
     const clientId = Number(req.params.clientId);
-    const client = await clientRepo.delete(clientId);
+    const deleteEmployees = req.query.deleteEmployees === 'true' || req.query.deleteEmployees === true;
+
+    const client = await clientRepo.findById(clientId);
     if (!client) {
       throw notFound('Client not found');
     }
-    res.json({ message: 'Client deleted', client });
+
+    if (deleteEmployees) {
+      // Delete all employees under this client (and their salaries, contracts, etc.)
+      const employees = await employeeRepo.listByClientId(clientId, { limit: 10000 });
+      for (const emp of employees) {
+        await employeeRepo.deleteWithDependencies(emp.employee_id);
+      }
+    }
+
+    await clientRepo.delete(clientId);
+    res.json({
+      message: deleteEmployees
+        ? 'Client and all employees deleted'
+        : 'Client deleted. Employees were kept and unassigned.',
+      client: { client_id: clientId, name: client.name },
+    });
   } catch (error) {
     next(error);
   }

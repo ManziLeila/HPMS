@@ -144,6 +144,7 @@ export const getComputationFormulas = (s) => {
   const rssb = Number(snap.rssbEePension ?? s.rssb_pension) || 0;
   const maternity = Number(snap.rssbEeMaternity) || 0;
   const rama = Number(snap.ramaInsuranceEmployee) || 0;
+  const includeMedical = snap.includeMedical !== false;
   const netBeforeCbhi = Number(snap.netBeforeCbhi) || 0;
   const cbhi = Number(snap.cbhiEmployee) || 0;
   const advance = Number(snap.advanceAmount) || 0;
@@ -170,14 +171,15 @@ export const getComputationFormulas = (s) => {
       formula: '0.3% of Basic Salary',
       amount: maternity,
     },
-    {
+    // RAMA only shown when included on the sheet (Include RAMA = Yes)
+    ...(includeMedical ? [{
       label: 'RAMA (Medical)',
       formula: '7.5% of Basic Salary',
       amount: rama,
-    },
+    }] : []),
     {
       label: 'NET (before CBHI)',
-      formula: 'Gross − PAYE − RSSB Pension − Maternity − RAMA',
+      formula: includeMedical ? 'Gross − PAYE − RSSB Pension − Maternity − RAMA' : 'Gross − PAYE − RSSB Pension − Maternity',
       amount: netBeforeCbhi,
     },
     {

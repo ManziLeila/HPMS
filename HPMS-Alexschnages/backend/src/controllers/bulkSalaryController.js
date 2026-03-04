@@ -315,14 +315,14 @@ export const downloadBulkPayslips = async (req, res, next) => {
                 // Generate PDF
                 const pdfBuffer = await generatePayslipPdf({
                     employee: {
-                        fullName: record.full_name,
+                        fullName: record.full_name || 'N/A',
                         email: record.email,
                         bankName: record.bank_name || 'N/A',
                         accountNumber: bankAccountNumber,
-                        accountHolderName: record.account_holder_name || record.full_name,
+                        accountHolderName: record.account_holder_name || record.full_name || 'N/A',
                         role: record.role || 'Employee',
                         department: record.department || 'N/A',
-                        dateOfJoining: record.date_of_joining || record.created_at,
+                        dateOfJoining: record.date_of_joining || record.employee_created_at || record.created_at,
                     },
                     salary: {
                         payPeriod: record.pay_period,
@@ -343,7 +343,11 @@ export const downloadBulkPayslips = async (req, res, next) => {
                 }
                 const monthFolder = monthFolders.get(monthName);
 
-                const filename = `payslip-${record.full_name.replace(/\s+/g, '-').toLowerCase()}-${record.pay_period}.pdf`;
+                const periodStr = record.pay_period
+                    ? new Date(record.pay_period).toISOString().slice(0, 10)
+                    : 'unknown';
+                const safeName = (record.full_name || 'employee').replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, '').toLowerCase();
+                const filename = `payslip-${safeName}-${periodStr}.pdf`;
                 monthFolder.file(filename, pdfBuffer);
                 successCount++;
             } catch (err) {
@@ -484,7 +488,11 @@ export const sendBulkPayslipEmails = async (req, res, next) => {
                     payrollSnapshot,
                 });
 
-                const filename = `payslip-${record.full_name.replace(/\s+/g, '-').toLowerCase()}-${record.pay_period}.pdf`;
+                const periodStr = record.pay_period
+                    ? new Date(record.pay_period).toISOString().slice(0, 10)
+                    : 'unknown';
+                const safeName = (record.full_name || 'employee').replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, '').toLowerCase();
+                const filename = `payslip-${safeName}-${periodStr}.pdf`;
 
                 // Calculate payment date
                 const payDate = new Date(record.pay_period);

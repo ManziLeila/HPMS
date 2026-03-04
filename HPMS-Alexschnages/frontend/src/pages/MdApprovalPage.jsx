@@ -1,8 +1,7 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
-    KeyRound, Building2, CheckCircle, Clock, AlertTriangle,
-    Lock, ChevronDown, ChevronRight, X, RefreshCw, Inbox,
-    User, CreditCard, Banknote, Download,
+    Building2, CheckCircle, Clock, ChevronDown, ChevronRight,
+    X, RefreshCw, Inbox, CreditCard, Banknote, Download,
 } from 'lucide-react';
 import { apiClient, API_BASE_URL } from '../api/client';
 import useAuth from '../hooks/useAuth';
@@ -14,72 +13,36 @@ const MONTHS = [
     'July','August','September','October','November','December',
 ];
 
-/* ── PIN input ─────────────────────────────────────────────── */
-const PinModal = ({ onConfirm, onCancel, loading }) => {
-    const [pin, setPin] = useState(['', '', '', '']);
-    const refs = [useRef(), useRef(), useRef(), useRef()];
-
-    const handleKey = (i, val) => {
-        if (!/^\d?$/.test(val)) return;
-        const next = [...pin];
-        next[i] = val;
-        setPin(next);
-        if (val && i < 3) refs[i + 1].current.focus();
-    };
-
-    const handleBs = (i, e) => {
-        if (e.key === 'Backspace' && !pin[i] && i > 0) refs[i - 1].current.focus();
-    };
-
-    const complete = pin.join('');
-
-    return (
-        <div className="mdp__overlay" onClick={onCancel}>
-            <div className="mdp__pin-modal" onClick={e => e.stopPropagation()}>
-                <p className="mdp__pin-icon" aria-hidden><KeyRound size={40} /></p>
-                <h2>Confirm Final Approval</h2>
-                <p className="mdp__pin-sub">
-                    Enter your 4-digit PIN to authorise this payroll disbursement.
-                    <br /><em>This action is irreversible once submitted.</em>
-                </p>
-                <div className="mdp__pin-boxes">
-                    {pin.map((d, i) => (
-                        <input
-                            key={i}
-                            ref={refs[i]}
-                            className="mdp__pin-box"
-                            type="password"
-                            inputMode="numeric"
-                            maxLength={1}
-                            value={d}
-                            onChange={e => handleKey(i, e.target.value)}
-                            onKeyDown={e => handleBs(i, e)}
-                            autoFocus={i === 0}
-                        />
-                    ))}
-                </div>
-                <div className="mdp__pin-actions">
-                    <button className="mdp__btn" onClick={onCancel}>Cancel</button>
-                    <button
-                        className="mdp__btn mdp__btn--approve mdp__btn--lg"
-                        disabled={complete.length < 4 || loading}
-                        onClick={() => onConfirm(complete)}
-                    >
-                        {loading
-                            ? 'Authorising…'
-                            : <><Building2 size={18} style={{ verticalAlign: 'middle' }} /> Authorise Payroll</>}
-                    </button>
-                </div>
-                <p className="mdp__pin-hint">Your PIN is your last 4 login digits or set in HR settings</p>
-            </div>
-        </div>
-    );
-};
-
-/* ── Expandable employee row with full salary breakdown + computation formulas ───────────────────── */
-const EmployeeSalaryRow = ({ s, formatCurrency }) => {
+/* ── Expandable employee row with computation breakdown + per-employee Approve/Reject ─────────────── */
+const EmployeeSalaryRow = ({ s, formatCurrency, onMdReview, mdReviewLoading, onRefresh }) => {
     const [open, setOpen] = useState(false);
+    const [rejectReason, setRejectReason] = useState('');
+    const [showRejectInput, setShowRejectInput] = useState(false);
     const formulas = getComputationFormulas(s);
+    const status = s.md_status || 'PENDING';
+    const isPending = status === 'PENDING' || status === 'pending';
+    const isApproved = status === 'MD_APPROVED';
+    const isRejected = status === 'MD_REJECTED';
+
+    const handleApprove = (e) => {
+        e.stopPropagation();
+        if (!isPending || mdReviewLoading) return;
+        onMdReview(s.salary_id, 'APPROVE', null, onRefresh);
+    };
+    const handleReject = (e) => {
+        e.stopPropagation();
+        if (!isPending || mdReviewLoading) return;
+        if (showRejectInput) {
+            onMdReview(s.salary_id, 'REJECT', rejectReason.trim() || 'Rejected by MD', () => {
+                setShowRejectInput(false);
+                setRejectReason('');
+                onRefresh?.();
+            });
+        } else {
+            setShowRejectInput(true);
+        }
+    };
+
     return (
         <>
             <tr className="mdp__emp-row" onClick={() => setOpen(!open)}>
@@ -89,6 +52,11 @@ const EmployeeSalaryRow = ({ s, formatCurrency }) => {
                         <p className="mdp__emp-name">{s.full_name}</p>
                         <span className="mdp__emp-email">{s.email}</span>
                         {s.department && <span className="mdp__emp-dept"> · {s.department}</span>}
+                        {!isPending && (
+                            <span className={`mdp__emp-status mdp__emp-status--${isApproved ? 'ok' : 'err'}`}>
+                                {isApproved ? '✓ Approved' : '✕ Rejected'}
+                            </span>
+                        )}
                     </div>
                 </td>
                 <td><strong>{formatCurrency(s.gross_salary)}</strong></td>
@@ -112,6 +80,53 @@ const EmployeeSalaryRow = ({ s, formatCurrency }) => {
                                     </div>
                                 ))}
                             </div>
+                            <div className="mdp__emp-actions" onClick={e => e.stopPropagation()}>
+                                <h4 className="mdp__formula-title">Approve or reject this employee</h4>
+                                {isPending ? (
+                                    <div className="mdp__emp-action-btns">
+                                        <button
+                                            className="mdp__btn mdp__btn--approve mdp__btn--sm"
+                                            onClick={handleApprove}
+                                            disabled={mdReviewLoading}
+                                        >
+                                            <CheckCircle size={14} /> Approve
+                                        </button>
+                                        {showRejectInput ? (
+                                            <div className="mdp__reject-inline">
+                                                <textarea
+                                                    placeholder="Reason for rejection (optional)"
+                                                    value={rejectReason}
+                                                    onChange={e => setRejectReason(e.target.value)}
+                                                    rows={2}
+                                                    className="mdp__reject-inline-ta"
+                                                />
+                                                <div className="mdp__reject-inline-btns">
+                                                    <button className="mdp__btn" onClick={() => setShowRejectInput(false)}>Cancel</button>
+                                                    <button
+                                                        className="mdp__btn mdp__btn--reject mdp__btn--sm"
+                                                        onClick={handleReject}
+                                                        disabled={mdReviewLoading}
+                                                    >
+                                                        <X size={14} /> Confirm Reject
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <button
+                                                className="mdp__btn mdp__btn--reject mdp__btn--sm"
+                                                onClick={handleReject}
+                                                disabled={mdReviewLoading}
+                                            >
+                                                <X size={14} /> Reject
+                                            </button>
+                                        )}
+                                    </div>
+                                ) : (
+                                    <p className="mdp__emp-status-msg">
+                                        {isApproved ? '✓ This employee has been approved.' : '✕ This employee has been rejected.'}
+                                    </p>
+                                )}
+                            </div>
                             <div className="mdp__emp-detail-grid">
                                 <section>
                                     <h4><CreditCard size={14} /> Bank</h4>
@@ -132,7 +147,7 @@ const EmployeeSalaryRow = ({ s, formatCurrency }) => {
 /* ══════════════════════════════════════════════════════════════
    MD APPROVAL PAGE
    Shows HR-approved periods grouped by client.
-   MD reviews employees (full details), then gives final approval with PIN.
+   MD reviews employees (full details), then gives final approval.
 ══════════════════════════════════════════════════════════════ */
 const MdApprovalPage = () => {
     const { token } = useAuth();
@@ -140,6 +155,7 @@ const MdApprovalPage = () => {
     const [loading, setLoading]         = useState(true);
     const [msg, setMsg]                 = useState(null);
     const [actionLoading, setActionLoading] = useState(false);
+    const [mdReviewLoading, setMdReviewLoading] = useState(false);
 
     /* expanded period */
     const [expanded, setExpanded]       = useState(null);
@@ -148,7 +164,7 @@ const MdApprovalPage = () => {
     const [downloadSummaryLoading, setDownloadSummaryLoading] = useState(false);
 
     /* modals */
-    const [pinTarget, setPinTarget]     = useState(null); // period to approve
+    const [approveConfirm, setApproveConfirm] = useState(null); // period to approve
     const [rejectTarget, setRejectTarget] = useState(null);
     const [rejectReason, setRejectReason] = useState('');
 
@@ -179,27 +195,49 @@ const MdApprovalPage = () => {
         finally { setDetailLoading(false); }
     };
 
-    /* ── Approve (after PIN) ───────────────────────────────────────────── */
-    const handlePinConfirm = async () => {
-        if (!pinTarget) return;
+    const refreshDetail = useCallback(async () => {
+        if (!expanded || !token) return;
+        try {
+            const res = await apiClient.get(`/payroll-periods/${expanded}`, { token });
+            setDetail(res.data);
+        } catch { /* ignore */ }
+    }, [expanded, token]);
+
+    /* ── Approve ────────────────────────────────────────────────────────── */
+    const handleApprove = async () => {
+        if (!approveConfirm) return;
         setActionLoading(true);
         try {
             await apiClient.post(
-                `/payroll-periods/${pinTarget.period_id}/md-review`,
-                { action: 'APPROVE', comments: 'MD final approval authorised (PIN verified)' },
+                `/payroll-periods/${approveConfirm.period_id}/md-review`,
+                { action: 'APPROVE', comments: 'MD final approval' },
                 { token }
             );
             setMsg({
                 type: 'ok',
-                text: `${pinTarget.client_name} — ${MONTHS[pinTarget.period_month - 1]} ${pinTarget.period_year} approved ✓ Finance Officer notified to process payments`,
+                text: `${approveConfirm.client_name} — ${MONTHS[approveConfirm.period_month - 1]} ${approveConfirm.period_year} approved ✓ Finance Officer notified to process payments`,
             });
-            setPinTarget(null);
+            setApproveConfirm(null);
             setExpanded(null);
             setDetail(null);
             load();
         } catch (e) {
             setMsg({ type: 'err', text: e.message || 'Action failed' });
         } finally { setActionLoading(false); }
+    };
+
+    /* ── Per-employee MD approve/reject ────────────────────────────────── */
+    const handleMdReviewSalary = async (salaryId, action, comment, onDone) => {
+        setMdReviewLoading(true);
+        try {
+            await apiClient.post(`/salaries/${salaryId}/md-review`, { action, comment: comment || undefined }, { token });
+            setMsg({ type: 'ok', text: `Employee ${action === 'APPROVE' ? 'approved' : 'rejected'} ✓` });
+            if (onDone) onDone();
+            await refreshDetail();
+            load();
+        } catch (e) {
+            setMsg({ type: 'err', text: e.message || 'Action failed' });
+        } finally { setMdReviewLoading(false); }
     };
 
     /* ── Reject ───────────────────────────────────────────────────────── */
@@ -345,9 +383,9 @@ const MdApprovalPage = () => {
                                             <button
                                                 className="mdp__btn mdp__btn--approve"
                                                 disabled={actionLoading}
-                                                onClick={() => setPinTarget(period)}
+                                                onClick={() => setApproveConfirm(period)}
                                             >
-                                                <KeyRound size={15} style={{ verticalAlign: 'middle' }} /> Final Approve
+                                                <CheckCircle size={15} style={{ verticalAlign: 'middle' }} /> Final Approve
                                             </button>
                                         </div>
                                     </div>
@@ -370,7 +408,14 @@ const MdApprovalPage = () => {
                                                     </thead>
                                                     <tbody>
                                                         {(detail?.salaries || []).map(s => (
-                                                            <EmployeeSalaryRow key={s.salary_id} s={s} formatCurrency={formatCurrency} />
+                                                            <EmployeeSalaryRow
+                                                                key={s.salary_id}
+                                                                s={s}
+                                                                formatCurrency={formatCurrency}
+                                                                onMdReview={handleMdReviewSalary}
+                                                                mdReviewLoading={mdReviewLoading}
+                                                                onRefresh={refreshDetail}
+                                                            />
                                                         ))}
                                                     </tbody>
                                                 </table>
@@ -384,13 +429,36 @@ const MdApprovalPage = () => {
                 )}
             </section>
 
-            {/* ── PIN confirmation modal ─────────────────────────── */}
-            {pinTarget && (
-                <PinModal
-                    onConfirm={handlePinConfirm}
-                    onCancel={() => setPinTarget(null)}
-                    loading={actionLoading}
-                />
+            {/* ── Approve confirmation modal ──────────────────────── */}
+            {approveConfirm && (
+                <div className="mdp__overlay" onClick={() => setApproveConfirm(null)}>
+                    <div className="mdp__modal mdp__modal--confirm" onClick={e => e.stopPropagation()}>
+                        <button className="mdp__modal-close" onClick={() => setApproveConfirm(null)} aria-label="Close" disabled={actionLoading}><X size={20} /></button>
+                        <div className="mdp__confirm-icon mdp__confirm-icon--approve">
+                            <CheckCircle size={28} aria-hidden />
+                        </div>
+                        <h2 className="mdp__confirm-title">Approve payroll?</h2>
+                        <p className="mdp__confirm-body">
+                            <strong>{approveConfirm.client_name}</strong> — {MONTHS[approveConfirm.period_month - 1]} {approveConfirm.period_year}
+                        </p>
+                        <p className="mdp__confirm-meta">
+                            {approveConfirm.salary_count || 0} employees · {formatCurrency(approveConfirm.total_gross || 0)}
+                        </p>
+                        <p className="mdp__confirm-meta mdp__confirm-meta--warning">
+                            Finance Officer will be notified to process payments.
+                        </p>
+                        <div className="mdp__modal-footer">
+                            <button className="mdp__btn" onClick={() => setApproveConfirm(null)} disabled={actionLoading}>Cancel</button>
+                            <button
+                                className="mdp__btn mdp__btn--approve mdp__btn--lg"
+                                disabled={actionLoading}
+                                onClick={handleApprove}
+                            >
+                                {actionLoading ? 'Approving…' : <><CheckCircle size={15} aria-hidden /> Approve</>}
+                            </button>
+                        </div>
+                    </div>
+                </div>
             )}
 
             {/* ── Reject modal ───────────────────────────────────── */}
