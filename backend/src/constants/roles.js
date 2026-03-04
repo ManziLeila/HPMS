@@ -1,7 +1,6 @@
 // Role constants for the approval system
 export const ROLES = {
     EMPLOYEE: 'Employee',
-    ADMIN: 'Admin',
     FINANCE_OFFICER: 'FinanceOfficer',
     HR: 'HR',
     MANAGING_DIRECTOR: 'ManagingDirector',
@@ -74,9 +73,6 @@ export const ROLE_PERMISSIONS = {
     [ROLES.EMPLOYEE]: [
         'view_own_payslip',
     ],
-    [ROLES.ADMIN]: [
-        'all', // Admin has all permissions
-    ],
 };
 
 // Helper function to check if role has permission
@@ -88,10 +84,10 @@ export const hasPermission = (role, permission) => {
 // Helper function to get roles that can perform an action
 export const getRolesForAction = (action) => {
     const roleMap = {
-        create_batch: [ROLES.FINANCE_OFFICER, ROLES.ADMIN],
-        approve_hr: [ROLES.HR, ROLES.ADMIN],
-        approve_md: [ROLES.MANAGING_DIRECTOR, ROLES.ADMIN],
-        send_to_bank: [ROLES.FINANCE_OFFICER, ROLES.MANAGING_DIRECTOR, ROLES.ADMIN],
+        create_batch: [ROLES.FINANCE_OFFICER],
+        approve_hr: [ROLES.HR],
+        approve_md: [ROLES.MANAGING_DIRECTOR],
+        send_to_bank: [ROLES.FINANCE_OFFICER, ROLES.MANAGING_DIRECTOR],
     };
     return roleMap[action] || [];
 };

@@ -397,7 +397,63 @@
     padding: 24px;
 }
 
-/* ── PIN modal ───────────────────────────────────────── */
+/* ── Approve confirm modal ───────────────────────────── */
+.mdp__modal--confirm {
+    max-width: 420px;
+    text-align: center;
+    padding: 32px 28px 24px;
+}
+
+.mdp__confirm-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 20px;
+}
+
+.mdp__confirm-icon--approve {
+    background: #dcfce7;
+    color: #16a34a;
+}
+
+.mdp__confirm-title {
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: #1e293b;
+    margin: 0 0 12px;
+}
+
+.mdp__confirm-body {
+    font-size: 1rem;
+    color: #334155;
+    margin: 0 0 8px;
+}
+
+.mdp__confirm-body strong {
+    color: #1e293b;
+}
+
+.mdp__confirm-meta {
+    font-size: 0.9rem;
+    color: #64748b;
+    margin: 0 0 8px;
+}
+
+.mdp__confirm-meta--warning {
+    font-size: 0.82rem;
+    color: #6366f1;
+    margin-bottom: 24px;
+}
+
+.mdp__modal--confirm .mdp__modal-footer {
+    justify-content: center;
+    padding-top: 20px;
+}
+
+/* ── PIN modal (legacy, kept for reference) ───────────── */
 .mdp__pin-modal {
     background: #fff;
     border-radius: 20px;
@@ -562,4 +618,237 @@
 
 .mdp__reject-ta:focus {
     border-color: #ef4444;
+}
+
+/* ── Spin ──────────────────────────────────────────────── */
+.mdp__spin { animation: mdp-spin 1s linear infinite; }
+@keyframes mdp-spin { to { transform: rotate(360deg); } }
+
+/* ── Empty state ───────────────────────────────────────── */
+.mdp__empty-state {
+    text-align: center;
+    padding: 48px 24px;
+    color: #94a3b8;
+}
+
+.mdp__empty-state p    { font-size: 0.95rem; margin: 8px 0 4px; }
+.mdp__empty-state small{ font-size: 0.82rem; }
+
+/* ── Period list (client-grouped) ──────────────────────── */
+.mdp__period-list {
+    display: flex;
+    flex-direction: column;
+}
+
+.mdp__period-card {
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.mdp__period-card:last-child { border-bottom: none; }
+.mdp__period-card--open      { background: #f8faff; }
+
+.mdp__period-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 24px;
+    cursor: pointer;
+    gap: 12px;
+    transition: background 0.15s;
+}
+
+.mdp__period-header:hover { background: #f8fafc; }
+
+.mdp__period-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+}
+
+.mdp__period-toggle {
+    color: #94a3b8;
+    flex-shrink: 0;
+    display: flex;
+}
+
+.mdp__period-client {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #1e293b;
+    margin: 0 0 3px;
+}
+
+.mdp__period-meta {
+    font-size: 0.82rem;
+    color: #64748b;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-wrap: wrap;
+}
+
+.mdp__period-right {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+/* ── Employee table inside period ───────────────────────── */
+.mdp__period-employees {
+    padding: 0 24px 20px;
+    border-top: 1px solid #e2e8f0;
+}
+
+.mdp__emp-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.86rem;
+    margin-top: 16px;
+}
+
+.mdp__emp-table th {
+    background: #f8fafc;
+    padding: 8px 12px;
+    text-align: left;
+    font-size: 0.73rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #64748b;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.mdp__emp-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid #f1f5f9;
+    color: #334155;
+    vertical-align: middle;
+}
+
+.mdp__emp-table tbody tr:last-child td { border-bottom: none; }
+.mdp__emp-table tbody tr:hover         { background: #f8fafc; }
+
+.mdp__emp-name  { font-weight: 600; color: #1e293b; margin: 0 0 2px; font-size: 0.88rem; }
+.mdp__emp-email { font-size: 0.78rem; color: #94a3b8; }
+
+/* ── Expandable employee row with full details ───────────────── */
+.mdp__emp-row { cursor: pointer; }
+.mdp__emp-row:hover { background: #f0f9ff !important; }
+.mdp__emp-toggle { display: inline-flex; margin-right: 8px; color: #94a3b8; vertical-align: middle; }
+.mdp__emp-dept { font-size: 0.75rem; color: #64748b; }
+
+.mdp__emp-status {
+    display: inline-block;
+    margin-left: 8px;
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 0.72rem;
+    font-weight: 700;
+}
+.mdp__emp-status--ok { background: #d1fae5; color: #047857; }
+.mdp__emp-status--err { background: #fef2f2; color: #b91c1c; }
+
+.mdp__emp-actions {
+    margin: 16px 0;
+    padding: 12px 0;
+    border-top: 1px solid #e2e8f0;
+}
+.mdp__emp-action-btns {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+.mdp__emp-status-msg {
+    margin: 0;
+    font-size: 0.9rem;
+    color: #64748b;
+}
+.mdp__reject-inline {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 8px;
+}
+.mdp__reject-inline-ta {
+    padding: 8px 12px;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-family: inherit;
+    resize: vertical;
+    min-height: 60px;
+}
+.mdp__reject-inline-ta:focus {
+    border-color: #ef4444;
+    outline: none;
+}
+.mdp__reject-inline-btns { display: flex; gap: 8px; }
+.mdp__btn--sm { padding: 6px 12px; font-size: 0.82rem; }
+
+.mdp__emp-detail-row td { padding: 0 !important; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
+.mdp__emp-detail { padding: 16px 20px; background: #f8fafc; border-left: 3px solid #6366f1; }
+.mdp__emp-detail-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+}
+.mdp__emp-detail-grid section h4 {
+    margin: 0 0 8px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.06em; color: #64748b; display: flex; align-items: center; gap: 6px;
+}
+.mdp__emp-detail-grid section ul { margin: 0; padding: 0; list-style: none; }
+.mdp__emp-detail-grid section li { padding: 4px 0; font-size: 0.82rem; color: #334155; }
+.mdp__emp-detail-grid section li strong { color: #0d1b2a; }
+
+/* ── Computation formulas (formula + result) ───────────────── */
+.mdp__formula-title {
+    margin: 0 0 12px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #64748b;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.mdp__formula-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.mdp__formula-item {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 6px;
+    font-size: 0.82rem;
+    padding: 6px 10px;
+    background: #fff;
+    border-radius: 6px;
+    border: 1px solid #e2e8f0;
+}
+
+.mdp__formula-label {
+    font-weight: 600;
+    color: #334155;
+    min-width: 120px;
+}
+
+.mdp__formula-expr {
+    color: #64748b;
+    flex: 1;
+    font-family: ui-monospace, monospace;
+    font-size: 0.78rem;
+}
+
+.mdp__formula-result {
+    font-weight: 700;
+    color: #10b981;
+    font-variant-numeric: tabular-nums;
 }

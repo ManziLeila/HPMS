@@ -33,6 +33,7 @@ export const authenticate = (req, res, next) => {
       id: claims.sub,
       email: claims.email,
       role: claims.role,
+      userType: claims.userType || 'user',
       sessionId: claims.sessionId,
     };
 

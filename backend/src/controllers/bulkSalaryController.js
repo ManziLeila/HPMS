@@ -14,6 +14,7 @@ const bulkSalarySchema = z.object({
     payPeriod: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
     frequency: z.enum(['monthly', 'weekly', 'daily']).default('monthly'),
     includeMedical: z.boolean().optional().default(true),
+    clientId: z.string().optional().transform((v) => (v ? Number(v) : null)),
 });
 
 /**
@@ -37,12 +38,14 @@ export const bulkUploadSalaries = async (req, res, next) => {
         }
 
         // Convert includeMedical from string to boolean (FormData sends strings)
+        // clientId can come from req.body (FormData) or req.query (fallback for some clients)
         const bodyData = {
             ...req.body,
             includeMedical: req.body.includeMedical === 'true' || req.body.includeMedical === true,
+            clientId: req.body.clientId ?? req.query.clientId ?? undefined,
         };
 
-        const { payPeriod, frequency, includeMedical } = bulkSalarySchema.parse(bodyData);
+        const { payPeriod, frequency, includeMedical, clientId } = bulkSalarySchema.parse(bodyData);
 
         // Parse Excel file
         const workbook = XLSX.read(req.file.buffer, { type: 'buffer' });
@@ -109,11 +112,14 @@ export const bulkUploadSalaries = async (req, res, next) => {
                     }
                     if (existingEmployee) {
                         employee = existingEmployee;
-                        // Update RSSB number if provided and employee doesn't have one yet
-                        if (rssbNumber && !existingEmployee.rssb_number) {
-                            await employeeRepo.update({
+                        // Update RSSB and/or client_id when needed
+                        const needsRssb = rssbNumber && !existingEmployee.rssb_number;
+                        const needsClient = clientId != null && existingEmployee.client_id !== clientId;
+                        if (needsRssb || needsClient) {
+                            employee = await employeeRepo.update({
                                 employeeId: existingEmployee.employee_id,
-                                rssbNumber: String(rssbNumber).trim(),
+                                rssbNumber: needsRssb ? String(rssbNumber).trim() : undefined,
+                                clientId: needsClient ? clientId : undefined,
                             });
                         }
                     } else {
@@ -122,6 +128,7 @@ export const bulkUploadSalaries = async (req, res, next) => {
                             email: email || null,
                             role: 'Employee',
                             rssbNumber: rssbNumber ? String(rssbNumber).trim() : null,
+                            clientId: clientId != null ? clientId : undefined,
                         });
                     }
                 } catch (err) {
@@ -246,34 +253,76 @@ export const downloadBulkPayslips = async (req, res, next) => {
                     continue;
                 }
 
-                // Decrypt compensation data
-                const decryptedComp = {
-                    baseSalary: record.basic_salary_enc ? Number(decryptField('basic_salary_enc', record.basic_salary_enc)) : 0,
-                    transportAllowance: record.transport_allow_enc ? Number(decryptField('transport_allow_enc', record.transport_allow_enc)) : 0,
-                    housingAllowance: record.housing_allow_enc ? Number(decryptField('housing_allow_enc', record.housing_allow_enc)) : 0,
-                    variableAllowance: record.variable_allow_enc ? Number(decryptField('variable_allow_enc', record.variable_allow_enc)) : 0,
-                    performanceAllowance: record.performance_allow_enc ? Number(decryptField('performance_allow_enc', record.performance_allow_enc)) : 0,
+                // Decrypt compensation data — prefer payroll_snapshot_enc (matches salaryRepo storage)
+                let decryptedComp = {
+                    baseSalary: 0,
+                    transportAllowance: 0,
+                    housingAllowance: 0,
+                    variableAllowance: 0,
+                    performanceAllowance: 0,
                 };
+                let payrollSnapshot = null;
 
-                // Calculate payroll snapshot
-                const payrollSnapshot = calculatePayroll({
+                if (record.payroll_snapshot_enc) {
+                    try {
+                        const raw = decryptField('payroll_snapshot_enc', record.payroll_snapshot_enc);
+                        if (raw) {
+                            const snap = JSON.parse(raw);
+                            const sa = snap.allowances || snap;
+                            decryptedComp.baseSalary = snap.basicSalary ?? snap.baseSalary ?? snap.base_salary ?? 0;
+                            decryptedComp.transportAllowance = sa.transport ?? sa.transportAllowance ?? sa.transport_allowance ?? 0;
+                            decryptedComp.housingAllowance = sa.housing ?? sa.housingAllowance ?? sa.housing_allowance ?? 0;
+                            decryptedComp.performanceAllowance = sa.performance ?? sa.performanceAllowance ?? sa.performance_allowance ?? 0;
+                            decryptedComp.variableAllowance = sa.variable ?? sa.variableAllowance ?? sa.variable_allowance ?? 0;
+                            payrollSnapshot = snap;
+                        }
+                    } catch (e) {
+                        console.warn(`[downloadBulkPayslips] payroll_snapshot_enc failed for salary ${salaryId}:`, e.message);
+                    }
+                }
+
+                if (!payrollSnapshot) {
+                    try {
+                        decryptedComp.baseSalary = record.basic_salary_enc ? Number(decryptField('basic_salary_enc', record.basic_salary_enc)) : 0;
+                        decryptedComp.transportAllowance = record.transport_allow_enc ? Number(decryptField('transport_allow_enc', record.transport_allow_enc)) : 0;
+                        decryptedComp.housingAllowance = record.housing_allow_enc ? Number(decryptField('housing_allow_enc', record.housing_allow_enc)) : 0;
+                        decryptedComp.variableAllowance = record.variable_allow_enc ? Number(decryptField('variable_allow_enc', record.variable_allow_enc)) : 0;
+                        decryptedComp.performanceAllowance = record.performance_allow_enc ? Number(decryptField('performance_allow_enc', record.performance_allow_enc)) : 0;
+                    } catch (e) {
+                        console.warn(`[downloadBulkPayslips] individual field decryption failed for salary ${salaryId}:`, e.message);
+                    }
+                }
+
+                // Fallback: use gross_salary if decryption yielded zero base
+                if (decryptedComp.baseSalary === 0 && record.gross_salary > 0) {
+                    decryptedComp.baseSalary = record.gross_salary;
+                }
+
+                payrollSnapshot = calculatePayroll({
                     ...decryptedComp,
                     advanceAmount: record.advance_amount || 0,
                     frequency: record.pay_frequency,
                     includeMedical: record.include_medical !== false,
                 });
 
+                let bankAccountNumber = 'N/A';
+                if (record.account_number_enc) {
+                    try {
+                        bankAccountNumber = decryptField('account_number_enc', record.account_number_enc);
+                    } catch { /* ignore */ }
+                }
+
                 // Generate PDF
                 const pdfBuffer = await generatePayslipPdf({
                     employee: {
-                        fullName: record.full_name,
+                        fullName: record.full_name || 'N/A',
                         email: record.email,
                         bankName: record.bank_name || 'N/A',
-                        accountNumber: record.account_number_enc ? decryptField('account_number_enc', record.account_number_enc) : 'N/A',
-                        accountHolderName: record.account_holder_name || record.full_name,
+                        accountNumber: bankAccountNumber,
+                        accountHolderName: record.account_holder_name || record.full_name || 'N/A',
                         role: record.role || 'Employee',
                         department: record.department || 'N/A',
-                        dateOfJoining: record.date_of_joining || record.created_at,
+                        dateOfJoining: record.date_of_joining || record.employee_created_at || record.created_at,
                     },
                     salary: {
                         payPeriod: record.pay_period,
@@ -294,7 +343,11 @@ export const downloadBulkPayslips = async (req, res, next) => {
                 }
                 const monthFolder = monthFolders.get(monthName);
 
-                const filename = `payslip-${record.full_name.replace(/\s+/g, '-').toLowerCase()}-${record.pay_period}.pdf`;
+                const periodStr = record.pay_period
+                    ? new Date(record.pay_period).toISOString().slice(0, 10)
+                    : 'unknown';
+                const safeName = (record.full_name || 'employee').replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, '').toLowerCase();
+                const filename = `payslip-${safeName}-${periodStr}.pdf`;
                 monthFolder.file(filename, pdfBuffer);
                 successCount++;
             } catch (err) {
@@ -361,16 +414,45 @@ export const sendBulkPayslipEmails = async (req, res, next) => {
                     continue;
                 }
 
-                // Decrypt compensation data
-                const decryptedComp = {
-                    baseSalary: record.basic_salary_enc ? Number(decryptField('basic_salary_enc', record.basic_salary_enc)) : 0,
-                    transportAllowance: record.transport_allow_enc ? Number(decryptField('transport_allow_enc', record.transport_allow_enc)) : 0,
-                    housingAllowance: record.housing_allow_enc ? Number(decryptField('housing_allow_enc', record.housing_allow_enc)) : 0,
-                    variableAllowance: record.variable_allow_enc ? Number(decryptField('variable_allow_enc', record.variable_allow_enc)) : 0,
-                    performanceAllowance: record.performance_allow_enc ? Number(decryptField('performance_allow_enc', record.performance_allow_enc)) : 0,
+                // Decrypt compensation data — prefer payroll_snapshot_enc (same as downloadBulkPayslips)
+                let decryptedComp = {
+                    baseSalary: 0,
+                    transportAllowance: 0,
+                    housingAllowance: 0,
+                    variableAllowance: 0,
+                    performanceAllowance: 0,
                 };
+                if (record.payroll_snapshot_enc) {
+                    try {
+                        const raw = decryptField('payroll_snapshot_enc', record.payroll_snapshot_enc);
+                        if (raw) {
+                            const snap = JSON.parse(raw);
+                            const sa = snap.allowances || snap;
+                            decryptedComp.baseSalary = snap.basicSalary ?? snap.baseSalary ?? snap.base_salary ?? 0;
+                            decryptedComp.transportAllowance = sa.transport ?? sa.transportAllowance ?? sa.transport_allowance ?? 0;
+                            decryptedComp.housingAllowance = sa.housing ?? sa.housingAllowance ?? sa.housing_allowance ?? 0;
+                            decryptedComp.performanceAllowance = sa.performance ?? sa.performanceAllowance ?? sa.performance_allowance ?? 0;
+                            decryptedComp.variableAllowance = sa.variable ?? sa.variableAllowance ?? sa.variable_allowance ?? 0;
+                        }
+                    } catch (e) {
+                        console.warn(`[sendBulkPayslipEmails] payroll_snapshot_enc failed for salary ${salaryId}:`, e.message);
+                    }
+                }
+                if (decryptedComp.baseSalary === 0) {
+                    try {
+                        decryptedComp.baseSalary = record.basic_salary_enc ? Number(decryptField('basic_salary_enc', record.basic_salary_enc)) : 0;
+                        decryptedComp.transportAllowance = record.transport_allow_enc ? Number(decryptField('transport_allow_enc', record.transport_allow_enc)) : 0;
+                        decryptedComp.housingAllowance = record.housing_allow_enc ? Number(decryptField('housing_allow_enc', record.housing_allow_enc)) : 0;
+                        decryptedComp.variableAllowance = record.variable_allow_enc ? Number(decryptField('variable_allow_enc', record.variable_allow_enc)) : 0;
+                        decryptedComp.performanceAllowance = record.performance_allow_enc ? Number(decryptField('performance_allow_enc', record.performance_allow_enc)) : 0;
+                    } catch (e) {
+                        console.warn(`[sendBulkPayslipEmails] individual field decryption failed for salary ${salaryId}:`, e.message);
+                    }
+                }
+                if (decryptedComp.baseSalary === 0 && record.gross_salary > 0) {
+                    decryptedComp.baseSalary = record.gross_salary;
+                }
 
-                // Calculate payroll snapshot
                 const payrollSnapshot = calculatePayroll({
                     ...decryptedComp,
                     advanceAmount: record.advance_amount || 0,
@@ -378,13 +460,20 @@ export const sendBulkPayslipEmails = async (req, res, next) => {
                     includeMedical: record.include_medical !== false,
                 });
 
+                let bankAccountNumber = null;
+                if (record.account_number_enc) {
+                    try {
+                        bankAccountNumber = decryptField('account_number_enc', record.account_number_enc);
+                    } catch { /* ignore */ }
+                }
+
                 // Generate PDF
                 const pdfBuffer = await generatePayslipPdf({
                     employee: {
                         fullName: record.full_name,
                         email: record.email,
                         bankName: record.bank_name,
-                        accountNumber: record.account_number_enc ? decryptField('account_number_enc', record.account_number_enc) : null,
+                        accountNumber: bankAccountNumber,
                         accountHolderName: record.account_holder_name,
                         role: record.role,
                         department: record.department,
@@ -399,7 +488,11 @@ export const sendBulkPayslipEmails = async (req, res, next) => {
                     payrollSnapshot,
                 });
 
-                const filename = `payslip-${record.full_name.replace(/\s+/g, '-').toLowerCase()}-${record.pay_period}.pdf`;
+                const periodStr = record.pay_period
+                    ? new Date(record.pay_period).toISOString().slice(0, 10)
+                    : 'unknown';
+                const safeName = (record.full_name || 'employee').replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, '').toLowerCase();
+                const filename = `payslip-${safeName}-${periodStr}.pdf`;
 
                 // Calculate payment date
                 const payDate = new Date(record.pay_period);

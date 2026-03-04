@@ -26,6 +26,10 @@ const initialFormState = {
   performanceAllowance: '',
   advanceAmount: '',
   includeMedical: true,
+  contractStartDate: '',
+  contractEndDate: '',
+  jobTitle: '',
+  department: '',
 };
 
 const EmployeeFormPage = () => {
@@ -140,6 +144,22 @@ const EmployeeFormPage = () => {
 
       const employeeId = employeeResponse.employee?.employee_id || employeeResponse.employee_id;
 
+      // Then create contract if under client and contract dates provided
+      if (formValues.clientId && formValues.contractStartDate) {
+        try {
+          await apiClient.post('/contracts', {
+            employeeId,
+            contractType: 'fixed-term',
+            jobTitle: formValues.jobTitle || 'Employee',
+            department: formValues.department || undefined,
+            startDate: formValues.contractStartDate,
+            endDate: formValues.contractEndDate || undefined,
+          }, { token });
+        } catch (contractErr) {
+          console.warn('Contract creation failed:', contractErr);
+        }
+      }
+
       // Then create salary
       const salaryResponse = await apiClient.post(
         '/salaries',
@@ -224,9 +244,6 @@ const EmployeeFormPage = () => {
               Role
               <select name="role" value={formValues.role} onChange={handleChange}>
                 <option value="Employee">Employee</option>
-                <option value="Admin">Admin (Legacy)</option>
-                <option value="HR">HR</option>
-                <option value="FinanceOfficer">Finance Officer</option>
               </select>
             </label>
             <label>
@@ -238,6 +255,46 @@ const EmployeeFormPage = () => {
                 ))}
               </select>
             </label>
+            {formValues.clientId && (
+              <>
+                <label>
+                  Contract start date
+                  <input
+                    type="date"
+                    name="contractStartDate"
+                    value={formValues.contractStartDate}
+                    onChange={handleChange}
+                  />
+                </label>
+                <label>
+                  Contract end date
+                  <input
+                    type="date"
+                    name="contractEndDate"
+                    value={formValues.contractEndDate}
+                    onChange={handleChange}
+                  />
+                </label>
+                <label>
+                  Job title
+                  <input
+                    name="jobTitle"
+                    placeholder="e.g. Software Developer"
+                    value={formValues.jobTitle}
+                    onChange={handleChange}
+                  />
+                </label>
+                <label>
+                  Department
+                  <input
+                    name="department"
+                    placeholder="e.g. IT"
+                    value={formValues.department}
+                    onChange={handleChange}
+                  />
+                </label>
+              </>
+            )}
             <label>
               Pay period
               <input

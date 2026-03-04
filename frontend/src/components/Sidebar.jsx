@@ -13,6 +13,8 @@ import {
   Settings,
   Mail,
   Calculator,
+  BarChart3,
+  UserCog,
   X,
 } from 'lucide-react';
 import useAuth from '../hooks/useAuth';
@@ -21,22 +23,23 @@ import './Sidebar.css';
 const ROUTE_MAP = {
   FinanceOfficer: [
     { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { path: '/approval-dashboard', label: 'Approvals', icon: BarChart3 },
     { path: '/clients', label: 'Clients', icon: Users },
     { path: '/employees/new', label: 'Employee Form', icon: UserPlus },
     { path: '/bulk-upload', label: 'Bulk Upload', icon: Upload },
     { path: '/payroll-run', label: 'Payroll Run', icon: Calculator },
-    { path: '/my-batches', label: 'My Batches', icon: Layers },
+    { path: '/payroll-periods', label: 'Payroll Periods', icon: Layers },
     { path: '/contracts', label: 'Contracts', icon: FileSignature },
     { path: '/contract-templates', label: 'Contract Templates', icon: Pencil },
-    { path: '/hr-review', label: 'HR Review', icon: CheckSquare },
-    { path: '/md-approval', label: 'MD Approval', icon: ShieldCheck },
     { path: '/reports', label: 'Reports', icon: FileText },
     { path: '/email-settings', label: 'Email Settings', icon: Mail },
     { path: '/settings', label: 'Settings', icon: Settings },
   ],
   HR: [
     { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { path: '/approval-dashboard', label: 'Approvals', icon: BarChart3 },
     { path: '/clients', label: 'Clients', icon: Users },
+    { path: '/users', label: 'Users', icon: UserCog },
     { path: '/contracts', label: 'Contracts', icon: FileSignature },
     { path: '/contract-templates', label: 'Contract Templates', icon: Pencil },
     { path: '/hr-review', label: 'HR Review', icon: CheckSquare },
@@ -46,25 +49,12 @@ const ROUTE_MAP = {
   ],
   ManagingDirector: [
     { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { path: '/approval-dashboard', label: 'Approvals', icon: BarChart3 },
     { path: '/clients', label: 'Clients', icon: Users },
+    { path: '/users', label: 'Users', icon: UserCog },
     { path: '/md-approval', label: 'MD Approval', icon: ShieldCheck },
     { path: '/contracts', label: 'Contracts', icon: FileSignature },
     { path: '/reports', label: 'Reports', icon: FileText },
-    { path: '/settings', label: 'Settings', icon: Settings },
-  ],
-  Admin: [
-    { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { path: '/clients', label: 'Clients', icon: Users },
-    { path: '/employees/new', label: 'Employee Form', icon: UserPlus },
-    { path: '/bulk-upload', label: 'Bulk Upload', icon: Upload },
-    { path: '/payroll-run', label: 'Payroll Run', icon: Calculator },
-    { path: '/my-batches', label: 'My Batches', icon: Layers },
-    { path: '/contracts', label: 'Contracts', icon: FileSignature },
-    { path: '/contract-templates', label: 'Contract Templates', icon: Pencil },
-    { path: '/hr-review', label: 'HR Review', icon: CheckSquare },
-    { path: '/md-approval', label: 'MD Approval', icon: ShieldCheck },
-    { path: '/reports', label: 'Reports', icon: FileText },
-    { path: '/email-settings', label: 'Email Settings', icon: Mail },
     { path: '/settings', label: 'Settings', icon: Settings },
   ],
   Employee: [
@@ -78,7 +68,6 @@ const ROLE_LABELS = {
   FinanceOfficer: 'Finance Officer',
   HR: 'HR Manager',
   ManagingDirector: 'Managing Director',
-  Admin: 'Administrator',
   Employee: 'Employee',
 };
 
@@ -86,7 +75,6 @@ const STATUS_COLORS = {
   FinanceOfficer: '#f5911f',
   HR: '#6366f1',
   ManagingDirector: '#10b981',
-  Admin: '#ef4444',
   Employee: '#94a3b8',
 };
 

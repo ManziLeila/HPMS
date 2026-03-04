@@ -7,7 +7,8 @@ const resolveApiBase = () => {
   }
 
   const origin = window.location.origin;
-  if (origin.includes("localhost:5173") || origin.includes("localhost:5174")) {
+  // Local dev: Vite uses 5173 by default, may use 5174, 5175, etc. if port is busy
+  if (origin.includes("localhost:") || origin.includes("127.0.0.1:")) {
     return "http://localhost:4000/api";
   }
 
@@ -93,6 +94,28 @@ const request = async (path, { method = "GET", body, token, signal, headers } = 
 export const apiClient = {
   get: (path, options) => request(path, { ...options, method: "GET" }),
   post: (path, body, options) => request(path, { ...options, method: "POST", body }),
+  postForm: async (path, formData, options = {}) => {
+    const url = `${API_BASE_URL}${path}`;
+    const headers = {};
+    if (options.token) headers.Authorization = `Bearer ${options.token}`;
+    const res = await fetch(url, {
+      method: "POST",
+      headers,
+      body: formData,
+    });
+    return parseResponse(res);
+  },
+  putForm: async (path, formData, options = {}) => {
+    const url = `${API_BASE_URL}${path}`;
+    const headers = {};
+    if (options.token) headers.Authorization = `Bearer ${options.token}`;
+    const res = await fetch(url, {
+      method: "PUT",
+      headers,
+      body: formData,
+    });
+    return parseResponse(res);
+  },
   put: (path, body, options) => request(path, { ...options, method: "PUT", body }),
   patch: (path, body, options) => request(path, { ...options, method: "PATCH", body }),
   delete: (path, options) => request(path, { ...options, method: "DELETE" }),

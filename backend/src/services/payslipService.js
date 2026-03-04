@@ -1,4 +1,5 @@
 import PDFDocument from 'pdfkit';
+import { PassThrough } from 'stream';
 import dayjs from 'dayjs';
 import { formatCurrency } from '../utils/currency.js';
 import { numberToWords } from '../utils/numberToWords.js';
@@ -6,15 +7,35 @@ import { numberToWords } from '../utils/numberToWords.js';
 /**
  * Generate a professional payslip PDF matching the reference design
  * Clean, business-style layout with bordered tables
+ * Uses pipe() as required by PDFKit for proper streaming
  */
 export const generatePayslipPdf = ({ employee, salary, payrollSnapshot }) =>
   new Promise((resolve, reject) => {
     const doc = new PDFDocument({ size: 'A4', margin: 50 });
     const chunks = [];
-
-    doc.on('data', (chunk) => chunks.push(chunk));
-    doc.on('end', () => resolve(Buffer.concat(chunks)));
+    const pass = new PassThrough();
+    pass.on('data', (chunk) => chunks.push(chunk));
+    pass.on('finish', () => {
+      const buf = Buffer.concat(chunks);
+      if (buf.length === 0) {
+        reject(new Error('PDF generation produced empty output'));
+      } else {
+        resolve(buf);
+      }
+    });
+    pass.on('error', reject);
     doc.on('error', reject);
+    doc.pipe(pass);
+
+    // Defensive: ensure required structures exist (use snap for all reads)
+    const snap = payrollSnapshot || {};
+    const allowances = snap.allowances || {
+      transport: 0,
+      housing: 0,
+      performance: 0,
+      variable: 0,
+    };
+    const basicSalary = snap.basicSalary ?? 0;
 
     const pageWidth = 595.28; // A4 width in points
     const margin = 50;
@@ -59,10 +80,11 @@ export const generatePayslipPdf = ({ employee, salary, payrollSnapshot }) =>
       );
 
     doc.fontSize(10).font('Helvetica').text('Pay Period', leftColX, infoStartY + 20);
+    const payPeriodStr = salary?.payPeriod ? dayjs(salary.payPeriod).format('MMMM YYYY') : 'N/A';
     doc
       .fontSize(11)
       .font('Helvetica-Bold')
-      .text(dayjs(salary.payPeriod).format('MMMM YYYY'), leftColX + 120, infoStartY + 20);
+      .text(payPeriodStr, leftColX + 120, infoStartY + 20);
 
     doc.fontSize(10).font('Helvetica').text('Worked Days', leftColX, infoStartY + 40);
     doc
@@ -72,7 +94,7 @@ export const generatePayslipPdf = ({ employee, salary, payrollSnapshot }) =>
 
     // Right Column
     doc.fontSize(10).font('Helvetica').text('Employee name', rightColX, infoStartY);
-    doc.fontSize(11).font('Helvetica-Bold').text(employee.fullName, rightColX + 120, infoStartY);
+    doc.fontSize(11).font('Helvetica-Bold').text(employee?.fullName || 'N/A', rightColX + 120, infoStartY);
 
     doc.fontSize(10).font('Helvetica').text('Designation', rightColX, infoStartY + 20);
     doc
@@ -108,12 +130,12 @@ export const generatePayslipPdf = ({ employee, salary, payrollSnapshot }) =>
 
     let currentY = earningsTableY + 25;
 
-    // Earnings rows
+    // Earnings rows (use safe allowances/basicSalary)
     const earningsItems = [
-      { label: 'Basic Salary', amount: payrollSnapshot.basicSalary },
-      { label: 'Transport Allowance', amount: payrollSnapshot.allowances.transport },
-      { label: 'Housing Allowance', amount: payrollSnapshot.allowances.housing },
-      { label: 'Performance Allowance', amount: payrollSnapshot.allowances.performance },
+      { label: 'Basic Salary', amount: basicSalary },
+      { label: 'Transport Allowance', amount: allowances.transport },
+      { label: 'Housing Allowance', amount: allowances.housing },
+      { label: 'Performance Allowance', amount: allowances.performance },
     ];
 
     earningsItems.forEach((item) => {
@@ -131,7 +153,7 @@ export const generatePayslipPdf = ({ employee, salary, payrollSnapshot }) =>
     doc.rect(tableX, currentY, tableWidth, 22).stroke();
     doc.rect(tableX, currentY, col1Width, 22).stroke();
     doc.fontSize(11).font('Helvetica-Bold').text('Total Earnings', tableX + 10, currentY + 6);
-    doc.text(formatCurrency(payrollSnapshot.grossSalary).replace('RWF ', ''), tableX + col1Width + 10, currentY + 6, {
+    doc.text(formatCurrency(snap.grossSalary ?? 0).replace('RWF ', ''), tableX + col1Width + 10, currentY + 6, {
       width: col2Width - 20,
       align: 'right',
     });
@@ -156,27 +178,27 @@ export const generatePayslipPdf = ({ employee, salary, payrollSnapshot }) =>
 
     // Deductions rows
     const deductionsItems = [
-      { label: 'PAYE Tax', amount: payrollSnapshot.paye },
-      { label: 'RSSB Pension (6%)', amount: payrollSnapshot.rssbEePension },
-      { label: 'RSSB Maternity (0.3%)', amount: payrollSnapshot.rssbEeMaternity },
+      { label: 'PAYE Tax', amount: snap.paye ?? 0 },
+      { label: 'RSSB Pension (6%)', amount: snap.rssbEePension ?? 0 },
+      { label: 'RSSB Maternity (0.3%)', amount: snap.rssbEeMaternity ?? 0 },
     ];
 
-    if (payrollSnapshot.includeMedical !== false) {
+    if (snap.includeMedical !== false) {
       deductionsItems.push({
         label: 'RAMA Insurance (7.5%)',
-        amount: payrollSnapshot.ramaInsuranceEmployee || payrollSnapshot.medicalInsuranceEmployee || 0,
+        amount: snap.ramaInsuranceEmployee || snap.medicalInsuranceEmployee || 0,
       });
     }
 
     deductionsItems.push({
       label: 'CBHI (0.5%)',
-      amount: payrollSnapshot.cbhiEmployee || 0,
+      amount: snap.cbhiEmployee ?? 0,
     });
 
-    if (payrollSnapshot.advanceAmount > 0) {
+    if ((snap.advanceAmount ?? 0) > 0) {
       deductionsItems.push({
         label: 'Advance Deduction',
-        amount: payrollSnapshot.advanceAmount,
+        amount: snap.advanceAmount,
       });
     }
 
@@ -196,7 +218,7 @@ export const generatePayslipPdf = ({ employee, salary, payrollSnapshot }) =>
     doc.rect(tableX, currentY, col1Width, 22).stroke();
     doc.fontSize(11).font('Helvetica-Bold').text('Total Deductions', tableX + 10, currentY + 6);
     doc.text(
-      formatCurrency(payrollSnapshot.totalEmployeeDeductions).replace('RWF ', ''),
+      formatCurrency(snap.totalEmployeeDeductions ?? 0).replace('RWF ', ''),
       tableX + col1Width + 10,
       currentY + 6,
       {
@@ -212,7 +234,7 @@ export const generatePayslipPdf = ({ employee, salary, payrollSnapshot }) =>
     doc.rect(tableX, currentY, col1Width, 25).stroke();
     doc.fontSize(12).font('Helvetica-Bold').fillColor('#000000').text('Net Pay', tableX + 10, currentY + 8);
     doc.text(
-      formatCurrency(payrollSnapshot.netPaidToBank || payrollSnapshot.netSalary).replace('RWF ', ''),
+      formatCurrency(snap.netPaidToBank || snap.netSalary || 0).replace('RWF ', ''),
       tableX + col1Width + 10,
       currentY + 8,
       {
@@ -226,8 +248,8 @@ export const generatePayslipPdf = ({ employee, salary, payrollSnapshot }) =>
     // ========================================
     // NET PAY IN WORDS
     // ========================================
-    const netAmount = payrollSnapshot.netPaidToBank || payrollSnapshot.netSalary;
-    const amountInWords = numberToWords(netAmount);
+    const netAmount = snap.netPaidToBank ?? snap.netSalary ?? 0;
+    const amountInWords = numberToWords(Math.max(0, Number(netAmount) || 0));
 
     doc
       .fontSize(11)

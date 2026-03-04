@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Pencil, Trash2, AlertTriangle, ArrowLeft, UserPlus } from 'lucide-react';
-import { apiClient } from '../api/client';
+import { Pencil, Trash2, AlertTriangle, ArrowLeft, UserPlus, FileSpreadsheet, FileText, Eye, Download } from 'lucide-react';
+import { apiClient, API_BASE_URL } from '../api/client';
 import useAuth from '../hooks/useAuth';
 import { useLanguage } from '../context/LanguageContext';
 import './EmployeesPage.css';
@@ -18,8 +18,9 @@ const ClientEmployeesPage = () => {
     const [deleteConfirm, setDeleteConfirm] = useState(null);
     const [clientContracts, setClientContracts] = useState([]);
     const [clientContractModal, setClientContractModal] = useState(null); // null | 'add' | contract for edit
-    const [clientContractForm, setClientContractForm] = useState({ contractType: 'service-agreement', startDate: '', endDate: '', notes: '' });
+    const [clientContractForm, setClientContractForm] = useState({ contractType: 'service-agreement', startDate: '', endDate: '', notes: '', contractDocument: null });
     const [savingContract, setSavingContract] = useState(false);
+    const [viewContractDetails, setViewContractDetails] = useState(null); // 'client' | { employee } for employee contract
     const { token } = useAuth();
     const { t } = useLanguage();
 
@@ -91,7 +92,7 @@ const ClientEmployeesPage = () => {
     };
 
     const openAddClientContract = () => {
-        setClientContractForm({ contractType: 'service-agreement', startDate: '', endDate: '', notes: '' });
+        setClientContractForm({ contractType: 'service-agreement', startDate: '', endDate: '', notes: '', contractDocument: null });
         setClientContractModal('add');
     };
     const openEditClientContract = (contract) => {
@@ -100,6 +101,7 @@ const ClientEmployeesPage = () => {
             startDate: contract.start_date?.slice(0, 10) || '',
             endDate: contract.end_date?.slice(0, 10) || '',
             notes: contract.notes || '',
+            contractDocument: null,
         });
         setClientContractModal(contract);
     };
@@ -110,20 +112,35 @@ const ClientEmployeesPage = () => {
         }
         setSavingContract(true);
         try {
-            if (clientContractModal === 'add') {
-                await apiClient.post(`/clients/${clientId}/contracts`, {
-                    contractType: clientContractForm.contractType,
-                    startDate: clientContractForm.startDate,
-                    endDate: clientContractForm.endDate || null,
-                    notes: clientContractForm.notes || null,
-                }, { token });
+            const hasFile = !!clientContractForm.contractDocument;
+            if (hasFile) {
+                const formData = new FormData();
+                formData.append('contractType', clientContractForm.contractType);
+                formData.append('startDate', clientContractForm.startDate);
+                if (clientContractForm.endDate) formData.append('endDate', clientContractForm.endDate);
+                if (clientContractForm.notes) formData.append('notes', clientContractForm.notes);
+                formData.append('contractDocument', clientContractForm.contractDocument);
+                if (clientContractModal === 'add') {
+                    await apiClient.postForm(`/clients/${clientId}/contracts`, formData, { token });
+                } else {
+                    await apiClient.putForm(`/clients/${clientId}/contracts/${clientContractModal.contract_id}`, formData, { token });
+                }
             } else {
-                await apiClient.put(`/clients/${clientId}/contracts/${clientContractModal.contract_id}`, {
-                    contractType: clientContractForm.contractType,
-                    startDate: clientContractForm.startDate,
-                    endDate: clientContractForm.endDate || null,
-                    notes: clientContractForm.notes || null,
-                }, { token });
+                if (clientContractModal === 'add') {
+                    await apiClient.post(`/clients/${clientId}/contracts`, {
+                        contractType: clientContractForm.contractType,
+                        startDate: clientContractForm.startDate,
+                        endDate: clientContractForm.endDate || null,
+                        notes: clientContractForm.notes || null,
+                    }, { token });
+                } else {
+                    await apiClient.put(`/clients/${clientId}/contracts/${clientContractModal.contract_id}`, {
+                        contractType: clientContractForm.contractType,
+                        startDate: clientContractForm.startDate,
+                        endDate: clientContractForm.endDate || null,
+                        notes: clientContractForm.notes || null,
+                    }, { token });
+                }
             }
             setClientContractModal(null);
             fetchClientAndEmployees();
@@ -131,6 +148,24 @@ const ClientEmployeesPage = () => {
             alert(err.message || 'Failed to save client contract');
         } finally {
             setSavingContract(false);
+        }
+    };
+
+    const downloadContractDocument = async (type, contractId, filename = 'contract.pdf') => {
+        const url = type === 'client'
+            ? `${API_BASE_URL}/clients/${clientId}/contracts/${contractId}/download`
+            : `${API_BASE_URL}/contracts/${contractId}/download`;
+        try {
+            const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+            if (!res.ok) throw new Error('Download failed');
+            const blob = await res.blob();
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = filename;
+            a.click();
+            URL.revokeObjectURL(a.href);
+        } catch (err) {
+            alert(err.message || 'Failed to download document');
         }
     };
 
@@ -184,13 +219,22 @@ const ClientEmployeesPage = () => {
                     <h1>{client.name} — {t('employees') || 'Employees'}</h1>
                     <p>{t('manageEmployeeInfo') || 'Manage employee information and access.'}</p>
                 </div>
-                <button
-                    type="button"
-                    className="btn-add-employee"
-                    onClick={() => navigate(`/employees/new?clientId=${clientId}`)}
-                >
-                    <UserPlus size={20} aria-hidden /> {t('addEmployee') || 'Add employee'}
-                </button>
+                <div style={{ display: 'flex', gap: '1rem' }}>
+                    <button
+                        type="button"
+                        className="btn-add-employee"
+                        onClick={() => navigate(`/employees/new?clientId=${clientId}`)}
+                    >
+                        <UserPlus size={20} aria-hidden /> {t('addEmployee') || 'Add employee'}
+                    </button>
+                    <button
+                        type="button"
+                        className="btn-bulk-upload"
+                        onClick={() => navigate(`/clients/${clientId}/bulk-upload`)}
+                    >
+                        <FileSpreadsheet size={20} aria-hidden /> Bulk Upload
+                    </button>
+                </div>
             </header>
 
             <div className="client-employees-summary">
@@ -231,6 +275,11 @@ const ClientEmployeesPage = () => {
                     </article>
                 </div>
                 <div className="client-employees-summary__actions">
+                    {clientContracts.length > 0 && (
+                        <button type="button" className="client-employees-summary__btn-contract client-employees-summary__btn-contract--view" onClick={() => setViewContractDetails('client')}>
+                            <Eye size={18} /> {t('viewContractDetails') || 'View contract details'}
+                        </button>
+                    )}
                     <button type="button" className="client-employees-summary__btn-contract" onClick={clientContracts.length === 0 ? openAddClientContract : () => openEditClientContract(clientContracts[0])}>
                         {clientContracts.length === 0 ? (t('addClientContract') || 'Add client contract') : (t('edit') || 'Edit') + ' contract'}
                     </button>
@@ -289,6 +338,14 @@ const ClientEmployeesPage = () => {
                                     })()}
                                 </td>
                                 <td className="actions">
+                                    <button
+                                        type="button"
+                                        className="btn-edit"
+                                        onClick={() => setViewContractDetails({ employee })}
+                                        title={t('viewContractDetails') || 'View contract details'}
+                                    >
+                                        <Eye size={16} aria-hidden /> {t('view') || 'View'}
+                                    </button>
                                     <button
                                         type="button"
                                         className="btn-edit"
@@ -431,11 +488,64 @@ const ClientEmployeesPage = () => {
                                 onChange={(e) => setClientContractForm({ ...clientContractForm, notes: e.target.value })}
                             />
                         </div>
+                        <div className="form-group">
+                            <label><FileText size={16} style={{ verticalAlign: 'middle' }} /> {t('contractDocument') || 'Upload contract document'}</label>
+                            <input
+                                type="file"
+                                accept=".pdf,.doc,.docx,image/*"
+                                onChange={(e) => setClientContractForm({ ...clientContractForm, contractDocument: e.target.files?.[0] || null })}
+                            />
+                            {clientContractForm.contractDocument && (
+                                <span className="form-hint">{clientContractForm.contractDocument.name}</span>
+                            )}
+                        </div>
                         <div className="modal-actions">
                             <button type="button" className="btn-cancel" onClick={() => setClientContractModal(null)} disabled={savingContract}>{t('cancel')}</button>
                             <button type="button" className="btn-save" onClick={saveClientContract} disabled={savingContract}>
                                 {savingContract ? (t('saving') || 'Saving…') : t('save') || 'Save'}
                             </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* View contract details modal */}
+            {viewContractDetails && (
+                <div className="modal-overlay" onClick={() => setViewContractDetails(null)}>
+                    <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                        <h2><FileText size={20} style={{ verticalAlign: 'middle' }} /> {t('viewContractDetails') || 'View contract details'}</h2>
+                        {viewContractDetails === 'client' ? (
+                            clientContracts.length > 0 && (
+                                <div className="contract-details">
+                                    <p><strong>{client.name}</strong> — {t('clientContract') || 'Client contract'}</p>
+                                    <p><strong>{t('contractStart') || 'Start'}:</strong> {formatDate(clientContracts[0].start_date)}</p>
+                                    <p><strong>{t('contractEnd') || 'End'}:</strong> {formatDate(clientContracts[0].end_date)}</p>
+                                    <p><strong>{t('daysRemaining') || 'Days remaining'}:</strong> {clientContracts[0].end_date ? (getRemainingDays(clientContracts[0].end_date) < 0 ? (t('expired') || 'Expired') : getRemainingDays(clientContracts[0].end_date) + 'd') : '—'}</p>
+                                    {clientContracts[0].contract_document_path && (
+                                        <button type="button" className="btn-add-employee" style={{ marginTop: '1rem' }} onClick={() => downloadContractDocument('client', clientContracts[0].contract_id, 'client-contract.pdf')}>
+                                            <Download size={18} /> {t('downloadContract') || 'Download contract document'}
+                                        </button>
+                                    )}
+                                </div>
+                            )
+                        ) : viewContractDetails.employee && (
+                            <div className="contract-details">
+                                <p><strong>{viewContractDetails.employee.full_name}</strong> — {t('employeeContract') || 'Employee contract'}</p>
+                                <p><strong>{t('contractStart') || 'Start'}:</strong> {formatDate(displayContractStart(viewContractDetails.employee))}</p>
+                                <p><strong>{t('contractEnd') || 'End'}:</strong> {formatDate(displayContractEnd(viewContractDetails.employee))}</p>
+                                <p><strong>{t('daysRemaining') || 'Days remaining'}:</strong> {displayContractEnd(viewContractDetails.employee) ? (getRemainingDays(displayContractEnd(viewContractDetails.employee)) < 0 ? (t('expired') || 'Expired') : getRemainingDays(displayContractEnd(viewContractDetails.employee)) + 'd') : '—'}</p>
+                                {viewContractDetails.employee.contract_id && viewContractDetails.employee.contract_document_path && (
+                                    <button type="button" className="btn-add-employee" style={{ marginTop: '1rem' }} onClick={() => downloadContractDocument('employee', viewContractDetails.employee.contract_id, `contract-${viewContractDetails.employee.full_name}.pdf`)}>
+                                        <Download size={18} /> {t('downloadContract') || 'Download contract document'}
+                                    </button>
+                                )}
+                                {(!viewContractDetails.employee.contract_id || !viewContractDetails.employee.contract_document_path) && (
+                                    <p className="form-hint" style={{ marginTop: '1rem' }}>{t('noContractDocument') || 'No contract document uploaded.'}</p>
+                                )}
+                            </div>
+                        )}
+                        <div className="modal-actions" style={{ marginTop: '1.5rem' }}>
+                            <button type="button" className="btn-cancel" onClick={() => setViewContractDetails(null)}>{t('close') || 'Close'}</button>
                         </div>
                     </div>
                 </div>

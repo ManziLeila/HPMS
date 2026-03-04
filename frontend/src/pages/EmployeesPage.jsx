@@ -22,9 +22,7 @@ const EmployeesPage = () => {
         try {
             setLoading(true);
             const response = await apiClient.get('/employees', { token });
-            // Hide system login accounts — only show payroll employees
-            const SYSTEM_ROLES = ['FinanceOfficer', 'HR', 'ManagingDirector', 'Admin'];
-            setEmployees((response.data || []).filter(e => !SYSTEM_ROLES.includes(e.role)));
+            setEmployees(response.data || []);
             setError(null);
         } catch (err) {
             setError(err.message || 'Failed to load employees');

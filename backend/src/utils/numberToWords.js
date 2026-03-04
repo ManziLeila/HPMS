@@ -3,7 +3,9 @@
  * Example: 9500 -> "Nine Thousand Five Hundred"
  */
 export const numberToWords = (num) => {
-    if (num === 0) return 'Zero';
+    const n = Number(num);
+    if (!Number.isFinite(n) || n < 0) return 'Zero';
+    if (n === 0) return 'Zero';
 
     const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine'];
     const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
@@ -40,6 +42,6 @@ export const numberToWords = (num) => {
     };
 
     // Round to nearest whole number for currency
-    const rounded = Math.round(num);
+    const rounded = Math.round(n);
     return convertMillions(rounded).trim();
 };

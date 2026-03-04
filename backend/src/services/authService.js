@@ -3,9 +3,22 @@ import bcrypt from 'bcryptjs';
 import { authenticator } from 'otplib';
 import { randomUUID } from 'node:crypto';
 import config from '../config/env.js';
-import userService from './userService.js';
+import userRepo from '../repositories/userRepo.js';
+import employeeRepo from '../repositories/employeeRepo.js';
 import auditService from './auditService.js';
 import { unauthorized, badRequest } from '../utils/httpError.js';
+
+// Check users table first (Finance/HR/MD), then employees table.
+// Returns { record, userType } where userType is 'user' | 'employee'.
+const findAccountByEmail = async (email) => {
+  const systemUser = await userRepo.findByEmail(email);
+  if (systemUser) return { record: systemUser, userType: 'user', idField: 'user_id' };
+
+  const employee = await employeeRepo.findByEmail(email);
+  if (employee) return { record: employee, userType: 'employee', idField: 'employee_id' };
+
+  return null;
+};
 
 const signToken = (payload, options = {}) => {
   const { privateKey, secret } = config.jwt;
@@ -29,11 +42,14 @@ export const initiateLogin = async ({
   userAgent,
   correlationId,
 }) => {
-  const user = await userService.findByEmail(email);
+  const found = await findAccountByEmail(email);
+  const user = found?.record;
+  const userType = found?.userType;
+  const userId = user ? user[found.idField] : undefined;
 
   if (!user || !(await bcrypt.compare(password, user.password_hash))) {
     await auditService.log({
-      userId: user?.employee_id,
+      userId,
       actionType: 'LOGIN_REQUEST',
       details: { email, status: 'FAILED' },
       ipAddress,
@@ -45,18 +61,17 @@ export const initiateLogin = async ({
 
   if (!config.auth.mfaRequired) {
     const sessionId = randomUUID();
-    const finalToken = signToken(
-      {
-        sub: user.employee_id,
-        email: user.email,
-        role: user.role,
-        sessionId,
-        mfa: true,
-      }
-    );
+    const finalToken = signToken({
+      sub: userId,
+      email: user.email,
+      role: user.role,
+      userType,
+      sessionId,
+      mfa: true,
+    });
 
     await auditService.log({
-      userId: user.employee_id,
+      userId,
       actionType: 'ACCESS_GRANTED',
       details: { sessionId, method: 'PASSWORD_ONLY' },
       ipAddress,
@@ -69,9 +84,10 @@ export const initiateLogin = async ({
 
   const preToken = signToken(
     {
-      sub: user.employee_id,
+      sub: userId,
       email: user.email,
       role: user.role,
+      userType,
       mfa: false,
       stage: 'MFA_PENDING',
     },
@@ -79,7 +95,7 @@ export const initiateLogin = async ({
   );
 
   await auditService.log({
-    userId: user.employee_id,
+    userId,
     actionType: 'LOGIN_REQUEST',
     details: { email, status: 'MFA_REQUIRED' },
     ipAddress,
@@ -109,7 +125,11 @@ export const verifyMfa = async ({ token, code, ipAddress, userAgent, correlation
     throw badRequest('Token is not in MFA pending stage');
   }
 
-  const user = await userService.findByEmail(claims.email);
+  const found = await findAccountByEmail(claims.email);
+  const user = found?.record;
+  const userType = found?.userType;
+  const userId = user ? user[found.idField] : undefined;
+
   if (!user) {
     throw unauthorized('User not found');
   }
@@ -121,7 +141,7 @@ export const verifyMfa = async ({ token, code, ipAddress, userAgent, correlation
 
   if (!isValid) {
     await auditService.log({
-      userId: user.employee_id,
+      userId,
       actionType: 'MFA_CHALLENGE',
       details: { status: 'FAILED' },
       ipAddress,
@@ -132,18 +152,17 @@ export const verifyMfa = async ({ token, code, ipAddress, userAgent, correlation
   }
 
   const sessionId = randomUUID();
-  const finalToken = signToken(
-    {
-      sub: user.employee_id,
-      email: user.email,
-      role: user.role,
-      sessionId,
-      mfa: true,
-    }
-  );
+  const finalToken = signToken({
+    sub: userId,
+    email: user.email,
+    role: user.role,
+    userType,
+    sessionId,
+    mfa: true,
+  });
 
   await auditService.log({
-    userId: user.employee_id,
+    userId,
     actionType: 'ACCESS_GRANTED',
     details: { sessionId },
     ipAddress,

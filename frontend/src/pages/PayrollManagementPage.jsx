@@ -1,19 +1,20 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Send, Trash2, Eye, Pencil, AlertTriangle } from 'lucide-react';
+import { Trash2, Eye, Pencil, AlertTriangle, ChevronDown, ChevronRight, Building2, ArrowRight } from 'lucide-react';
 import './ReportsPage.css';
-import { apiClient, API_BASE_URL } from '../api/client';
+import { apiClient } from '../api/client';
 import useAuth from '../hooks/useAuth.js';
 import { formatCurrency } from '../utils/payroll';
+import { Link } from 'react-router-dom';
 
 const current = new Date();
 
 const STATUS_META = {
-    PENDING: { label: 'Pending', color: '#f59e0b' },
+    PENDING:     { label: 'Pending', color: '#f59e0b' },
     HR_APPROVED: { label: 'HR Approved', color: '#10b981' },
     HR_REJECTED: { label: 'HR Rejected', color: '#ef4444' },
     MD_APPROVED: { label: 'MD Approved', color: '#6366f1' },
-    REJECTED: { label: 'Rejected', color: '#ef4444' },
-    SENT_TO_BANK: { label: 'Paid', color: '#0ea5e9' },
+    REJECTED:    { label: 'Rejected', color: '#ef4444' },
+    SENT_TO_BANK:{ label: 'Paid', color: '#0ea5e9' },
 };
 
 const Badge = ({ status }) => {
@@ -35,6 +36,18 @@ const Badge = ({ status }) => {
     );
 };
 
+/* Group salary rows by client */
+const groupByClient = (rows) => {
+    const groups = {};
+    for (const row of rows) {
+        const key = row.client_id ?? 0;
+        const label = row.client_name || '— No Client';
+        if (!groups[key]) groups[key] = { clientId: key, clientName: label, employees: [] };
+        groups[key].employees.push(row);
+    }
+    return Object.values(groups).sort((a, b) => a.clientName.localeCompare(b.clientName));
+};
+
 const PayrollManagementPage = () => {
     const { token } = useAuth();
     const [filters, setFilters] = useState({
@@ -51,6 +64,7 @@ const PayrollManagementPage = () => {
     const [deleteConfirm, setDeleteConfirm] = useState(null);
     const [resetConfirm, setResetConfirm] = useState(false);
     const [editLoading, setEditLoading] = useState(false);
+    const [expandedClients, setExpandedClients] = useState(new Set());
 
     const { year, month } = filters;
 
@@ -70,58 +84,50 @@ const PayrollManagementPage = () => {
         }
     }, [token, year, month, filters.frequency]);
 
-    useEffect(() => {
-        loadData();
-    }, [loadData]);
+    useEffect(() => { loadData(); }, [loadData]);
 
-    const handleSubmitMonth = async () => {
-        if (!token) return;
-        if (!window.confirm(`Confirm all records for ${year}/${month} are correct and notify HR?`)) return;
+    const clientGroups = useMemo(() => groupByClient(monthlyReport), [monthlyReport]);
 
-        try {
-            setActionMsg('Submitting to HR…');
-            await apiClient.post(`/salaries/reports/monthly/submit`, { year, month }, { token });
-            setActionMsg('Monthly payroll submitted to HR successfully');
-            setTimeout(() => setActionMsg(null), 5000);
-            loadData();
-        } catch (err) {
-            setActionMsg(`${err.response?.data?.message || err.message}`);
-            setTimeout(() => setActionMsg(null), 8000);
-        }
+    const toggleClient = (clientId) => {
+        setExpandedClients(prev => {
+            const next = new Set(prev);
+            next.has(clientId) ? next.delete(clientId) : next.add(clientId);
+            return next;
+        });
     };
+
+    const expandAll = () => setExpandedClients(new Set(clientGroups.map(g => g.clientId)));
+    const collapseAll = () => setExpandedClients(new Set());
 
     const handleEditSalary = (salary) => {
         setEditLoading(true);
-        apiClient.get(`/salaries/${salary.salary_id}`, { token }).then(res => {
-            // res.data is expected to be the salary object or { data: salary }
-            const d = res.data.data || res.data;
-            const s = d.snapshot || {};
-            const al = s.allowances || {};
+        apiClient.get(`/salaries/${salary.salary_id}/detail`, { token }).then(res => {
+            const d = res?.data ?? res;
+            if (!d) return;
             setEditingSalary({
                 salary_id: d.salary_id,
-                employee_name: d.employee?.full_name || salary.full_name,
+                employee_name: d.full_name ?? salary.full_name,
                 pay_period: d.pay_period,
-                baseSalary: s.basicSalary ?? 0,
-                transportAllowance: al.transport ?? 0,
-                housingAllowance: al.housing ?? 0,
-                variableAllowance: al.variable ?? 0,
-                performanceAllowance: al.performance ?? 0,
+                baseSalary: d.base_salary ?? 0,
+                transportAllowance: d.transport_allowance ?? 0,
+                housingAllowance: d.housing_allowance ?? 0,
+                variableAllowance: d.variable_allowance ?? 0,
+                performanceAllowance: d.performance_allowance ?? 0,
                 advanceAmount: d.advance_amount ?? 0,
                 frequency: d.pay_frequency || 'monthly',
                 hr_comment: d.hr_comment
             });
         }).catch(err => {
             setError("Failed to load details for editing: " + err.message);
-        }).finally(() => {
-            setEditLoading(false);
-        });
+        }).finally(() => setEditLoading(false));
     };
 
     const handleViewDetails = async (salary) => {
         try {
             setActionMsg('Loading breakdown…');
-            const res = await apiClient.get(`/salaries/${salary.salary_id}`, { token });
-            setViewingSalary(res.data.data || res.data);
+            const res = await apiClient.get(`/salaries/${salary.salary_id}/detail`, { token });
+            const data = res?.data ?? res;
+            setViewingSalary(data);
             setActionMsg(null);
         } catch (err) {
             setActionMsg('Error loading details: ' + err.message);
@@ -192,7 +198,7 @@ const PayrollManagementPage = () => {
             <section className="reports-page__filters">
                 <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
                     <div>
-                        <p className="reports-page__eyebrow">Payroll Management</p>
+                        <p className="reports-page__eyebrow">Payroll Run</p>
                         <h3>Current Period: {year}/{month}</h3>
                     </div>
                 </div>
@@ -204,16 +210,8 @@ const PayrollManagementPage = () => {
                         </select>
                     </label>
                     <button onClick={loadData} disabled={loading}>{loading ? '...' : 'Refresh'}</button>
-
-                    <button
-                        type="button"
-                        onClick={handleSubmitMonth}
-                        disabled={loading || monthlyReport.length === 0}
-                        style={{ backgroundColor: '#10b981', color: 'white' }}
-                    >
-                        <Send size={16} aria-hidden /> Submit Month to HR
-                    </button>
-
+                    <button type="button" onClick={expandAll} disabled={loading || clientGroups.length === 0}>Expand All</button>
+                    <button type="button" onClick={collapseAll} disabled={loading || clientGroups.length === 0}>Collapse All</button>
                     <button
                         type="button"
                         onClick={() => setResetConfirm(true)}
@@ -225,6 +223,40 @@ const PayrollManagementPage = () => {
                 </div>
             </section>
 
+            {/* ── Next step: Payroll Periods ───────────────────────────────── */}
+            <div className="reports-page__next-step" style={{
+                background: 'linear-gradient(135deg, #ede9fe 0%, #e0e7ff 100%)',
+                border: '1px solid #c4b5fd',
+                borderRadius: '12px',
+                padding: '16px 20px',
+                marginBottom: '20px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '12px',
+            }}>
+                <div>
+                    <p style={{ fontWeight: 700, color: '#5b21b6', margin: 0 }}>After calculations are done</p>
+                    <p style={{ color: '#6b21a8', margin: '4px 0 0', fontSize: '0.9rem' }}>
+                        Go to <strong>Payroll Periods</strong> to submit each client+month for HR review. Approved or waiting items appear in the <strong>Approval Dashboard</strong>.
+                    </p>
+                </div>
+                <Link to="/payroll-periods" className="reports-page__link-btn" style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '10px 18px',
+                    background: '#6366f1',
+                    color: 'white',
+                    borderRadius: '10px',
+                    fontWeight: 600,
+                    textDecoration: 'none',
+                }}>
+                    <ArrowRight size={18} aria-hidden /> Payroll Periods
+                </Link>
+            </div>
+
             {actionMsg && (
                 <div className="reports-page__status" style={{ background: '#f8fafc', padding: '10px', borderRadius: '8px', marginBottom: '16px', border: '1px solid #e2e8f0' }}>
                     {actionMsg}
@@ -232,44 +264,92 @@ const PayrollManagementPage = () => {
             )}
 
             <div className="reports-page__monthly">
-                <div className="reports-page__table-wrapper">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Employee</th>
-                                <th>Gross (RWF)</th>
-                                <th>PAYE (RWF)</th>
-                                <th>Status</th>
-                                <th style={{ textAlign: 'right' }}>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {monthlyReport.map((row) => (
-                                <tr key={row.salary_id}>
-                                    <td>
-                                        <strong>{row.full_name}</strong>
-                                        <br /><small>{row.email}</small>
-                                    </td>
-                                    <td>{formatCurrency(row.gross_salary)}</td>
-                                    <td>{formatCurrency(row.paye)}</td>
-                                    <td><Badge status={row.hr_status || 'PENDING'} /></td>
-                                    <td>
-                                        <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
-                                            <button onClick={() => handleViewDetails(row)} className="reports-page__action-btn" style={{ background: '#3b82f6', color: 'white' }}><Eye size={16} aria-hidden /> Details</button>
-                                            {row.hr_status !== 'HR_APPROVED' && (
-                                                <button onClick={() => handleEditSalary(row)} className="reports-page__action-btn" style={{ background: '#f59e0b', color: 'white' }}><Pencil size={16} aria-hidden /> Edit</button>
-                                            )}
-                                            <button onClick={() => setDeleteConfirm(row)} className="reports-page__action-btn" style={{ background: '#ef4444', color: 'white' }}><Trash2 size={16} aria-hidden /> Delete</button>
+                {loading ? (
+                    <p style={{ textAlign: 'center', padding: 40, color: '#94a3b8' }}>Loading…</p>
+                ) : clientGroups.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: 48, color: '#94a3b8' }}>
+                        <p>No salary records for {year}/{month}.</p>
+                        <p style={{ fontSize: '0.9rem', marginTop: 8 }}>Use Bulk Upload or compute salaries for employees first.</p>
+                    </div>
+                ) : (
+                    <div className="reports-page__client-groups">
+                        {clientGroups.map((group) => {
+                            const isOpen = expandedClients.has(group.clientId);
+                            const totalGross = group.employees.reduce((s, e) => s + Number(e.gross_salary || 0), 0);
+                            return (
+                                <div key={group.clientId} className="reports-page__client-card" style={{
+                                    border: '1px solid #e2e8f0',
+                                    borderRadius: '12px',
+                                    marginBottom: '12px',
+                                    overflow: 'hidden',
+                                }}>
+                                    <div
+                                        className="reports-page__client-header"
+                                        onClick={() => toggleClient(group.clientId)}
+                                        style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'space-between',
+                                            padding: '12px 16px',
+                                            background: group.clientId ? '#f8fafc' : '#fef3c7',
+                                            cursor: 'pointer',
+                                            borderBottom: isOpen ? '1px solid #e2e8f0' : 'none',
+                                        }}
+                                    >
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                            <span style={{ color: '#64748b' }}>{isOpen ? <ChevronDown size={18} /> : <ChevronRight size={18} />}</span>
+                                            <Building2 size={18} style={{ color: '#6366f1' }} />
+                                            <strong>{group.clientName}</strong>
+                                            <span style={{ fontWeight: 400, color: '#64748b', fontSize: '0.85rem' }}>
+                                                ({group.employees.length} employee{group.employees.length !== 1 ? 's' : ''} · {formatCurrency(totalGross)})
+                                            </span>
                                         </div>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
+                                    </div>
+                                    {isOpen && (
+                                        <div className="reports-page__table-wrapper" style={{ padding: 0 }}>
+                                            <table>
+                                                <thead>
+                                                    <tr>
+                                                        <th>Employee</th>
+                                                        <th>Gross (RWF)</th>
+                                                        <th>PAYE (RWF)</th>
+                                                        <th>Status</th>
+                                                        <th style={{ textAlign: 'right' }}>Actions</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {group.employees.map((row) => (
+                                                        <tr key={row.salary_id}>
+                                                            <td>
+                                                                <strong>{row.full_name}</strong>
+                                                                <br /><small>{row.email}</small>
+                                                            </td>
+                                                            <td>{formatCurrency(row.gross_salary)}</td>
+                                                            <td>{formatCurrency(row.paye)}</td>
+                                                            <td><Badge status={row.hr_status || 'PENDING'} /></td>
+                                                            <td>
+                                                                <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
+                                                                    <button onClick={() => handleViewDetails(row)} className="reports-page__action-btn" style={{ background: '#3b82f6', color: 'white' }}><Eye size={16} aria-hidden /> Details</button>
+                                                                    {row.hr_status !== 'HR_APPROVED' && (
+                                                                        <button onClick={() => handleEditSalary(row)} className="reports-page__action-btn" style={{ background: '#f59e0b', color: 'white' }}><Pencil size={16} aria-hidden /> Edit</button>
+                                                                    )}
+                                                                    <button onClick={() => setDeleteConfirm(row)} className="reports-page__action-btn" style={{ background: '#ef4444', color: 'white' }}><Trash2 size={16} aria-hidden /> Delete</button>
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })}
+                    </div>
+                )}
             </div>
 
-            {/* Modals from previous version */}
+            {/* Modals */}
             {editingSalary && (
                 <div className="modal-overlay" onClick={() => !editLoading && setEditingSalary(null)}>
                     <div className="modal-content" onClick={(e) => e.stopPropagation()}>
@@ -289,7 +369,6 @@ const PayrollManagementPage = () => {
                                 <label>Transport</label>
                                 <input type="number" value={editingSalary.transportAllowance} onChange={e => setEditingSalary({ ...editingSalary, transportAllowance: e.target.value })} />
                             </div>
-                            {/* Simplified inputs for space */}
                             <div className="form-group">
                                 <label>Housing</label>
                                 <input type="number" value={editingSalary.housingAllowance} onChange={e => setEditingSalary({ ...editingSalary, housingAllowance: e.target.value })} />

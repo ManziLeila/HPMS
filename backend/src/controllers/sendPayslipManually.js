@@ -87,7 +87,9 @@ export const sendPayslipEmailManually = async (req, res, next) => {
             payrollSnapshot,
         });
 
-        const filename = `payslip-${employeeData.full_name.replace(/\s+/g, '-').toLowerCase()}-${employeeData.pay_period}.pdf`;
+        const periodStr = employeeData.pay_period ? new Date(employeeData.pay_period).toISOString().slice(0, 10) : 'unknown';
+        const safeName = (employeeData.full_name || 'employee').replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, '').toLowerCase();
+        const filename = `payslip-${safeName}-${periodStr}.pdf`;
 
         // Save to filesystem (organized by months)
         await fileStorageService.savePayslip(pdfBuffer, filename, employeeData.pay_period);

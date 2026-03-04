@@ -10,7 +10,7 @@ const contractRepo = {
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'active')
        RETURNING *`,
             [employeeId, contractType, jobTitle, department, startDate, endDate || null,
-                salaryGrade, grossSalary || 0, notes, createdBy]
+                salaryGrade, grossSalary || 0, notes, createdBy || null]
         );
         return rows[0];
     },

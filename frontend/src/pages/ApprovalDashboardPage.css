@@ -1,0 +1,606 @@
+/* ═════════════════════════════════════════════════════════════
+   APPROVAL DASHBOARD PAGE STYLES
+═════════════════════════════════════════════════════════════ */
+
+.apd__container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem;
+    background: linear-gradient(135deg, #f5f7fa 0%, #e9ecef 100%);
+    min-height: 100vh;
+}
+
+/* ─────────────────────── HEADER ─────────────────────── */
+.apd__header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 12px;
+    padding: 3rem 2rem;
+    margin-bottom: 3rem;
+    color: white;
+    box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+}
+
+.apd__header-content h1 {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    font-size: 2rem;
+    margin: 0 0 0.5rem 0;
+    font-weight: 700;
+}
+
+.apd__header-content p {
+    font-size: 1rem;
+    opacity: 0.9;
+    margin: 0;
+}
+
+/* ─────────────────────── MESSAGES ─────────────────────── */
+.apd__message {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem 1.5rem;
+    border-radius: 8px;
+    margin-bottom: 2rem;
+    animation: slideIn 0.3s ease;
+}
+
+.apd__msg-err {
+    background: #fee2e2;
+    color: #991b1b;
+    border-left: 4px solid #dc2626;
+}
+
+.apd__msg-success {
+    background: #dcfce7;
+    color: #166534;
+    border-left: 4px solid #22c55e;
+}
+
+/* ─────────────────────── STATS GRID ─────────────────────── */
+.apd__stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 3rem;
+}
+
+.apd__stat-card {
+    background: white;
+    border-radius: 12px;
+    padding: 1.5rem;
+    display: flex;
+    gap: 1.5rem;
+    align-items: center;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    transition: all 0.3s ease;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.apd__stat-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+}
+
+.apd__stat-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.apd__stat-content {
+    flex: 1;
+}
+
+.apd__stat-label {
+    font-size: 0.875rem;
+    color: #6b7280;
+    margin: 0 0 0.5rem 0;
+    font-weight: 500;
+}
+
+.apd__stat-value {
+    font-size: 2rem;
+    font-weight: 700;
+    margin: 0;
+    color: #111827;
+}
+
+/* ─────────────────────── FILTERS ─────────────────────── */
+.apd__filters {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+}
+
+.apd__filter-btn {
+    padding: 0.75rem 1.5rem;
+    border: 2px solid #e5e7eb;
+    background: white;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    color: #6b7280;
+    transition: all 0.3s ease;
+    font-size: 0.95rem;
+}
+
+.apd__filter-btn:hover {
+    border-color: #667eea;
+    color: #667eea;
+}
+
+.apd__filter-btn.active {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-color: transparent;
+    color: white;
+}
+
+/* ─────────────────────── BATCHES GRID ─────────────────────── */
+.apd__batches-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+    gap: 2rem;
+    margin-bottom: 2rem;
+}
+
+@media (max-width: 768px) {
+    .apd__batches-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ─────────────────────── BATCH CARD ─────────────────────── */
+.apd__batch-card {
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    transition: all 0.3s ease;
+    border-left: 4px solid #667eea;
+    display: flex;
+    flex-direction: column;
+}
+
+.apd__batch-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+}
+
+.apd__card-header {
+    padding: 1.5rem;
+    background: #f9fafb;
+    border-bottom: 1px solid #e5e7eb;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+}
+
+.apd__card-title h4 {
+    margin: 0 0 0.25rem 0;
+    color: #111827;
+    font-size: 1.125rem;
+    font-weight: 700;
+}
+
+.apd__batch-id {
+    color: #9ca3af;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.apd__badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    border: 1px solid;
+    font-size: 0.875rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.apd__card-body {
+    padding: 1.5rem;
+    flex: 1;
+}
+
+.apd__card-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.apd__card-item {
+    display: flex;
+    flex-direction: column;
+}
+
+.apd__card-label {
+    color: #6b7280;
+    font-size: 0.8rem;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.apd__card-value {
+    color: #111827;
+    font-size: 1rem;
+    font-weight: 700;
+    margin: 0;
+}
+
+/* Mini Timeline */
+.apd__mini-timeline {
+    display: flex;
+    gap: 0.75rem;
+    padding: 1rem;
+    background: #f9fafb;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+}
+
+.apd__timeline-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #e5e7eb;
+    transition: all 0.3s ease;
+}
+
+.apd__timeline-dot.done {
+    background: #10b981;
+}
+
+.apd__timeline-dot.reject {
+    background: #ef4444;
+}
+
+.apd__card-footer {
+    padding: 1rem 1.5rem;
+    border-top: 1px solid #e5e7eb;
+    background: #f9fafb;
+}
+
+.apd__btn-small {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.95rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    transition: all 0.3s ease;
+}
+
+.apd__btn-small:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+/* ─────────────────────── STATES ─────────────────────── */
+.apd__loading {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: #6b7280;
+    font-size: 1.125rem;
+}
+
+.apd__empty {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 4rem 2rem;
+    color: #9ca3af;
+}
+
+.apd__empty svg {
+    margin-bottom: 1rem;
+    opacity: 0.3;
+}
+
+.apd__empty p {
+    font-size: 1.125rem;
+    margin: 0;
+}
+
+/* ─────────────────────── MODAL ─────────────────────── */
+.apd__modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 1rem;
+    animation: fadeIn 0.3s ease;
+}
+
+.apd__modal-content {
+    background: white;
+    border-radius: 12px;
+    max-width: 700px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+}
+
+.apd__modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 2rem;
+    border-bottom: 1px solid #e5e7eb;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.apd__modal-header h2 {
+    margin: 0;
+    font-size: 1.5rem;
+}
+
+.apd__modal-close {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 2rem;
+    cursor: pointer;
+    padding: 0;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: background 0.3s ease;
+}
+
+.apd__modal-close:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.apd__modal-body {
+    padding: 2rem;
+}
+
+/* ─────────────────────── SECTIONS ─────────────────────── */
+.apd__section {
+    margin-bottom: 2rem;
+}
+
+.apd__section h3 {
+    margin: 0 0 1rem 0;
+    color: #111827;
+    font-size: 1.125rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+/* Info Grid */
+.apd__info-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+}
+
+.apd__info-item {
+    display: flex;
+    flex-direction: column;
+}
+
+.apd__info-label {
+    color: #6b7280;
+    font-size: 0.875rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.apd__info-value {
+    color: #111827;
+    font-size: 1.125rem;
+    font-weight: 700;
+}
+
+/* Financial Grid */
+.apd__financial-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1rem;
+}
+
+.apd__fin-item {
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 1rem;
+    text-align: center;
+}
+
+.apd__fin-item span {
+    display: block;
+    color: #6b7280;
+    font-size: 0.875rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.apd__fin-item p {
+    margin: 0;
+    color: #111827;
+    font-size: 1.125rem;
+    font-weight: 700;
+}
+
+.apd__fin-item.highlight {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-color: transparent;
+}
+
+.apd__fin-item.highlight span,
+.apd__fin-item.highlight p {
+    color: white;
+}
+
+/* ─────────────────────── TIMELINE ─────────────────────── */
+.apd__timeline {
+    display: flex;
+    align-items: stretch;
+    gap: 2rem;
+    overflow-x: auto;
+    padding: 1rem 0;
+}
+
+.apd__stage {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex: 1;
+    min-width: 200px;
+}
+
+.apd__stage-dot {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #e5e7eb;
+    border: 3px solid white;
+    flex-shrink: 0;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.apd__stage.complete .apd__stage-dot {
+    background: #10b981;
+}
+
+.apd__stage.rejected .apd__stage-dot {
+    background: #ef4444;
+}
+
+.apd__stage.pending .apd__stage-dot {
+    background: #f59e0b;
+}
+
+.apd__stage-content {
+    flex: 1;
+}
+
+.apd__stage-name {
+    margin: 0 0 0.25rem 0;
+    color: #111827;
+    font-weight: 700;
+    font-size: 0.95rem;
+}
+
+.apd__stage-date,
+.apd__stage-user {
+    margin: 0;
+    color: #6b7280;
+    font-size: 0.825rem;
+}
+
+.apd__stage-arrow {
+    color: #d1d5db;
+    flex-shrink: 0;
+}
+
+/* Comments */
+.apd__comment {
+    background: #f9fafb;
+    border-left: 4px solid #667eea;
+    padding: 1rem;
+    border-radius: 6px;
+    margin-bottom: 1rem;
+}
+
+.apd__comment-title {
+    margin: 0 0 0.5rem 0;
+    color: #111827;
+    font-weight: 700;
+    font-size: 0.95rem;
+}
+
+.apd__comment-text {
+    margin: 0;
+    color: #6b7280;
+    line-height: 1.5;
+}
+
+/* ─────────────────────── ANIMATIONS ─────────────────────── */
+@keyframes slideIn {
+    from {
+        transform: translateY(-10px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+/* ─────────────────────── RESPONSIVE ─────────────────────── */
+@media (max-width: 768px) {
+    .apd__container {
+        padding: 1rem;
+    }
+
+    .apd__header {
+        padding: 2rem 1.5rem;
+    }
+
+    .apd__header-content h1 {
+        font-size: 1.5rem;
+    }
+
+    .apd__card-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .apd__info-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .apd__timeline {
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .apd__stage-arrow {
+        display: none;
+    }
+}

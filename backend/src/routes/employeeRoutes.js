@@ -4,8 +4,7 @@ import { createEmployee, listEmployees, getEmployee, updateEmployee, deleteEmplo
 
 const router = Router();
 
-// Allow HR, Admin (legacy), and Finance Officer to manage employees
-router.use(authenticate, requireRole(['Admin', 'HR', 'FinanceOfficer']));
+router.use(authenticate, requireRole(['HR', 'FinanceOfficer']));
 router.post('/', createEmployee);
 router.get('/', listEmployees);
 router.get('/:employeeId', getEmployee);

@@ -1,10 +1,13 @@
-const currency = (value) =>
-  new Intl.NumberFormat('en-RW', {
-    style: 'currency',
-    currency: 'RWF',
+/** Format as RWF (Rwandan Franc) - always show RWF, not RF */
+const currency = (value) => {
+  const num = Number(value);
+  const n = Math.max(Number.isFinite(num) ? num : 0, 0);
+  const formatted = new Intl.NumberFormat('en-RW', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
-  }).format(value);
+  }).format(n);
+  return `RWF ${formatted}`;
+};
 
 const clampNumber = (value) => {
   const numeric = Number(value);
@@ -124,4 +127,73 @@ export const calculatePayroll = (payload) => {
 };
 
 export const formatCurrency = (value) => currency(Math.max(clampNumber(value), 0));
+
+/**
+ * Build computation formulas for HR/MD approval view.
+ * Returns array of { label, formula, amount } for each payroll line.
+ */
+export const getComputationFormulas = (s) => {
+  const snap = s?.snapshot || {};
+  const allow = snap.allowances || {};
+  const basic = Number(snap.basicSalary) || 0;
+  const transport = Number(allow.transport) || 0;
+  const housing = Number(allow.housing) || 0;
+  const performance = Number(allow.performance) || 0;
+  const gross = Number(s.gross_salary ?? snap.grossSalary) || 0;
+  const paye = Number(s.paye ?? snap.paye) || 0;
+  const rssb = Number(snap.rssbEePension ?? s.rssb_pension) || 0;
+  const maternity = Number(snap.rssbEeMaternity) || 0;
+  const rama = Number(snap.ramaInsuranceEmployee) || 0;
+  const includeMedical = snap.includeMedical !== false;
+  const netBeforeCbhi = Number(snap.netBeforeCbhi) || 0;
+  const cbhi = Number(snap.cbhiEmployee) || 0;
+  const advance = Number(snap.advanceAmount) || 0;
+  const net = Number(s.net_salary ?? snap.netPaidToBank ?? snap.netSalary) || 0;
+
+  const items = [
+    {
+      label: 'Gross Salary',
+      formula: `Basic (${basic.toLocaleString()}) + Transport (${transport.toLocaleString()}) + Housing (${housing.toLocaleString()}) + Performance (${performance.toLocaleString()})`,
+      amount: gross,
+    },
+    {
+      label: 'PAYE',
+      formula: 'Progressive tax: 0% on first 60,000 RWF, 10% on next 40,000, 20% on next 100,000, 30% above 200,000',
+      amount: paye,
+    },
+    {
+      label: 'RSSB Pension',
+      formula: '6% of Gross Salary',
+      amount: rssb,
+    },
+    {
+      label: 'RSSB Maternity',
+      formula: '0.3% of Basic Salary',
+      amount: maternity,
+    },
+    // RAMA only shown when included on the sheet (Include RAMA = Yes)
+    ...(includeMedical ? [{
+      label: 'RAMA (Medical)',
+      formula: '7.5% of Basic Salary',
+      amount: rama,
+    }] : []),
+    {
+      label: 'NET (before CBHI)',
+      formula: includeMedical ? 'Gross − PAYE − RSSB Pension − Maternity − RAMA' : 'Gross − PAYE − RSSB Pension − Maternity',
+      amount: netBeforeCbhi,
+    },
+    {
+      label: 'CBHI',
+      formula: '0.5% of NET (before CBHI)',
+      amount: cbhi,
+    },
+    { label: 'Advance', formula: 'Deducted amount', amount: advance },
+    {
+      label: 'Net Pay',
+      formula: 'NET (before CBHI) − CBHI − Advance',
+      amount: net,
+    },
+  ];
+  return items;
+};
 
