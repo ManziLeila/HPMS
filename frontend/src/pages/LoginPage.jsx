@@ -1,9 +1,8 @@
 import { useState, useRef, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Lock, Zap, BarChart3, CheckCircle, KeyRound, ArrowRight, ArrowLeft } from "lucide-react";
+import { API_BASE_URL } from "../api/client";
 import "./LoginPage.css";
-
-const API = import.meta.env.VITE_API_URL || "http://localhost:4000/api";
 
 /* ── icons ── */
 const GoogleIcon = () => (
@@ -29,6 +28,8 @@ const EyeClosed = () => (
 
 export default function LoginPage() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const from = location.state?.from?.pathname;
   const [step, setStep] = useState("creds"); // "creds" | "otp"
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -39,14 +40,19 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const otpRefs = useRef([]);
 
-  /* ── Decode JWT and send each role to its home ── */
+  /* ── Decode JWT and send each role to its home (or return to requested page) ── */
   const roleRedirect = (token) => {
     try {
+      if (from && /^\/[a-z0-9-/]*$/i.test(from)) {
+        window.location.replace(from);
+        return;
+      }
       const payload = JSON.parse(atob(token.split(".")[1]));
       const role = payload.role || "";
       const destinations = {
         HR: "/hr-review",
         ManagingDirector: "/md-approval",
+        TechAdmin: "/management-console",
       };
       window.location.replace(destinations[role] || "/dashboard");
     } catch {
@@ -63,13 +69,13 @@ export default function LoginPage() {
     e.preventDefault();
     setError(""); setLoading(true);
     try {
-      const r = await fetch(`${API}/auth/login`, {
+      const r = await fetch(`${API_BASE_URL}/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: email.trim(), password }),
       });
       const d = await r.json();
-      if (!r.ok) throw new Error(d.message || "Invalid credentials");
+      if (!r.ok) throw new Error(d.error?.message || d.message || 'Invalid credentials');
       if (d.token && d.requiresMfa === false) {
         localStorage.setItem("hpms_admin_token", d.token);
         roleRedirect(d.token); return;
@@ -87,13 +93,13 @@ export default function LoginPage() {
     if (code.length < 6) return;
     setError(""); setLoading(true);
     try {
-      const r = await fetch(`${API}/auth/mfa`, {
+      const r = await fetch(`${API_BASE_URL}/auth/mfa`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ token: preToken, code }),
       });
       const d = await r.json();
-      if (!r.ok) throw new Error(d.message || "Invalid code");
+      if (!r.ok) throw new Error(d.error?.message || d.message || 'Invalid code');
       localStorage.setItem("hpms_admin_token", d.token);
       roleRedirect(d.token);
     } catch (err) {

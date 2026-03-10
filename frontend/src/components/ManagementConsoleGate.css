@@ -1,0 +1,125 @@
+.mgmt-gate {
+  min-height: 60vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  background: #f8fafc;
+}
+
+.mgmt-gate__card {
+  width: 100%;
+  max-width: 400px;
+  padding: 2rem;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  border: 1px solid #e2e8f0;
+}
+
+.mgmt-gate__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 72px;
+  height: 72px;
+  margin: 0 auto 1.25rem;
+  background: linear-gradient(135deg, #003661 0%, #004d8a 100%);
+  color: #fff;
+  border-radius: 50%;
+}
+
+.mgmt-gate__title {
+  margin: 0 0 0.5rem;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #0f172a;
+  text-align: center;
+}
+
+.mgmt-gate__desc {
+  margin: 0 0 1.5rem;
+  font-size: 0.9375rem;
+  color: #64748b;
+  text-align: center;
+  line-height: 1.5;
+}
+
+.mgmt-gate__form {
+  margin-bottom: 1.25rem;
+}
+
+.mgmt-gate__label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #334155;
+  margin-bottom: 0.5rem;
+}
+
+.mgmt-gate__label-icon {
+  vertical-align: middle;
+  margin-right: 0.25rem;
+  color: #64748b;
+}
+
+.mgmt-gate__input {
+  width: 100%;
+  margin-top: 0.375rem;
+  padding: 0.75rem 1rem;
+  font-size: 1rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  box-sizing: border-box;
+}
+
+.mgmt-gate__input:focus {
+  outline: none;
+  border-color: #003661;
+  box-shadow: 0 0 0 3px rgba(0, 54, 97, 0.15);
+}
+
+.mgmt-gate__input::placeholder {
+  color: #94a3b8;
+}
+
+.mgmt-gate__error {
+  margin: 0.75rem 0 0;
+  font-size: 0.875rem;
+  color: #dc2626;
+}
+
+.mgmt-gate__submit {
+  width: 100%;
+  margin-top: 1rem;
+  padding: 0.75rem 1.25rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #fff;
+  background: linear-gradient(135deg, #003661 0%, #004d8a 100%);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.mgmt-gate__submit:hover:not(:disabled) {
+  opacity: 0.95;
+}
+
+.mgmt-gate__submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.mgmt-gate__back {
+  display: block;
+  text-align: center;
+  font-size: 0.875rem;
+  color: #003661;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.mgmt-gate__back:hover {
+  text-decoration: underline;
+}

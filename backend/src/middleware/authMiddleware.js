@@ -1,6 +1,7 @@
 import jwt from 'jsonwebtoken';
 import config from '../config/env.js';
 import { unauthorized, forbidden } from '../utils/httpError.js';
+import * as rolePermissionsRepo from '../repositories/rolePermissionsRepo.js';
 
 const verifyToken = (token) => {
   const { publicKey, secret } = config.jwt;
@@ -50,6 +51,11 @@ export const requireRole = (allowedRoles = []) => (req, res, next) => {
   }
 
   const roles = Array.isArray(allowedRoles) ? allowedRoles : [allowedRoles];
+  // Admin can access any route
+  if (req.user.role === 'Admin') {
+    next();
+    return;
+  }
 
   if (roles.length && !roles.includes(req.user.role)) {
     next(forbidden('Insufficient permissions'));
@@ -57,5 +63,31 @@ export const requireRole = (allowedRoles = []) => (req, res, next) => {
   }
 
   next();
+};
+
+/**
+ * Require that the user's role has the given permission (from DB role_permissions).
+ * Admin always passes. Use after authenticate.
+ */
+export const requirePermission = (permission) => async (req, res, next) => {
+  if (!req.user) {
+    next(unauthorized());
+    return;
+  }
+  if (req.user.role === 'Admin') {
+    next();
+    return;
+  }
+  try {
+    const permissions = await rolePermissionsRepo.getRolePermissions(req.user.role);
+    const hasIt = permissions.includes('all') || permissions.includes(permission);
+    if (!hasIt) {
+      next(forbidden('Insufficient permissions'));
+      return;
+    }
+    next();
+  } catch (e) {
+    next(e);
+  }
 };
 

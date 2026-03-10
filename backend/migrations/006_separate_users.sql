@@ -22,8 +22,14 @@ DROP TYPE IF EXISTS hpms_core.user_role CASCADE;
 
 -- Restore any dropped constraints back to employees so the migration
 -- starts from a clean, known baseline every time.
+-- Skip this block if payroll_batches was already dropped (e.g. 007 ran before 006).
 DO $$
 BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'hpms_core' AND table_name = 'payroll_batches') THEN
+        RAISE NOTICE 'payroll_batches does not exist (007 may have run); skipping FK restoration to payroll_batches/approval_history';
+        RETURN;
+    END IF;
+
     -- payroll_batches.created_by
     IF NOT EXISTS (
         SELECT 1 FROM information_schema.table_constraints
@@ -158,53 +164,45 @@ FROM hpms_core.employees
 WHERE role IN ('FinanceOfficer', 'HR', 'ManagingDirector');
 
 -- ─── Step 5: Remap payroll_batches FKs → users ───────────────────────────────
+-- (Skip if payroll_batches was already dropped by 007)
 
-ALTER TABLE hpms_core.payroll_batches DROP CONSTRAINT IF EXISTS payroll_batches_created_by_fkey;
-UPDATE hpms_core.payroll_batches pb
-   SET created_by = u.user_id
-  FROM hpms_core.users u
- WHERE u._old_employee_id = pb.created_by;
-ALTER TABLE hpms_core.payroll_batches
-    ADD CONSTRAINT payroll_batches_created_by_fkey
-    FOREIGN KEY (created_by) REFERENCES hpms_core.users(user_id) ON DELETE RESTRICT;
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'hpms_core' AND table_name = 'payroll_batches') THEN
+    RAISE NOTICE 'Skipping Step 5 (payroll_batches does not exist)';
+    RETURN;
+  END IF;
 
-ALTER TABLE hpms_core.payroll_batches DROP CONSTRAINT IF EXISTS payroll_batches_hr_reviewed_by_fkey;
-UPDATE hpms_core.payroll_batches pb
-   SET hr_reviewed_by = u.user_id
-  FROM hpms_core.users u
- WHERE u._old_employee_id = pb.hr_reviewed_by;
-ALTER TABLE hpms_core.payroll_batches
-    ADD CONSTRAINT payroll_batches_hr_reviewed_by_fkey
-    FOREIGN KEY (hr_reviewed_by) REFERENCES hpms_core.users(user_id) ON DELETE SET NULL;
+  ALTER TABLE hpms_core.payroll_batches DROP CONSTRAINT IF EXISTS payroll_batches_created_by_fkey;
+  UPDATE hpms_core.payroll_batches pb SET created_by = u.user_id FROM hpms_core.users u WHERE u._old_employee_id = pb.created_by;
+  ALTER TABLE hpms_core.payroll_batches ADD CONSTRAINT payroll_batches_created_by_fkey FOREIGN KEY (created_by) REFERENCES hpms_core.users(user_id) ON DELETE RESTRICT;
 
-ALTER TABLE hpms_core.payroll_batches DROP CONSTRAINT IF EXISTS payroll_batches_md_reviewed_by_fkey;
-UPDATE hpms_core.payroll_batches pb
-   SET md_reviewed_by = u.user_id
-  FROM hpms_core.users u
- WHERE u._old_employee_id = pb.md_reviewed_by;
-ALTER TABLE hpms_core.payroll_batches
-    ADD CONSTRAINT payroll_batches_md_reviewed_by_fkey
-    FOREIGN KEY (md_reviewed_by) REFERENCES hpms_core.users(user_id) ON DELETE SET NULL;
+  ALTER TABLE hpms_core.payroll_batches DROP CONSTRAINT IF EXISTS payroll_batches_hr_reviewed_by_fkey;
+  UPDATE hpms_core.payroll_batches pb SET hr_reviewed_by = u.user_id FROM hpms_core.users u WHERE u._old_employee_id = pb.hr_reviewed_by;
+  ALTER TABLE hpms_core.payroll_batches ADD CONSTRAINT payroll_batches_hr_reviewed_by_fkey FOREIGN KEY (hr_reviewed_by) REFERENCES hpms_core.users(user_id) ON DELETE SET NULL;
 
-ALTER TABLE hpms_core.payroll_batches DROP CONSTRAINT IF EXISTS payroll_batches_sent_to_bank_by_fkey;
-UPDATE hpms_core.payroll_batches pb
-   SET sent_to_bank_by = u.user_id
-  FROM hpms_core.users u
- WHERE u._old_employee_id = pb.sent_to_bank_by;
-ALTER TABLE hpms_core.payroll_batches
-    ADD CONSTRAINT payroll_batches_sent_to_bank_by_fkey
-    FOREIGN KEY (sent_to_bank_by) REFERENCES hpms_core.users(user_id) ON DELETE SET NULL;
+  ALTER TABLE hpms_core.payroll_batches DROP CONSTRAINT IF EXISTS payroll_batches_md_reviewed_by_fkey;
+  UPDATE hpms_core.payroll_batches pb SET md_reviewed_by = u.user_id FROM hpms_core.users u WHERE u._old_employee_id = pb.md_reviewed_by;
+  ALTER TABLE hpms_core.payroll_batches ADD CONSTRAINT payroll_batches_md_reviewed_by_fkey FOREIGN KEY (md_reviewed_by) REFERENCES hpms_core.users(user_id) ON DELETE SET NULL;
+
+  ALTER TABLE hpms_core.payroll_batches DROP CONSTRAINT IF EXISTS payroll_batches_sent_to_bank_by_fkey;
+  UPDATE hpms_core.payroll_batches pb SET sent_to_bank_by = u.user_id FROM hpms_core.users u WHERE u._old_employee_id = pb.sent_to_bank_by;
+  ALTER TABLE hpms_core.payroll_batches ADD CONSTRAINT payroll_batches_sent_to_bank_by_fkey FOREIGN KEY (sent_to_bank_by) REFERENCES hpms_core.users(user_id) ON DELETE SET NULL;
+END $$;
 
 -- ─── Step 6: Remap approval_history FK → users ───────────────────────────────
 
-ALTER TABLE hpms_core.approval_history DROP CONSTRAINT IF EXISTS approval_history_action_by_fkey;
-UPDATE hpms_core.approval_history ah
-   SET action_by = u.user_id
-  FROM hpms_core.users u
- WHERE u._old_employee_id = ah.action_by;
-ALTER TABLE hpms_core.approval_history
-    ADD CONSTRAINT approval_history_action_by_fkey
-    FOREIGN KEY (action_by) REFERENCES hpms_core.users(user_id) ON DELETE RESTRICT;
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'hpms_core' AND table_name = 'approval_history') THEN
+    RAISE NOTICE 'Skipping Step 6 (approval_history does not exist)';
+    RETURN;
+  END IF;
+
+  ALTER TABLE hpms_core.approval_history DROP CONSTRAINT IF EXISTS approval_history_action_by_fkey;
+  UPDATE hpms_core.approval_history ah SET action_by = u.user_id FROM hpms_core.users u WHERE u._old_employee_id = ah.action_by;
+  ALTER TABLE hpms_core.approval_history ADD CONSTRAINT approval_history_action_by_fkey FOREIGN KEY (action_by) REFERENCES hpms_core.users(user_id) ON DELETE RESTRICT;
+END $$;
 
 -- ─── Step 7: Remap notifications — drop old FK, update system-user rows ──────
 
@@ -250,44 +248,52 @@ BEGIN
 END $$;
 
 -- ─── Step 10: Rebuild v_batch_details view ───────────────────────────────────
+-- (Only if payroll_batches exists)
 
 DROP VIEW IF EXISTS hpms_core.v_batch_details;
 
-CREATE VIEW hpms_core.v_batch_details AS
-SELECT
-    pb.*,
-    creator.full_name AS created_by_name,
-    creator.email     AS created_by_email,
-    hr.full_name      AS hr_reviewed_by_name,
-    hr.email          AS hr_reviewed_by_email,
-    md.full_name      AS md_reviewed_by_name,
-    md.email          AS md_reviewed_by_email,
-    sender.full_name  AS sent_to_bank_by_name,
-    sender.email      AS sent_to_bank_by_email
-FROM hpms_core.payroll_batches pb
-LEFT JOIN hpms_core.users creator ON pb.created_by      = creator.user_id
-LEFT JOIN hpms_core.users hr      ON pb.hr_reviewed_by  = hr.user_id
-LEFT JOIN hpms_core.users md      ON pb.md_reviewed_by  = md.user_id
-LEFT JOIN hpms_core.users sender  ON pb.sent_to_bank_by = sender.user_id;
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'hpms_core' AND table_name = 'payroll_batches') THEN
+    EXECUTE '
+      CREATE VIEW hpms_core.v_batch_details AS
+      SELECT
+          pb.*,
+          creator.full_name AS created_by_name,
+          creator.email AS created_by_email,
+          hr.full_name AS hr_reviewed_by_name,
+          hr.email AS hr_reviewed_by_email,
+          md.full_name AS md_reviewed_by_name,
+          md.email AS md_reviewed_by_email,
+          sender.full_name AS sent_to_bank_by_name,
+          sender.email AS sent_to_bank_by_email
+      FROM hpms_core.payroll_batches pb
+      LEFT JOIN hpms_core.users creator ON pb.created_by = creator.user_id
+      LEFT JOIN hpms_core.users hr ON pb.hr_reviewed_by = hr.user_id
+      LEFT JOIN hpms_core.users md ON pb.md_reviewed_by = md.user_id
+      LEFT JOIN hpms_core.users sender ON pb.sent_to_bank_by = sender.user_id
+    ';
+  END IF;
+END $$;
 
 -- ─── Step 11: Remove the migration helper column ─────────────────────────────
 
 ALTER TABLE hpms_core.users DROP COLUMN _old_employee_id;
 
 -- ─── Step 12: Delete Admin / Finance / HR / MD from employees ────────────────
-
+-- Convert to TEXT first so DELETE works even if enum was already recreated to Employee-only
+ALTER TABLE hpms_core.employees ALTER COLUMN role TYPE TEXT;
 DELETE FROM hpms_core.employees
 WHERE role IN ('Admin', 'FinanceOfficer', 'HR', 'ManagingDirector');
 
 -- ─── Step 13: Rebuild employee_role enum as Employee-only ────────────────────
 
-ALTER TABLE hpms_core.employees ALTER COLUMN role TYPE TEXT;
 DROP TYPE IF EXISTS hpms_core.employee_role CASCADE;
 CREATE TYPE hpms_core.employee_role AS ENUM ('Employee');
-UPDATE hpms_core.employees SET role = 'Employee' WHERE role <> 'Employee';
+UPDATE hpms_core.employees SET role = 'Employee';
 ALTER TABLE hpms_core.employees
     ALTER COLUMN role TYPE hpms_core.employee_role
-    USING role::hpms_core.employee_role;
+    USING 'Employee'::hpms_core.employee_role;
 
 COMMIT;
 

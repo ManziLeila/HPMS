@@ -1,0 +1,938 @@
+.mgmt {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  width: 100%;
+  max-width: none;
+  min-width: 0;
+  min-height: 60vh;
+  color: #1e293b;
+  background: #f8fafc;
+}
+
+.mgmt__tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid #e2e8f0;
+  flex-wrap: wrap;
+}
+
+.mgmt__tab {
+  padding: 12px 20px;
+  border: none;
+  background: none;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #64748b;
+  cursor: pointer;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -1px;
+  font-family: inherit;
+  transition: color 0.2s, border-color 0.2s;
+}
+
+.mgmt__tab:hover {
+  color: #334155;
+}
+
+.mgmt__tab--active {
+  color: #0f172a;
+  border-bottom-color: #003661;
+}
+
+.mgmt__panel {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.mgmt__panel-title {
+  margin: 0 0 8px;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.mgmt__panel-desc {
+  margin: 0 0 20px;
+  font-size: 0.9rem;
+  color: #64748b;
+}
+
+.mgmt__loading,
+.mgmt__error {
+  padding: 2rem;
+  text-align: center;
+  color: #64748b;
+}
+
+.mgmt__error {
+  color: #dc2626;
+}
+
+.mgmt__overview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 16px;
+}
+
+.mgmt__stat {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 20px;
+  text-align: center;
+}
+
+.mgmt__stat-value {
+  display: block;
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin-bottom: 4px;
+}
+
+.mgmt__stat-label {
+  font-size: 0.85rem;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.mgmt__overview-section {
+  margin-bottom: 24px;
+}
+
+.mgmt__overview-section:last-child {
+  margin-bottom: 0;
+}
+
+.mgmt__overview-section-title {
+  margin: 0 0 12px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #475569;
+}
+
+.mgmt__overview-grid--status {
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+}
+
+.mgmt__stat--ok .mgmt__stat-value { color: #15803d; }
+.mgmt__stat--error .mgmt__stat-value { color: #dc2626; }
+.mgmt__stat--warn .mgmt__stat-value { color: #b45309; }
+
+.mgmt__docs-content { max-width: 720px; }
+.mgmt__docs-section { margin-bottom: 24px; }
+.mgmt__docs-heading { margin: 0 0 8px; font-size: 1rem; font-weight: 700; color: #0f172a; }
+.mgmt__docs-section p { margin: 0 0 8px; font-size: 0.9rem; color: #475569; line-height: 1.5; }
+.mgmt__docs-code {
+  display: block;
+  padding: 12px 16px;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-family: ui-monospace, monospace;
+  white-space: pre-wrap;
+  margin: 8px 0 16px;
+  overflow-x: auto;
+}
+.mgmt__docs-content code { font-size: 0.9em; background: #f1f5f9; padding: 2px 6px; border-radius: 4px; }
+
+.mgmt__table-wrap {
+  overflow-x: auto;
+}
+
+.mgmt__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.mgmt__table th,
+.mgmt__table td {
+  padding: 12px 14px;
+  text-align: left;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.mgmt__table th {
+  font-weight: 600;
+  color: #475569;
+  background: #f8fafc;
+}
+
+.mgmt__table tr:hover td {
+  background: #f8fafc;
+}
+
+.mgmt__role-select {
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  font-size: 0.85rem;
+  font-family: inherit;
+  min-width: 140px;
+}
+
+.mgmt__role-select:focus {
+  outline: none;
+  border-color: #003661;
+  box-shadow: 0 0 0 2px rgba(0, 54, 97, 0.2);
+}
+
+.mgmt__badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.mgmt__badge--user {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.mgmt__badge--employee {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.mgmt__filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 20px;
+  align-items: center;
+}
+
+.mgmt__filters-bar {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 16px 20px;
+  margin-bottom: 24px;
+  padding: 20px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  align-items: end;
+}
+
+.mgmt__filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.mgmt__filter-group .mgmt__filter-label {
+  margin: 0;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.mgmt__filter-actions {
+  display: flex;
+  align-items: flex-end;
+}
+
+.mgmt__filter-apply {
+  padding: 10px 18px;
+  background: #003661;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.mgmt__filter-apply:hover {
+  background: #002a4d;
+}
+
+.mgmt__filter-select {
+  min-width: 160px;
+  cursor: pointer;
+}
+
+.mgmt__filter-input {
+  padding: 8px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-family: inherit;
+  background: #fff;
+}
+
+.mgmt__filter-input:focus {
+  outline: none;
+  border-color: #003661;
+  box-shadow: 0 0 0 2px rgba(0, 54, 97, 0.1);
+}
+
+.mgmt__activity-table {
+  font-size: 0.88rem;
+}
+
+.mgmt__activity-table .mgmt__table th {
+  white-space: nowrap;
+}
+
+.mgmt__activity-tr:hover td {
+  background: #fafbfc;
+}
+
+.mgmt__activity-date {
+  white-space: nowrap;
+  color: #64748b;
+  font-variant-numeric: tabular-nums;
+}
+
+.mgmt__activity-user {
+  font-weight: 500;
+  color: #0f172a;
+}
+
+.mgmt__action-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.mgmt__action-icon {
+  flex-shrink: 0;
+  opacity: 0.9;
+}
+
+.mgmt__action-badge--auth {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.mgmt__action-badge--data {
+  background: #e0f2fe;
+  color: #0369a1;
+}
+
+.mgmt__action-badge--default {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.mgmt__activity-ip .mgmt__ip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #64748b;
+  font-size: 0.85rem;
+}
+
+.mgmt__activity-details-cell {
+  max-width: 280px;
+  min-width: 120px;
+}
+
+.mgmt__details-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  margin: -4px -8px;
+  background: none;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  color: #0369a1;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+}
+
+.mgmt__details-toggle:hover {
+  background: #e0f2fe;
+  color: #0369a1;
+}
+
+.mgmt__details-json {
+  margin: 10px 0 0;
+  padding: 12px;
+  background: #1e293b;
+  color: #e2e8f0;
+  border-radius: 8px;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  overflow-x: auto;
+  white-space: pre;
+}
+
+.mgmt__details-inline {
+  color: #64748b;
+  font-size: 0.85rem;
+}
+
+.mgmt__pagination-info {
+  font-size: 0.9rem;
+  color: #64748b;
+}
+
+.mgmt__pagination {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 16px;
+  flex-wrap: wrap;
+}
+
+.mgmt__pagination-btn {
+  padding: 8px 14px;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.mgmt__pagination-btn:hover:not(:disabled) {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+.mgmt__pagination-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.mgmt__perms-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.mgmt__perms-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 20px;
+}
+
+.mgmt__perms-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.mgmt__perms-card-header {
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.mgmt__perms-card-header .mgmt__perms-role {
+  font-size: 1.05rem;
+  margin: 0;
+}
+
+.mgmt__perms-actions {
+  display: flex;
+  align-items: center;
+}
+
+.mgmt__perms-save-btn {
+  padding: 6px 14px;
+  background: #003661;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.mgmt__perms-save-btn:hover {
+  background: #002a4d;
+}
+
+.mgmt__perms-saving {
+  font-size: 0.85rem;
+  color: #64748b;
+}
+
+.mgmt__perms-check-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.mgmt__perms-check-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: #334155;
+}
+
+.mgmt__perms-check-row input {
+  width: 18px;
+  height: 18px;
+  accent-color: #003661;
+}
+
+.mgmt__perm-label {
+  flex: 1;
+}
+
+.mgmt__perms-card-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mgmt__perms-section-title {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.mgmt__perms-access {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #475569;
+  line-height: 1.5;
+}
+
+.mgmt__perms-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 0;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.mgmt__perms-item:last-child {
+  border-bottom: none;
+}
+
+.mgmt__perms-role {
+  font-weight: 600;
+  color: #0f172a;
+  min-width: 160px;
+}
+
+.mgmt__perms-caps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.mgmt__perm-tag {
+  padding: 5px 10px;
+  background: #e2e8f0;
+  color: #475569;
+  border-radius: 6px;
+  font-size: 0.8rem;
+}
+
+.mgmt__perm-tag--all {
+  background: #003661;
+  color: #fff;
+}
+
+/* Add user & credentials */
+.mgmt__add-user-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 10px 18px;
+  margin-bottom: 20px;
+  background: #003661;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.mgmt__add-user-btn:hover {
+  background: #002a4d;
+}
+
+.mgmt__add-user-form {
+  margin-bottom: 24px;
+  padding: 20px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+}
+
+.mgmt__add-user-heading {
+  margin: 0 0 16px;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.mgmt__add-user-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.mgmt__add-user-label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #334155;
+}
+
+.mgmt__add-user-label--inline {
+  margin-top: 8px;
+}
+
+.mgmt__add-user-input {
+  padding: 8px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-family: inherit;
+}
+
+.mgmt__add-user-input:focus {
+  outline: none;
+  border-color: #003661;
+  box-shadow: 0 0 0 2px rgba(0, 54, 97, 0.15);
+}
+
+.mgmt__add-user-password-row {
+  margin-bottom: 16px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+}
+
+.mgmt__add-user-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #334155;
+  cursor: pointer;
+}
+
+.mgmt__add-user-check input {
+  width: 18px;
+  height: 18px;
+  accent-color: #003661;
+}
+
+.mgmt__add-user-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.mgmt__add-user-submit {
+  padding: 10px 20px;
+  background: #003661;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.mgmt__add-user-submit:hover:not(:disabled) {
+  background: #002a4d;
+}
+
+.mgmt__add-user-submit:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.mgmt__add-user-cancel {
+  padding: 10px 20px;
+  background: #fff;
+  color: #475569;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.mgmt__add-user-cancel:hover {
+  background: #f8fafc;
+}
+
+.mgmt__credentials-box {
+  margin-bottom: 24px;
+  padding: 24px;
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  border-radius: 12px;
+}
+
+.mgmt__credentials-title {
+  margin: 0 0 8px;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #065f46;
+}
+
+.mgmt__credentials-warn {
+  margin: 0 0 16px;
+  font-size: 0.9rem;
+  color: #047857;
+  font-weight: 500;
+}
+
+.mgmt__credentials-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.mgmt__credential-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.mgmt__credential-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #065f46;
+  min-width: 180px;
+}
+
+.mgmt__credential-value {
+  flex: 1;
+  min-width: 120px;
+  padding: 8px 12px;
+  background: #fff;
+  border: 1px solid #a7f3d0;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  word-break: break-all;
+}
+
+.mgmt__credential-value--secret {
+  font-family: ui-monospace, monospace;
+  font-size: 0.85rem;
+}
+
+.mgmt__credential-copy {
+  padding: 6px 14px;
+  background: #065f46;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.mgmt__credential-copy:hover {
+  background: #047857;
+}
+
+.mgmt__credentials-mfa-hint {
+  margin: 0 0 16px;
+  font-size: 0.85rem;
+  color: #047857;
+}
+
+.mgmt__credentials-done {
+  padding: 10px 24px;
+  background: #065f46;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.mgmt__credentials-done:hover {
+  background: #047857;
+}
+
+/* User table actions */
+.mgmt__user-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.mgmt__btn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #fff;
+  cursor: pointer;
+  color: #475569;
+}
+
+.mgmt__btn-icon:hover {
+  background: #f8fafc;
+  color: #0f172a;
+}
+
+.mgmt__btn-icon--edit:hover {
+  border-color: #003661;
+  color: #003661;
+}
+
+.mgmt__btn-icon--delete:hover {
+  border-color: #dc2626;
+  color: #dc2626;
+}
+
+.mgmt__btn-icon:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Modals */
+.mgmt__modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.mgmt__modal {
+  background: #fff;
+  border-radius: 14px;
+  padding: 24px;
+  max-width: 480px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+}
+
+.mgmt__modal--sm {
+  max-width: 400px;
+}
+
+.mgmt__modal-title {
+  margin: 0 0 20px;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.mgmt__modal-text {
+  margin: 0 0 20px;
+  font-size: 0.95rem;
+  color: #475569;
+  line-height: 1.5;
+}
+
+.mgmt__btn-delete {
+  padding: 10px 20px;
+  background: #dc2626;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.mgmt__btn-delete:hover:not(:disabled) {
+  background: #b91c1c;
+}
+
+.mgmt__btn-delete:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.mgmt__add-user-hint {
+  font-size: 0.875rem;
+  color: #64748b;
+  width: 100%;
+  margin-bottom: 4px;
+}
+
+@media (max-width: 768px) {
+  .mgmt__overview-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .mgmt__table th,
+  .mgmt__table td {
+    padding: 10px;
+    font-size: 0.85rem;
+  }
+
+  .mgmt__filters-bar {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .mgmt__filter-actions {
+    grid-column: 1 / -1;
+  }
+
+  .mgmt__activity-table {
+    font-size: 0.8rem;
+  }
+
+  .mgmt__action-badge {
+    padding: 4px 8px;
+    font-size: 0.72rem;
+  }
+
+  .mgmt__activity-details-cell {
+    max-width: 160px;
+  }
+}

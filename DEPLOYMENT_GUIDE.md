@@ -1,5 +1,23 @@
 # HC Solutions Payroll Management System - Deployment Guide
 
+## Production domain
+
+**Live site:** [https://payroll.hcsolutions-rw.com](https://payroll.hcsolutions-rw.com)
+
+When hosting at this domain, set the following in your **backend** `.env`:
+
+```bash
+# CORS: allow the frontend origin
+CORS_ORIGINS=https://payroll.hcsolutions-rw.com
+
+# App URL: used in emails, login links, and approval links
+APP_URL=https://payroll.hcsolutions-rw.com
+```
+
+**Frontend:** If the API is served under the same host (e.g. reverse proxy at `/api`), leave `VITE_API_BASE_URL` unset so the app uses `https://payroll.hcsolutions-rw.com/api`. If the API is on a different host, set `VITE_API_BASE_URL` to that API base URL when building.
+
+---
+
 ## 🚀 Quick Start with Docker
 
 This guide will help you deploy the HC Solutions Payroll Management System using Docker and Coolify.

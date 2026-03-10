@@ -16,6 +16,7 @@ import {
   BarChart3,
   UserCog,
   X,
+  Shield,
 } from 'lucide-react';
 import useAuth from '../hooks/useAuth';
 import './Sidebar.css';
@@ -57,10 +58,25 @@ const ROUTE_MAP = {
     { path: '/reports', label: 'Reports', icon: FileText },
     { path: '/settings', label: 'Settings', icon: Settings },
   ],
-  Employee: [
+  Admin: [
     { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { path: '/approval-dashboard', label: 'Approvals', icon: BarChart3 },
+    { path: '/clients', label: 'Clients', icon: Users },
+    { path: '/users', label: 'Users', icon: UserCog },
+    { path: '/employees/new', label: 'Employee Form', icon: UserPlus },
+    { path: '/bulk-upload', label: 'Bulk Upload', icon: Upload },
+    { path: '/payroll-run', label: 'Payroll Run', icon: Calculator },
+    { path: '/payroll-periods', label: 'Payroll Periods', icon: Layers },
+    { path: '/hr-review', label: 'HR Review', icon: CheckSquare },
+    { path: '/md-approval', label: 'MD Approval', icon: ShieldCheck },
+    { path: '/contracts', label: 'Contracts', icon: FileSignature },
+    { path: '/contract-templates', label: 'Contract Templates', icon: Pencil },
     { path: '/reports', label: 'Reports', icon: FileText },
+    { path: '/email-settings', label: 'Email Settings', icon: Mail },
     { path: '/settings', label: 'Settings', icon: Settings },
+  ],
+  TechAdmin: [
+    { path: '/management-console', label: 'Management Console', icon: Shield },
   ],
 };
 
@@ -69,6 +85,8 @@ const ROLE_LABELS = {
   HR: 'HR Manager',
   ManagingDirector: 'Managing Director',
   Employee: 'Employee',
+  Admin: 'Admin',
+  TechAdmin: 'Tech Admin',
 };
 
 const STATUS_COLORS = {
@@ -76,13 +94,15 @@ const STATUS_COLORS = {
   HR: '#6366f1',
   ManagingDirector: '#10b981',
   Employee: '#94a3b8',
+  Admin: '#0f172a',
+  TechAdmin: '#0f766e',
 };
 
 const Sidebar = ({ onClose }) => {
   const { user } = useAuth();
   const location = useLocation();
   const role = user?.role || 'Employee';
-  const routes = ROUTE_MAP[role] || ROUTE_MAP.Employee;
+  const routes = (ROUTE_MAP && ROUTE_MAP[role]) || (role === 'Employee' ? [] : (ROUTE_MAP?.FinanceOfficer || []));
 
   return (
     <aside className="sidebar">
@@ -122,13 +142,13 @@ const Sidebar = ({ onClose }) => {
       <div className="sidebar__footer">
         <div
           className="sidebar__role-badge"
-          style={{ background: STATUS_COLORS[role] + '22', borderColor: STATUS_COLORS[role] + '55' }}
+          style={{ background: ((STATUS_COLORS || {})[role] || '#94a3b8') + '22', borderColor: ((STATUS_COLORS || {})[role] || '#94a3b8') + '55' }}
         >
           <span
             className="sidebar__role-dot"
-            style={{ background: STATUS_COLORS[role] }}
+            style={{ background: (STATUS_COLORS || {})[role] || '#94a3b8' }}
           />
-          <span style={{ color: STATUS_COLORS[role] }}>{ROLE_LABELS[role] || role}</span>
+          <span style={{ color: (STATUS_COLORS || {})[role] || '#94a3b8' }}>{(ROLE_LABELS || {})[role] || role}</span>
         </div>
         <p className="sidebar__email">{user?.email}</p>
       </div>

@@ -3,6 +3,10 @@
  * Handles notifications at each approval stage
  */
 
+import config from '../config/env.js';
+
+const appUrl = () => config.appUrl;
+
 export const payrollSubmittedTemplate = ({ batchName, periodMonth, periodYear, totalEmployees, totalNetSalary, financeOfficerName, batchId }) => `
 <!DOCTYPE html>
 <html>
@@ -96,7 +100,7 @@ export const payrollSubmittedTemplate = ({ batchName, periodMonth, periodYear, t
                 <p style="margin: 10px 0 0 0;">Please review this payroll batch and provide approval or feedback within 24 hours to maintain the approval timeline.</p>
             </div>
 
-            <a href="${process.env.APP_URL || 'http://localhost:5173'}/hr-review" class="button">Review Payroll Batch</a>
+            <a href="${appUrl()}/hr-review" class="button">Review Payroll Batch</a>
         </div>
         <div class="footer">
             <p style="margin: 0;">HC Solutions Payroll System<br>This is an automated message. Please do not reply to this email.</p>
@@ -189,7 +193,7 @@ export const mdApprovedTemplate = ({ batchName, periodMonth, periodYear, mdName,
             <p style="margin: 5px 0;">• Total Net Salary: RWF ${totalNetSalary.toLocaleString()}</p>
             <p style="margin: 5px 0;">• Approved By: ${mdName}</p>
 
-            <a href="${process.env.APP_URL || 'http://localhost:5173'}/my-batches" class="button">Send to Bank & Dispatch Payslips</a>
+            <a href="${appUrl()}/my-batches" class="button">Send to Bank & Dispatch Payslips</a>
         </div>
         <div class="footer">
             <p style="margin: 0;">HC Solutions Payroll System</p>

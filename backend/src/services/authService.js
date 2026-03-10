@@ -6,7 +6,10 @@ import config from '../config/env.js';
 import userRepo from '../repositories/userRepo.js';
 import employeeRepo from '../repositories/employeeRepo.js';
 import auditService from './auditService.js';
-import { unauthorized, badRequest } from '../utils/httpError.js';
+import { unauthorized, badRequest, forbidden } from '../utils/httpError.js';
+
+const EMPLOYEE_NO_APP_ACCESS =
+  'Employees do not have access to the app. You only receive payslips and other communications by email.';
 
 // Check users table first (Finance/HR/MD), then employees table.
 // Returns { record, userType } where userType is 'user' | 'employee'.
@@ -57,6 +60,13 @@ export const initiateLogin = async ({
       correlationId,
     });
     throw unauthorized('Invalid credentials');
+  }
+
+  // Employees (role or employee table) do not get app access — email only
+  const isEmployeeRole = userType === 'user' && user.role === 'Employee';
+  const isEmployeeTable = userType === 'employee';
+  if (isEmployeeRole || isEmployeeTable) {
+    throw forbidden(EMPLOYEE_NO_APP_ACCESS);
   }
 
   if (!config.auth.mfaRequired) {
@@ -132,6 +142,13 @@ export const verifyMfa = async ({ token, code, ipAddress, userAgent, correlation
 
   if (!user) {
     throw unauthorized('User not found');
+  }
+
+  // Employees (role or employee table) do not get app access — email only
+  const isEmployeeRole = userType === 'user' && user.role === 'Employee';
+  const isEmployeeTable = userType === 'employee';
+  if (isEmployeeRole || isEmployeeTable) {
+    throw forbidden(EMPLOYEE_NO_APP_ACCESS);
   }
 
   const isValid = authenticator.verify({

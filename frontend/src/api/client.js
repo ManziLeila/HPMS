@@ -1,21 +1,24 @@
 const normalizeBase = (base) => base.replace(/\/$/, "");
 
+/**
+ * API base URL: works in both production and local dev with one build.
+ * - Production (e.g. https://payroll.hcsolutions-rw.com): uses same origin → /api on same domain.
+ * - Local (localhost / 127.0.0.1): uses VITE_API_BASE_URL if set, else http://localhost:4000/api.
+ */
 const resolveApiBase = () => {
+  const origin = window.location.origin;
+  const isLocal =
+    origin.includes("localhost:") ||
+    origin.includes("127.0.0.1:");
+
+  if (!isLocal && origin.startsWith("http")) {
+    return normalizeBase(`${origin}/api`);
+  }
+
   const envBase = import.meta.env.VITE_API_BASE_URL?.trim();
   if (envBase) {
     return normalizeBase(envBase);
   }
-
-  const origin = window.location.origin;
-  // Local dev: Vite uses 5173 by default, may use 5174, 5175, etc. if port is busy
-  if (origin.includes("localhost:") || origin.includes("127.0.0.1:")) {
-    return "http://localhost:4000/api";
-  }
-
-  if (origin.startsWith("http")) {
-    return normalizeBase(`${origin}/api`);
-  }
-
   return "http://localhost:4000/api";
 };
 

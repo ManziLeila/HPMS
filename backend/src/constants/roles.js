@@ -1,9 +1,11 @@
 // Role constants for the approval system
 export const ROLES = {
+    ADMIN: 'Admin',
     EMPLOYEE: 'Employee',
     FINANCE_OFFICER: 'FinanceOfficer',
     HR: 'HR',
     MANAGING_DIRECTOR: 'ManagingDirector',
+    TECH_ADMIN: 'TechAdmin',
 };
 
 // Batch status constants
@@ -41,8 +43,13 @@ export const NOTIFICATION_TYPES = {
     EMPLOYEE_UPDATED: 'EMPLOYEE_UPDATED',
 };
 
-// Role permissions mapping
+// Role permissions mapping (defaults; can be overridden by DB via role_permissions table)
 export const ROLE_PERMISSIONS = {
+    [ROLES.ADMIN]: ['all'], // Management Console: full access, monitor site, manage permissions
+    // Tech admin: Management Console and audit features only (no payroll actions)
+    [ROLES.TECH_ADMIN]: [
+        'view_audit_trail',
+    ],
     [ROLES.FINANCE_OFFICER]: [
         'create_employee',
         'view_employees',
@@ -75,6 +82,31 @@ export const ROLE_PERMISSIONS = {
     ],
 };
 
+/** All permission keys that can be assigned to a role (for CRUD UI) */
+export const ALL_PERMISSION_KEYS = [
+    'all',
+    'create_employee',
+    'view_employees',
+    'create_salary',
+    'bulk_upload',
+    'view_reports',
+    'create_batch',
+    'submit_batch',
+    'send_to_bank',
+    'view_salaries',
+    'view_batches',
+    'approve_batch',
+    'reject_batch',
+    'add_comments',
+    'view_all',
+    'view_financial_summary',
+    'final_approve',
+    'final_reject',
+    'authorize_bank_transfer',
+    'view_audit_trail',
+    'view_own_payslip',
+];
+
 // Helper function to check if role has permission
 export const hasPermission = (role, permission) => {
     const permissions = ROLE_PERMISSIONS[role] || [];
@@ -98,6 +130,7 @@ export default {
     APPROVAL_ACTIONS,
     NOTIFICATION_TYPES,
     ROLE_PERMISSIONS,
+    ALL_PERMISSION_KEYS,
     hasPermission,
     getRolesForAction,
 };

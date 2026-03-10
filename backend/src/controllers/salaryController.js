@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import config from '../config/env.js';
 import { encryptField, decryptField } from '../services/encryptionService.js';
 import { calculatePayroll } from '../services/payrollService.js';
 import salaryRepo from '../repositories/salaryRepo.js';
@@ -88,7 +89,7 @@ export const hrReviewSalary = async (req, res, next) => {
       });
 
       // Email notification
-      const appUrl = process.env.APP_URL || 'http://localhost:5173';
+      const appUrl = config.appUrl;
       await sendFONotification({
         foEmail: creator.email,
         foName: creator.full_name,
@@ -159,7 +160,7 @@ export const bulkHrReviewSalaries = async (req, res, next) => {
       // Email notifications to all unique FOs
       if (foIds.length > 0) {
         const fos = await employeeRepo.findByIds(foIds);
-        const appUrl = process.env.APP_URL || 'http://localhost:5173';
+        const appUrl = config.appUrl;
         const emailPromises = fos.map(fo => sendFONotification({
           foEmail: fo.email,
           foName: fo.full_name,

@@ -20,7 +20,32 @@ import PayrollManagementPage from './pages/PayrollManagementPage.jsx';
 import ClientsPage from './pages/ClientsPage.jsx';
 import ClientEmployeesPage from './pages/ClientEmployeesPage.jsx';
 import UserManagementPage from './pages/UserManagementPage.jsx';
+import ManagementConsolePage from './pages/ManagementConsolePage.jsx';
+import useAuth from './hooks/useAuth.js';
+import { ErrorBoundary } from './components/ErrorBoundary.jsx';
 import './App.css';
+
+/** Dashboard is for finance/HR/MD/Admin only; Tech Admin goes to Management Console only. */
+function DashboardOrRedirect() {
+  const { user } = useAuth();
+  if (user?.role === 'TechAdmin') {
+    return <Navigate to="/management-console" replace />;
+  }
+  return <DashboardPage />;
+}
+
+/** Management Console is for Tech Admin only; everyone else (including Admin) is redirected. */
+function ManagementConsoleOrRedirect() {
+  const { user } = useAuth();
+  if (user?.role !== 'TechAdmin') {
+    return <Navigate to="/dashboard" replace />;
+  }
+  return (
+    <ErrorBoundary>
+      <ManagementConsolePage />
+    </ErrorBoundary>
+  );
+}
 
 const App = () => (
   <Routes>
@@ -34,7 +59,7 @@ const App = () => (
       }
     >
       <Route path="/home" element={<Navigate to="/dashboard" replace />} />
-      <Route path="/dashboard" element={<DashboardPage />} />
+      <Route path="/dashboard" element={<DashboardOrRedirect />} />
       <Route path="/approval-dashboard" element={<ApprovalDashboardPage />} />
       <Route path="/users" element={<UserManagementPage />} />
       <Route path="/clients" element={<ClientsPage />} />
@@ -52,6 +77,7 @@ const App = () => (
       <Route path="/email-settings" element={<EmailSettingsPage />} />
       <Route path="/settings" element={<SettingsPage />} />
       <Route path="/payroll-periods" element={<PayrollPeriodsPage />} />
+      <Route path="/management-console" element={<ManagementConsoleOrRedirect />} />
     </Route>
     <Route path="*" element={<Navigate to="/" />} />
   </Routes>

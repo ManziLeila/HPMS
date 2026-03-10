@@ -1,8 +1,8 @@
 -- =====================================================
 -- MULTI-LEVEL APPROVAL SYSTEM MIGRATION
--- Created: 2026-02-10
--- Purpose: Add 3-tier approval workflow for payroll
--- Schema: hpms_core (updated for existing database)
+-- Run 001a_multi_level_approval_tables.sql then
+-- 001b_multi_level_approval_triggers_views.sql instead
+-- (this file is kept for reference; single-file run can fail on "batch_id").
 -- =====================================================
 
 -- Step 1: Add ManagingDirector role to the enum
@@ -74,20 +74,16 @@ CREATE TABLE IF NOT EXISTS hpms_core.payroll_batches (
     UNIQUE(period_month, period_year, batch_name)
 );
 
--- Step 3: Add batch_id to salaries table
+-- Step 3: Add batch_id to salaries table (idempotent)
 DO $$
 BEGIN
-    IF NOT EXISTS (
-        SELECT 1 FROM information_schema.columns 
-        WHERE table_schema = 'hpms_core'
-        AND table_name = 'salaries' 
-        AND column_name = 'batch_id'
-    ) THEN
-        ALTER TABLE hpms_core.salaries ADD COLUMN batch_id INTEGER REFERENCES hpms_core.payroll_batches(batch_id) ON DELETE SET NULL;
-        RAISE NOTICE 'Added batch_id column to salaries table';
-    ELSE
-        RAISE NOTICE 'batch_id column already exists in salaries table';
-    END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'hpms_core' AND table_name = 'salaries' AND column_name = 'batch_id'
+  ) THEN
+    ALTER TABLE hpms_core.salaries
+      ADD COLUMN batch_id INTEGER REFERENCES hpms_core.payroll_batches(batch_id) ON DELETE SET NULL;
+  END IF;
 END $$;
 
 -- Step 4: Create Approval History table (audit trail)
@@ -150,7 +146,12 @@ CREATE INDEX IF NOT EXISTS idx_payroll_batches_period ON hpms_core.payroll_batch
 CREATE INDEX IF NOT EXISTS idx_payroll_batches_hr_reviewer ON hpms_core.payroll_batches(hr_reviewed_by);
 CREATE INDEX IF NOT EXISTS idx_payroll_batches_md_reviewer ON hpms_core.payroll_batches(md_reviewed_by);
 
-CREATE INDEX IF NOT EXISTS idx_salaries_batch ON hpms_core.salaries(batch_id);
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'hpms_core' AND table_name = 'salaries' AND column_name = 'batch_id') THEN
+    EXECUTE 'CREATE INDEX IF NOT EXISTS idx_salaries_batch ON hpms_core.salaries(batch_id)';
+  END IF;
+END $$;
 
 CREATE INDEX IF NOT EXISTS idx_approval_history_batch ON hpms_core.approval_history(batch_id);
 CREATE INDEX IF NOT EXISTS idx_approval_history_action_by ON hpms_core.approval_history(action_by);
@@ -160,62 +161,35 @@ CREATE INDEX IF NOT EXISTS idx_notifications_user ON hpms_core.notifications(use
 CREATE INDEX IF NOT EXISTS idx_notifications_created ON hpms_core.notifications(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_notifications_batch ON hpms_core.notifications(batch_id);
 
--- Step 7: Create function to update batch summary
-CREATE OR REPLACE FUNCTION hpms_core.update_batch_summary()
-RETURNS TRIGGER AS $$
+-- Step 7: Create function to update batch summary (only if batch_id exists on salaries)
+-- Use dynamic SQL so the trigger is not parsed until after batch_id exists.
+DO $$
 BEGIN
-    -- Update the batch summary when salaries are added/updated
-    UPDATE hpms_core.payroll_batches
-    SET 
-        total_employees = (
-            SELECT COUNT(*) 
-            FROM hpms_core.salaries 
-            WHERE batch_id = NEW.batch_id
-        ),
-        total_gross_salary = (
-            SELECT COALESCE(SUM(gross_salary), 0) 
-            FROM hpms_core.salaries 
-            WHERE batch_id = NEW.batch_id
-        ),
-        total_net_salary = (
-            SELECT COALESCE(SUM(net_salary), 0) 
-            FROM hpms_core.salaries 
-            WHERE batch_id = NEW.batch_id
-        ),
-        total_deductions = (
-            SELECT COALESCE(SUM(total_deductions), 0) 
-            FROM hpms_core.salaries 
-            WHERE batch_id = NEW.batch_id
-        ),
-        total_rssb = (
-            SELECT COALESCE(SUM(rssb_employee), 0) 
-            FROM hpms_core.salaries 
-            WHERE batch_id = NEW.batch_id
-        ),
-        total_paye = (
-            SELECT COALESCE(SUM(paye), 0) 
-            FROM hpms_core.salaries 
-            WHERE batch_id = NEW.batch_id
-        ),
-        total_rama = (
-            SELECT COALESCE(SUM(rama_insurance), 0) 
-            FROM hpms_core.salaries 
-            WHERE batch_id = NEW.batch_id
-        ),
-        updated_at = CURRENT_TIMESTAMP
-    WHERE batch_id = NEW.batch_id;
-    
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'hpms_core' AND table_name = 'salaries' AND column_name = 'batch_id') THEN
+    RETURN;
+  END IF;
 
--- Step 8: Create trigger for batch summary updates
-DROP TRIGGER IF EXISTS trigger_update_batch_summary ON hpms_core.salaries;
-CREATE TRIGGER trigger_update_batch_summary
-AFTER INSERT OR UPDATE ON hpms_core.salaries
-FOR EACH ROW
-WHEN (NEW.batch_id IS NOT NULL)
-EXECUTE FUNCTION hpms_core.update_batch_summary();
+  CREATE OR REPLACE FUNCTION hpms_core.update_batch_summary()
+  RETURNS TRIGGER AS $func$
+  BEGIN
+      UPDATE hpms_core.payroll_batches
+      SET 
+          total_employees = (SELECT COUNT(*) FROM hpms_core.salaries WHERE batch_id = NEW.batch_id),
+          total_gross_salary = (SELECT COALESCE(SUM(gross_salary), 0) FROM hpms_core.salaries WHERE batch_id = NEW.batch_id),
+          total_net_salary = (SELECT COALESCE(SUM(net_salary), 0) FROM hpms_core.salaries WHERE batch_id = NEW.batch_id),
+          total_deductions = (SELECT COALESCE(SUM(total_deductions), 0) FROM hpms_core.salaries WHERE batch_id = NEW.batch_id),
+          total_rssb = (SELECT COALESCE(SUM(rssb_employee), 0) FROM hpms_core.salaries WHERE batch_id = NEW.batch_id),
+          total_paye = (SELECT COALESCE(SUM(paye), 0) FROM hpms_core.salaries WHERE batch_id = NEW.batch_id),
+          total_rama = (SELECT COALESCE(SUM(rama_insurance), 0) FROM hpms_core.salaries WHERE batch_id = NEW.batch_id),
+          updated_at = CURRENT_TIMESTAMP
+      WHERE batch_id = NEW.batch_id;
+      RETURN NEW;
+  END;
+  $func$ LANGUAGE plpgsql;
+
+  DROP TRIGGER IF EXISTS trigger_update_batch_summary ON hpms_core.salaries;
+  EXECUTE 'CREATE TRIGGER trigger_update_batch_summary AFTER INSERT OR UPDATE ON hpms_core.salaries FOR EACH ROW WHEN (NEW.batch_id IS NOT NULL) EXECUTE FUNCTION hpms_core.update_batch_summary()';
+END $$;
 
 -- Step 9: Create function to auto-update timestamps
 CREATE OR REPLACE FUNCTION hpms_core.update_updated_at_column()
