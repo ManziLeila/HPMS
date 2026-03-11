@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ChevronRight, Building2, Plus, Pencil, Trash2, AlertTriangle } from 'lucide-react';
+import { ChevronRight, Building2, Plus, Pencil, Trash2, AlertTriangle, FileText } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { apiClient } from '../api/client';
 import useAuth from '../hooks/useAuth';
@@ -12,7 +12,14 @@ const ClientsPage = () => {
     const [error, setError] = useState(null);
     const [modalMode, setModalMode] = useState(null); // 'add' | 'edit' | null
     const [editingClient, setEditingClient] = useState(null);
-    const [clientName, setClientName] = useState('');
+    const [clientForm, setClientForm] = useState({
+        name: '',
+        email: '',
+        contactInfo: '',
+        startDate: '',
+        endDate: '',
+        contractDocument: null,
+    });
     const [submitError, setSubmitError] = useState(null);
     const [saving, setSaving] = useState(false);
     const [deleteConfirm, setDeleteConfirm] = useState(null);
@@ -40,7 +47,7 @@ const ClientsPage = () => {
     const openAddModal = () => {
         setModalMode('add');
         setEditingClient(null);
-        setClientName('');
+        setClientForm({ name: '', email: '', contactInfo: '', startDate: '', endDate: '', contractDocument: null });
         setSubmitError(null);
     };
 
@@ -49,19 +56,26 @@ const ClientsPage = () => {
         e?.stopPropagation?.();
         setModalMode('edit');
         setEditingClient(client);
-        setClientName(client.name);
+        setClientForm({
+            name: client.name || '',
+            email: client.email || '',
+            contactInfo: client.contact_info || '',
+            startDate: '',
+            endDate: '',
+            contractDocument: null,
+        });
         setSubmitError(null);
     };
 
     const closeModal = () => {
         setModalMode(null);
         setEditingClient(null);
-        setClientName('');
+        setClientForm({ name: '', email: '', contactInfo: '', startDate: '', endDate: '', contractDocument: null });
         setSubmitError(null);
     };
 
     const handleSaveClient = async () => {
-        const name = clientName.trim();
+        const name = clientForm.name.trim();
         if (!name) {
             setSubmitError(t('clientNameRequired') || 'Client name is required.');
             return;
@@ -70,9 +84,21 @@ const ClientsPage = () => {
         setSubmitError(null);
         try {
             if (modalMode === 'add') {
-                await apiClient.post('/clients', { name }, { token });
+                const formData = new FormData();
+                formData.append('name', name);
+                formData.append('email', clientForm.email.trim());
+                formData.append('contactInfo', clientForm.contactInfo.trim());
+                if (clientForm.startDate) formData.append('startDate', clientForm.startDate);
+                if (clientForm.endDate) formData.append('endDate', clientForm.endDate);
+                if (clientForm.contractDocument) formData.append('contractDocument', clientForm.contractDocument);
+                formData.append('contractType', 'service-agreement');
+                await apiClient.postForm('/clients', formData, { token });
             } else {
-                await apiClient.put(`/clients/${editingClient.client_id}`, { name }, { token });
+                await apiClient.put(`/clients/${editingClient.client_id}`, {
+                    name,
+                    email: clientForm.email.trim() || null,
+                    contact_info: clientForm.contactInfo.trim() || null,
+                }, { token });
             }
             closeModal();
             fetchClients();
@@ -89,11 +115,13 @@ const ClientsPage = () => {
         setDeleteConfirm(client);
     };
 
-    const handleDeleteClient = async () => {
+    const handleDeleteClient = async (deleteEmployees) => {
         if (!deleteConfirm) return;
         setSaving(true);
+        setSubmitError(null);
         try {
-            await apiClient.delete(`/clients/${deleteConfirm.client_id}`, { token });
+            const q = deleteEmployees ? '?deleteEmployees=true' : '';
+            await apiClient.delete(`/clients/${deleteConfirm.client_id}${q}`, { token });
             setDeleteConfirm(null);
             fetchClients();
         } catch (err) {
@@ -157,7 +185,7 @@ const ClientsPage = () => {
                             <div className="client-card__body">
                                 <span className="client-card__name">{client.name}</span>
                                 <span className="client-card__meta">
-                                    Client ID: {client.client_id}
+                                    {client.email ? `${client.email} • ` : ''}Client ID: {client.client_id}
                                 </span>
                             </div>
                             <div className="client-card__actions" onClick={(e) => e.stopPropagation()}>
@@ -189,18 +217,69 @@ const ClientsPage = () => {
             {/* Add / Edit client modal */}
             {(modalMode === 'add' || modalMode === 'edit') && (
                 <div className="modal-overlay" onClick={closeModal}>
-                    <div className="modal-content modal-content--client" onClick={(e) => e.stopPropagation()}>
+                    <div className="modal-content modal-content--client modal-content--client-form" onClick={(e) => e.stopPropagation()}>
                         <h2>{modalMode === 'add' ? (t('addClient') || 'Add client') : (t('editClient') || 'Edit client')}</h2>
                         <div className="form-group">
-                            <label>{t('clientName') || 'Client name'}</label>
+                            <label>{t('clientName') || 'Client name'} *</label>
                             <input
                                 type="text"
-                                value={clientName}
-                                onChange={(e) => setClientName(e.target.value)}
+                                value={clientForm.name}
+                                onChange={(e) => setClientForm((f) => ({ ...f, name: e.target.value }))}
                                 placeholder={t('clientNamePlaceholder') || 'e.g. Acme Corp'}
                                 autoFocus
                             />
                         </div>
+                        <div className="form-group">
+                            <label>{t('email') || 'Email'}</label>
+                            <input
+                                type="email"
+                                value={clientForm.email}
+                                onChange={(e) => setClientForm((f) => ({ ...f, email: e.target.value }))}
+                                placeholder="client@company.com"
+                            />
+                        </div>
+                        <div className="form-group">
+                            <label>{t('contactInfo') || 'Contact information'}</label>
+                            <textarea
+                                rows={2}
+                                value={clientForm.contactInfo}
+                                onChange={(e) => setClientForm((f) => ({ ...f, contactInfo: e.target.value }))}
+                                placeholder="Address, phone, notes..."
+                            />
+                        </div>
+                        {modalMode === 'add' && (
+                            <>
+                                <div className="form-group form-group--row">
+                                    <div>
+                                        <label>{t('contractStart') || 'Contract start date'}</label>
+                                        <input
+                                            type="date"
+                                            value={clientForm.startDate}
+                                            onChange={(e) => setClientForm((f) => ({ ...f, startDate: e.target.value }))}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label>{t('contractEnd') || 'Contract end date'}</label>
+                                        <input
+                                            type="date"
+                                            value={clientForm.endDate}
+                                            onChange={(e) => setClientForm((f) => ({ ...f, endDate: e.target.value }))}
+                                        />
+                                    </div>
+                                </div>
+                                <div className="form-group">
+                                    <label><FileText size={16} style={{ verticalAlign: 'middle' }} /> {t('contractDocument') || 'Upload contract document'}</label>
+                                    <input
+                                        type="file"
+                                        accept=".pdf,.doc,.docx,image/*"
+                                        onChange={(e) => setClientForm((f) => ({ ...f, contractDocument: e.target.files?.[0] || null }))}
+                                    />
+                                    {clientForm.contractDocument && (
+                                        <span className="form-hint">{clientForm.contractDocument.name}</span>
+                                    )}
+                                </div>
+                            </>
+                        )}
                         {submitError && <p className="modal-error">{submitError}</p>}
                         <div className="modal-actions">
                             <button type="button" className="btn-cancel" onClick={closeModal} disabled={saving}>{t('cancel')}</button>
@@ -214,15 +293,36 @@ const ClientsPage = () => {
 
             {/* Delete confirm modal */}
             {deleteConfirm && (
-                <div className="modal-overlay" onClick={() => setDeleteConfirm(null)}>
-                    <div className="modal-content modal-confirm" onClick={(e) => e.stopPropagation()}>
+                <div className="modal-overlay" onClick={() => { setDeleteConfirm(null); setSubmitError(null); }}>
+                    <div className="modal-content modal-confirm modal-confirm--client" onClick={(e) => e.stopPropagation()}>
                         <h2><AlertTriangle size={20} aria-hidden /> {t('confirmDelete') || 'Confirm delete'}</h2>
-                        <p>{t('deleteClientConfirmation') || 'Delete client'} <strong>{deleteConfirm.name}</strong>? {t('deleteClientWarning') || 'Employees under this client will be unassigned (not deleted).'}</p>
-                        <div className="modal-actions">
-                            <button type="button" className="btn-cancel" onClick={() => setDeleteConfirm(null)} disabled={saving}>{t('cancel')}</button>
-                            <button type="button" className="btn-delete-confirm" onClick={handleDeleteClient} disabled={saving}>
-                                {saving ? (t('deleting') || 'Deleting…') : t('delete')}
+                        <p>{t('deleteClientConfirmation') || 'Delete client'} <strong>{deleteConfirm.name}</strong>?</p>
+                        <p className="modal-confirm__sub">{t('deleteClientChoose') || 'What should happen to the employees under this client?'}</p>
+                        <div className="modal-confirm__options">
+                            <button
+                                type="button"
+                                className="btn-delete-option btn-delete-option--keep"
+                                onClick={() => handleDeleteClient(false)}
+                                disabled={saving}
+                                title={t('deleteClientKeepEmployees') || 'Employees stay in the database, unassigned from any client'}
+                            >
+                                <span className="btn-delete-option__title">{t('deleteClientKeepEmployees') || 'Keep employees'}</span>
+                                <span className="btn-delete-option__desc">{t('deleteClientKeepDesc') || 'Employees stay in the database and will be unassigned (no client).'}</span>
                             </button>
+                            <button
+                                type="button"
+                                className="btn-delete-option btn-delete-option--remove"
+                                onClick={() => handleDeleteClient(true)}
+                                disabled={saving}
+                                title={t('deleteClientDeleteEmployees') || 'Delete all employees and their salary records'}
+                            >
+                                <span className="btn-delete-option__title">{t('deleteClientDeleteEmployees') || 'Delete all employees'}</span>
+                                <span className="btn-delete-option__desc">{t('deleteClientDeleteDesc') || 'Employees and their salary records will be permanently deleted.'}</span>
+                            </button>
+                        </div>
+                        {submitError && <p className="modal-error">{submitError}</p>}
+                        <div className="modal-actions">
+                            <button type="button" className="btn-cancel" onClick={() => { setDeleteConfirm(null); setSubmitError(null); }} disabled={saving}>{t('cancel')}</button>
                         </div>
                     </div>
                 </div>

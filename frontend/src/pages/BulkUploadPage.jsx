@@ -1,13 +1,23 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useParams } from 'react-router-dom';
 import { FileSpreadsheet, Download, Settings, Upload, FolderOpen, Rocket, Package, Mail, CheckCircle, XCircle, Loader2, BarChart3 } from 'lucide-react';
 import './BulkUploadPage.css';
 import { apiClient, API_BASE_URL } from '../api/client';
 import useAuth from '../hooks/useAuth.js';
 
+const getDefaultPayPeriod = () => {
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    return `${y}-${m}`;
+};
+
 const BulkUploadPage = () => {
+    const { clientId } = useParams();
     const { token } = useAuth();
+    const [clientName, setClientName] = useState(null);
     const [file, setFile] = useState(null);
-    const [payPeriod, setPayPeriod] = useState('');
+    const [payPeriod, setPayPeriod] = useState(getDefaultPayPeriod);
     const [frequency, setFrequency] = useState('monthly');
     const [includeMedical, setIncludeMedical] = useState(true);
     const [uploadStatus, setUploadStatus] = useState(null);
@@ -15,19 +25,34 @@ const BulkUploadPage = () => {
     const [isUploading, setIsUploading] = useState(false);
     const [salaryIds, setSalaryIds] = useState([]);
 
+    useEffect(() => {
+        if (clientId && token) {
+            apiClient.get(`/clients/${clientId}`, { token })
+                .then((r) => setClientName(r?.name ?? 'Client'))
+                .catch(() => setClientName(null));
+        } else {
+            setClientName(null);
+        }
+    }, [clientId, token]);
+
     const handleFileChange = (event) => {
         const selectedFile = event.target.files[0];
         if (selectedFile) {
-            // Validate file type
+            const name = (selectedFile.name || '').toLowerCase();
+            const validExtensions = ['.xls', '.xlsx', '.xlsm', '.xlsb'];
             const validTypes = [
                 'application/vnd.ms-excel',
                 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                'application/vnd.ms-excel.sheet.macroEnabled.12',
+                'application/vnd.ms-excel.sheet.binary.macroEnabled.12',
             ];
-            if (validTypes.includes(selectedFile.type)) {
+            const byExt = validExtensions.some((ext) => name.endsWith(ext));
+            const byType = validTypes.includes(selectedFile.type);
+            if (byExt || byType) {
                 setFile(selectedFile);
                 setUploadStatus(null);
             } else {
-                setUploadStatus('Error: Please select a valid Excel file (.xls or .xlsx)');
+                setUploadStatus('Error: Please select a valid Excel file (.xls, .xlsx, .xlsm, .xlsb)');
                 setFile(null);
             }
         }
@@ -57,8 +82,14 @@ const BulkUploadPage = () => {
             formData.append('payPeriod', payPeriod + '-01');
             formData.append('frequency', frequency);
             formData.append('includeMedical', String(includeMedical));
+            if (clientId) {
+                formData.append('clientId', String(clientId));
+            }
 
-            const response = await fetch(`${API_BASE_URL}/salaries/bulk/upload`, {
+            const uploadUrl = clientId
+                ? `${API_BASE_URL}/salaries/bulk/upload?clientId=${encodeURIComponent(clientId)}`
+                : `${API_BASE_URL}/salaries/bulk/upload`;
+            const response = await fetch(uploadUrl, {
                 method: 'POST',
                 headers: {
                     Authorization: `Bearer ${token}`,
@@ -101,6 +132,7 @@ const BulkUploadPage = () => {
             }
 
             const blob = await response.blob();
+            if (blob.size === 0) throw new Error('Downloaded file is empty');
             const link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
             link.download = `payslips-${payPeriod}.zip`;
@@ -151,6 +183,11 @@ Jane Smith,jane.smith@example.com,1200000,60000,120000,60000,0,0,No,`;
         <div className="bulk-upload-page">
             <section className="bulk-upload-page__header">
                 <div>
+                    {clientId && (
+                        <p className="bulk-upload-page__client-banner" style={{ background: '#d1fae5', color: '#065f46', padding: '8px 14px', borderRadius: 8, marginBottom: 12, display: 'inline-block', fontWeight: 600 }}>
+                            Employees will be assigned to: <strong>{clientName || 'Loading…'}</strong>
+                        </p>
+                    )}
                     <p className="bulk-upload-page__eyebrow">Bulk Operations</p>
                     <h2>Upload Multiple Salaries</h2>
                     <p className="bulk-upload-page__description">
@@ -236,7 +273,7 @@ Jane Smith,jane.smith@example.com,1200000,60000,120000,60000,0,0,No,`;
                         <div className="bulk-upload-page__file-input">
                             <input
                                 type="file"
-                                accept=".xls,.xlsx"
+                                accept=".xls,.xlsx,.xlsm,.xlsb"
                                 onChange={handleFileChange}
                                 id="file-upload"
                             />

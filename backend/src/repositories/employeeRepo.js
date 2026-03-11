@@ -19,7 +19,7 @@ const employeeRepo = {
       `SELECT employee_id, full_name, email, role, password_hash, mfa_secret,
               bank_name, account_number_enc, account_holder_name, phone_number,
               email_notifications_enabled, sms_notifications_enabled,
-              department, date_of_joining, rssb_number
+              department, date_of_joining, rssb_number, client_id
        FROM hpms_core.employees
        WHERE email = $1`,
       [email],
@@ -45,10 +45,11 @@ const employeeRepo = {
       `SELECT e.employee_id, e.full_name, e.email, e.role, e.created_at,
               e.bank_name, e.account_holder_name, e.phone_number,
               e.department, e.date_of_joining, e.rssb_number, e.client_id,
-              c.start_date AS contract_start_date, c.end_date AS contract_end_date
+              c.contract_id, c.start_date AS contract_start_date, c.end_date AS contract_end_date,
+              c.contract_document_path AS contract_document_path
        FROM hpms_core.employees e
        LEFT JOIN (
-         SELECT DISTINCT ON (employee_id) employee_id, start_date, end_date
+         SELECT DISTINCT ON (employee_id) employee_id, contract_id, start_date, end_date, contract_document_path
          FROM hpms_core.contracts
          ORDER BY employee_id, start_date DESC
        ) c ON c.employee_id = e.employee_id
@@ -126,6 +127,18 @@ const employeeRepo = {
       `DELETE FROM hpms_core.employees
        WHERE employee_id = $1
        RETURNING employee_id, full_name, email`,
+      [employeeId],
+    );
+    return rows[0];
+  },
+
+  /** Delete employee and all dependent records (salaries, contracts, etc.) */
+  async deleteWithDependencies(employeeId) {
+    await db.query('DELETE FROM hpms_core.salaries WHERE employee_id = $1', [employeeId]);
+    await db.query('DELETE FROM hpms_core.contracts WHERE employee_id = $1', [employeeId]);
+    await db.query('DELETE FROM hpms_core.notifications WHERE user_type = $1 AND user_id = $2', ['employee', employeeId]);
+    const { rows } = await db.query(
+      `DELETE FROM hpms_core.employees WHERE employee_id = $1 RETURNING employee_id, full_name, email`,
       [employeeId],
     );
     return rows[0];

@@ -11,7 +11,8 @@
     "lint": "eslint \"src/**/*.{js,jsx}\"",
     "format": "prettier --write \"src/**/*.{js,jsx,json}\"",
     "test": "cross-env NODE_ENV=test jest --runInBand",
-    "reset-admin": "node ./scripts/resetAdmin.js"
+    "reset-admin": "node ./scripts/resetAdmin.js",
+    "reset-data": "node ./scripts/reset-data.js"
   },
   "keywords": [],
   "author": "",

@@ -121,7 +121,7 @@ export const generateMonthlyPayrollExcel = async ({ data, year, month }) => {
         });
     });
 
-    // Add totals row
+    // Add totals row — highlight Net Summary (column 8) in yellow
     const totalsRow = worksheet.addRow([
         'TOTALS',
         '',
@@ -141,6 +141,15 @@ export const generateMonthlyPayrollExcel = async ({ data, year, month }) => {
         pattern: 'solid',
         fgColor: { argb: 'FFF0F9FF' },
     };
+
+    // Highlight Net Salary (column 8) in yellow
+    const netSummaryCell = totalsRow.getCell(8);
+    netSummaryCell.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FFFFFF00' },
+    };
+    netSummaryCell.font = { bold: true };
 
     // Format currency in totals
     [5, 6, 7, 8, 9].forEach((colNum) => {

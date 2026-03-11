@@ -20,7 +20,9 @@ const decryptPayrollSnapshot = (encryptedData) => {
 };
 
 /**
- * Send payslip email manually
+ * Send payslip email manually.
+ * Payslip emails are only allowed after the full approval chain and after money has been sent to the bank,
+ * so the email confirms payment was sent (not before HR/MD approve).
  * POST /api/salaries/:salaryId/send-email
  */
 export const sendPayslipEmailManually = async (req, res, next) => {
@@ -35,11 +37,11 @@ export const sendPayslipEmailManually = async (req, res, next) => {
             throw notFound('Salary record not found');
         }
 
-        // 🚨 Security/Workflow check: Only allow sending if HR has approved
-        if (employeeData.hr_status !== 'HR_APPROVED' && employeeData.hr_status !== 'MD_APPROVED' && employeeData.hr_status !== 'SENT_TO_BANK') {
+        // Only allow sending after payroll has been sent to the bank (everyone has approved and money sent)
+        if (employeeData.hr_status !== 'SENT_TO_BANK') {
             return res.status(403).json({
                 success: false,
-                message: `Cannot send payslip. Current status is ${employeeData.hr_status || 'PENDING'}. Record must be HR Approved first.`
+                message: 'Payslip emails can only be sent after the payroll has been sent to the bank (HR and MD approved, and Finance has marked "Sent to bank").',
             });
         }
 
@@ -87,7 +89,9 @@ export const sendPayslipEmailManually = async (req, res, next) => {
             payrollSnapshot,
         });
 
-        const filename = `payslip-${employeeData.full_name.replace(/\s+/g, '-').toLowerCase()}-${employeeData.pay_period}.pdf`;
+        const periodStr = employeeData.pay_period ? new Date(employeeData.pay_period).toISOString().slice(0, 10) : 'unknown';
+        const safeName = (employeeData.full_name || 'employee').replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, '').toLowerCase();
+        const filename = `payslip-${safeName}-${periodStr}.pdf`;
 
         // Save to filesystem (organized by months)
         await fileStorageService.savePayslip(pdfBuffer, filename, employeeData.pay_period);

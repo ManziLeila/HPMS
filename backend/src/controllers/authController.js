@@ -76,14 +76,19 @@ export const logout = async (req, res, next) => {
 };
 
 export const me = async (req, res) => {
+  const isSystemUser = req.user.userType === 'user';
+  const table = isSystemUser ? 'hpms_core.users' : 'hpms_core.employees';
+  const idColumn = isSystemUser ? 'user_id' : 'employee_id';
+
   const { rows } = await pool.query(
-    'SELECT full_name FROM hpms_core.employees WHERE employee_id = $1',
+    `SELECT full_name FROM ${table} WHERE ${idColumn} = $1`,
     [req.user.id]
   );
   res.json({
     id: req.user.id,
     email: req.user.email,
     role: req.user.role,
+    userType: req.user.userType,
     fullName: rows[0]?.full_name || null,
     sessionId: req.user.sessionId,
   });
@@ -98,9 +103,12 @@ export const changePassword = async (req, res, next) => {
   try {
     const { currentPassword, newPassword } = changePasswordSchema.parse(req.body);
 
-    // Fetch stored password hash
+    const isSystemUser = req.user.userType === 'user';
+    const table = isSystemUser ? 'hpms_core.users' : 'hpms_core.employees';
+    const idColumn = isSystemUser ? 'user_id' : 'employee_id';
+
     const { rows } = await pool.query(
-      'SELECT password_hash FROM hpms_core.employees WHERE employee_id = $1',
+      `SELECT password_hash FROM ${table} WHERE ${idColumn} = $1`,
       [req.user.id]
     );
     if (!rows.length) return res.status(404).json({ error: { message: 'User not found' } });
@@ -110,7 +118,7 @@ export const changePassword = async (req, res, next) => {
 
     const newHash = await bcrypt.hash(newPassword, 12);
     await pool.query(
-      'UPDATE hpms_core.employees SET password_hash = $1, updated_at = NOW() WHERE employee_id = $2',
+      `UPDATE ${table} SET password_hash = $1, updated_at = NOW() WHERE ${idColumn} = $2`,
       [newHash, req.user.id]
     );
 

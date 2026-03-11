@@ -11,6 +11,35 @@ const STORAGE_ROOT = path.resolve(__dirname, '../../storage');
 class FileStorageService {
     constructor() {
         this.payslipsDir = path.join(STORAGE_ROOT, 'payslips');
+        this.contractsDir = path.join(STORAGE_ROOT, 'contracts');
+    }
+
+    /**
+     * Save a contract document (client or employee)
+     * Returns relative path for DB storage
+     */
+    async saveContractDocument(buffer, filename, subdir = '') {
+        try {
+            const targetDir = subdir
+                ? path.join(this.contractsDir, subdir)
+                : this.contractsDir;
+            await this.ensureDir(targetDir);
+            const safeName = (filename || 'contract').replace(/[^a-zA-Z0-9._-]/g, '_');
+            const filePath = path.join(targetDir, safeName);
+            await fs.writeFile(filePath, buffer);
+            return path.join('contracts', subdir, safeName).replace(/\\/g, '/');
+        } catch (err) {
+            console.error('[FileStorage] Failed to save contract:', err);
+            return null;
+        }
+    }
+
+    /**
+     * Get full path for a stored contract document
+     */
+    getContractPath(relativePath) {
+        if (!relativePath) return null;
+        return path.join(STORAGE_ROOT, relativePath);
     }
 
     /**

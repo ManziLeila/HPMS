@@ -10,10 +10,10 @@ const router = Router();
  */
 
 // Generate MFA credentials for an employee (HR only)
-router.post('/generate', authenticate, requireRole(['HR', 'Admin']), generateMfaForEmployee);
+router.post('/generate', authenticate, requireRole(['HR']), generateMfaForEmployee);
 
 // Reset MFA for an employee (HR only)
-router.post('/reset', authenticate, requireRole(['HR', 'Admin']), resetMfaForEmployee);
+router.post('/reset', authenticate, requireRole(['HR']), resetMfaForEmployee);
 
 // Get MFA status for an employee
 router.get('/status/:employeeId', authenticate, getMfaStatus);

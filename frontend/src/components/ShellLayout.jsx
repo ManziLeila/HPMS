@@ -27,6 +27,7 @@ const ShellLayout = () => {
     if (location.pathname.startsWith('/hr-review')) return 'HR Review Queue';
     if (location.pathname.startsWith('/md-approval')) return 'MD Final Approval';
     if (location.pathname.startsWith('/contract-templates')) return 'Contract Templates';
+    if (location.pathname.startsWith('/management-console')) return 'Management Console';
     if (location.pathname.startsWith('/contracts')) return 'Contract Management';
     return t('payrollManagement');
   })();

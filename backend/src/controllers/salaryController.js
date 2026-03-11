@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import config from '../config/env.js';
 import { encryptField, decryptField } from '../services/encryptionService.js';
 import { calculatePayroll } from '../services/payrollService.js';
 import salaryRepo from '../repositories/salaryRepo.js';
@@ -43,6 +44,11 @@ const hrReviewSchema = z.object({
   comment: z.string().optional(),
 });
 
+const mdReviewSchema = z.object({
+  action: z.enum(['APPROVE', 'REJECT']),
+  comment: z.string().optional(),
+});
+
 const bulkHrReviewSchema = z.object({
   year: z.coerce.number().min(2000),
   month: z.coerce.number().min(1).max(12),
@@ -83,7 +89,7 @@ export const hrReviewSalary = async (req, res, next) => {
       });
 
       // Email notification
-      const appUrl = process.env.APP_URL || 'http://localhost:5173';
+      const appUrl = config.appUrl;
       await sendFONotification({
         foEmail: creator.email,
         foName: creator.full_name,
@@ -95,6 +101,27 @@ export const hrReviewSalary = async (req, res, next) => {
         actionUrl: `${appUrl}/hr-review`,
       });
     }
+
+    res.json({ success: true, salary: updated });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * POST /salaries/:salaryId/md-review
+ * MD approves or rejects a single HR-approved salary.
+ */
+export const mdReviewSalary = async (req, res, next) => {
+  try {
+    const { salaryId } = salaryIdParams.parse(req.params);
+    const { action, comment } = mdReviewSchema.parse(req.body);
+
+    const newStatus = action === 'APPROVE' ? 'MD_APPROVED' : 'MD_REJECTED';
+    const reviewedBy = req.user.id;
+
+    const updated = await salaryRepo.mdReview({ salaryId, status: newStatus, comment, reviewedBy });
+    if (!updated) throw notFound('Salary record not found or not yet HR-approved');
 
     res.json({ success: true, salary: updated });
   } catch (error) {
@@ -133,7 +160,7 @@ export const bulkHrReviewSalaries = async (req, res, next) => {
       // Email notifications to all unique FOs
       if (foIds.length > 0) {
         const fos = await employeeRepo.findByIds(foIds);
-        const appUrl = process.env.APP_URL || 'http://localhost:5173';
+        const appUrl = config.appUrl;
         const emailPromises = fos.map(fo => sendFONotification({
           foEmail: fo.email,
           foName: fo.full_name,
@@ -188,30 +215,32 @@ export const createSalary = async (req, res, next) => {
       correlationId: req.id,
     });
 
-    // Prepare email preview data for frontend (don't auto-send)
+    // Prepare email preview data for frontend when env allows (EMPLOYEE_FORM_EMAIL_PREVIEW=true)
     let emailPreviewData = null;
-    const employeeData = await salaryRepo.findByIdWithEmployee(salaryRecord.salary_id);
-    if (employeeData && employeeData.email_notifications_enabled !== false) {
-      const formattedPayPeriod = new Date(payload.payPeriod).toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
-      const formattedNetSalary = new Intl.NumberFormat('en-RW', { style: 'currency', currency: 'RWF' }).format(payrollSnapshot.netSalary);
+    if (config.employeeFormEmailPreview) {
+      const employeeData = await salaryRepo.findByIdWithEmployee(salaryRecord.salary_id);
+      if (employeeData && employeeData.email_notifications_enabled !== false) {
+        const formattedPayPeriod = new Date(payload.payPeriod).toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
+        const formattedNetSalary = new Intl.NumberFormat('en-RW', { style: 'currency', currency: 'RWF' }).format(payrollSnapshot.netSalary);
 
-      const payDate = new Date(payload.payPeriod);
-      payDate.setDate(payDate.getDate() + 2);
-      const formattedPayDate = payDate.toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-      });
+        const payDate = new Date(payload.payPeriod);
+        payDate.setDate(payDate.getDate() + 2);
+        const formattedPayDate = payDate.toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric'
+        });
 
-      emailPreviewData = {
-        employeeEmail: employeeData.email,
-        employeeName: employeeData.full_name,
-        employeeId: employeeData.employee_id,
-        payPeriod: formattedPayPeriod,
-        netSalary: formattedNetSalary,
-        payDate: formattedPayDate,
-        pdfFilename: `payslip-${employeeData.full_name.replace(/\s+/g, '-').toLowerCase()}-${payload.payPeriod}.pdf`,
-      };
+        emailPreviewData = {
+          employeeEmail: employeeData.email,
+          employeeName: employeeData.full_name,
+          employeeId: employeeData.employee_id,
+          payPeriod: formattedPayPeriod,
+          netSalary: formattedNetSalary,
+          payDate: formattedPayDate,
+          pdfFilename: `payslip-${employeeData.full_name.replace(/\s+/g, '-').toLowerCase()}-${payload.payPeriod}.pdf`,
+        };
+      }
     }
 
     // Respond immediately — notifications fire async
@@ -583,17 +612,16 @@ export const downloadPayslip = async (req, res, next) => {
       payrollSnapshot,
     });
 
-    // Save to filesystem (organized by months)
-    const filename = `payslip-${record.full_name.replace(/\s+/g, '-').toLowerCase()}-${record.pay_period}.pdf`;
+    // Save to filesystem (organized by months) — use safe filename (no colons/spaces for Windows)
+    const periodStr = record.pay_period ? new Date(record.pay_period).toISOString().slice(0, 10) : 'unknown';
+    const safeName = (record.full_name || 'employee').replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, '').toLowerCase();
+    const filename = `payslip-${safeName}-${periodStr}.pdf`;
     await fileStorageService.savePayslip(pdfBuffer, filename, record.pay_period);
 
     // Payslip emails are now sent only after all approvals and after send-to-bank, not here.
 
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader(
-      'Content-Disposition',
-      `attachment; filename=\"payslip-${record.full_name.replace(/\s+/g, '-').toLowerCase()}-${record.pay_period}.pdf\"`,
-    );
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
     res.send(pdfBuffer);
   } catch (error) {
     next(error);
@@ -663,9 +691,10 @@ export const downloadMonthPayslips = async (req, res, next) => {
     const monthStr = month.toString().padStart(2, '0');
 
     for (const record of records) {
-      // Consistent date formatting for filenames
+      // Consistent date formatting for filenames (Windows-safe: no colons, special chars)
       const periodDate = dayjs(record.pay_period).format('YYYY-MM-DD');
-      const filename = `payslip-${record.full_name.replace(/\s+/g, '-').toLowerCase()}-${periodDate}.pdf`;
+      const safeName = (record.full_name || 'employee').replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, '').toLowerCase();
+      const filename = `payslip-${safeName}-${periodDate}.pdf`;
 
       const filePath = path.join(fileStorageService.payslipsDir, yearStr, monthStr, filename);
 
@@ -840,13 +869,30 @@ export const updateSalary = async (req, res, next) => {
       throw notFound('Salary record not found');
     }
 
-    // Decrypt existing values to use as defaults
+    // Decrypt existing values to use as defaults (graceful fallback if decryption fails)
+    const safeDecrypt = (col, val) => {
+      if (!val) return 0;
+      try {
+        return Number(decryptField(col, val)) || 0;
+      } catch (e) {
+        console.warn(`[updateSalary] Decrypt failed for ${col}:`, e.message);
+        return 0;
+      }
+    };
+    let baseSalary = existing.basic_salary_enc ? safeDecrypt('basic_salary_enc', existing.basic_salary_enc) : 0;
+    const transportAllowance = existing.transport_allow_enc ? safeDecrypt('transport_allow_enc', existing.transport_allow_enc) : 0;
+    const housingAllowance = existing.housing_allow_enc ? safeDecrypt('housing_allow_enc', existing.housing_allow_enc) : 0;
+    const variableAllowance = existing.variable_allow_enc ? safeDecrypt('variable_allow_enc', existing.variable_allow_enc) : 0;
+    const performanceAllowance = existing.performance_allow_enc ? safeDecrypt('performance_allow_enc', existing.performance_allow_enc) : 0;
+    if (baseSalary === 0 && existing.gross_salary > 0) {
+      baseSalary = existing.gross_salary;
+    }
     const existingValues = {
-      baseSalary: existing.basic_salary_enc ? Number(decryptField('basic_salary_enc', existing.basic_salary_enc)) : 0,
-      transportAllowance: existing.transport_allow_enc ? Number(decryptField('transport_allow_enc', existing.transport_allow_enc)) : 0,
-      housingAllowance: existing.housing_allow_enc ? Number(decryptField('housing_allow_enc', existing.housing_allow_enc)) : 0,
-      variableAllowance: existing.variable_allow_enc ? Number(decryptField('variable_allow_enc', existing.variable_allow_enc)) : 0,
-      performanceAllowance: existing.performance_allow_enc ? Number(decryptField('performance_allow_enc', existing.performance_allow_enc)) : 0,
+      baseSalary,
+      transportAllowance,
+      housingAllowance,
+      variableAllowance,
+      performanceAllowance,
     };
 
     // Merge with updates

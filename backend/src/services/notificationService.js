@@ -39,11 +39,10 @@ class NotificationService {
 
     // Notify all HR Managers
     async notifyHRManagers({ type, batchId, batchName, periodMonth, periodYear }) {
-        // Get all HR managers
         const query = `
-            SELECT employee_id, full_name, email
-            FROM hpms_core.employees
-            WHERE role = $1 AND employee_id IS NOT NULL AND is_active = true
+            SELECT user_id, full_name, email
+            FROM hpms_core.users
+            WHERE role = $1 AND status = 'ACTIVE'
         `;
 
         const result = await pool.query(query, [ROLES.HR]);
@@ -55,7 +54,7 @@ class NotificationService {
         }
 
         const notifications = hrManagers.map(hr => ({
-            userId: hr.employee_id,
+            userId: hr.user_id,
             type: NOTIFICATION_TYPES.PAYROLL_SUBMITTED,
             title: 'New Payroll Submitted for Review',
             message: `A new payroll batch "${batchName}" for ${this.getMonthName(periodMonth)} ${periodYear} has been submitted and requires your review.`,
@@ -69,12 +68,11 @@ class NotificationService {
 
     // Notify Managing Director
     async notifyManagingDirector({ type, batchId, batchName, periodMonth, periodYear, reviewerName }) {
-        // Get all Managing Directors
         const query = `
-      SELECT employee_id, full_name, email
-      FROM hpms_core.employees
-      WHERE role = $1 AND employee_id IS NOT NULL
-    `;
+            SELECT user_id, full_name, email
+            FROM hpms_core.users
+            WHERE role = $1 AND status = 'ACTIVE'
+        `;
 
         const result = await pool.query(query, [ROLES.MANAGING_DIRECTOR]);
         const mds = result.rows;
@@ -85,7 +83,7 @@ class NotificationService {
         }
 
         const notifications = mds.map(md => ({
-            userId: md.employee_id,
+            userId: md.user_id,
             type: NOTIFICATION_TYPES.PAYROLL_HR_APPROVED,
             title: 'Payroll Awaiting Final Approval',
             message: `Payroll batch "${batchName}" for ${this.getMonthName(periodMonth)} ${periodYear} has been approved by HR (${reviewerName}) and requires your final approval.`,
@@ -128,12 +126,12 @@ class NotificationService {
     async notifyByRole({ roles, type, title, message, actionUrl = null, priority = 'NORMAL' }) {
         const placeholders = roles.map((_, i) => `$${i + 1}`).join(',');
         const { rows: targets } = await pool.query(
-            `SELECT employee_id FROM hpms_core.employees WHERE role IN (${placeholders})`,
+            `SELECT user_id FROM hpms_core.users WHERE role IN (${placeholders}) AND status = 'ACTIVE'`,
             roles
         );
         if (!targets.length) return [];
         const notifications = targets.map(t => ({
-            userId: t.employee_id, type, title, message, actionUrl, priority,
+            userId: t.user_id, type, title, message, actionUrl, priority,
         }));
         return await this.createBulk(notifications);
     }
@@ -146,10 +144,10 @@ class NotificationService {
     async notifyNewEmployee({ newEmployee, createdByName }) {
         const promises = [];
 
-        // ── notify HR & Admin ──────────────────────────────────
+        // ── notify HR ─────────────────────────────────────────
         promises.push(
             this.notifyByRole({
-                roles: ['HR', 'Admin'],
+                roles: ['HR'],
                 type: NOTIFICATION_TYPES.EMPLOYEE_ADDED,
                 title: '👤 New Employee Added',
                 message: `${createdByName} has added a new employee: ${newEmployee.full_name} (${newEmployee.email}) as ${newEmployee.role}.`,
@@ -180,8 +178,8 @@ class NotificationService {
      */
     async notifySalaryComputed({ employeeName, payPeriod, salaryId, computedByName }) {
         const query = `
-            SELECT employee_id FROM hpms_core.employees
-            WHERE role = $1 AND employee_id IS NOT NULL AND is_active = true
+            SELECT user_id FROM hpms_core.users
+            WHERE role = $1 AND status = 'ACTIVE'
         `;
         const { rows: hrManagers } = await pool.query(query, [ROLES.HR]);
 
@@ -191,7 +189,7 @@ class NotificationService {
         }
 
         const notifications = hrManagers.map(hr => ({
-            userId: hr.employee_id,
+            userId: hr.user_id,
             type: NOTIFICATION_TYPES.PAYROLL_SUBMITTED,
             title: '📊 Salary Computed — Available for Review',
             message: `${computedByName} has computed the salary for ${employeeName} (${payPeriod}). You can view it in the Review Queue under Individual Salary Records.`,
@@ -208,8 +206,8 @@ class NotificationService {
      */
     async notifyBulkUploadComplete({ totalProcessed, successful, failed, payPeriod, uploadedByName }) {
         const query = `
-            SELECT employee_id FROM hpms_core.employees
-            WHERE role = $1 AND employee_id IS NOT NULL AND is_active = true
+            SELECT user_id FROM hpms_core.users
+            WHERE role = $1 AND status = 'ACTIVE'
         `;
         const { rows: hrManagers } = await pool.query(query, [ROLES.HR]);
 
@@ -223,7 +221,7 @@ class NotificationService {
             : `All ${successful} records processed successfully.`;
 
         const notifications = hrManagers.map(hr => ({
-            userId: hr.employee_id,
+            userId: hr.user_id,
             type: NOTIFICATION_TYPES.PAYROLL_SUBMITTED,
             title: '📋 Bulk Payroll Upload – Ready for Review',
             message: `${uploadedByName} completed a bulk salary upload for ${payPeriod}: ${statusPart} Please review the calculations before approving.`,

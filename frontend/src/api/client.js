@@ -1,20 +1,24 @@
 const normalizeBase = (base) => base.replace(/\/$/, "");
 
+/**
+ * API base URL: works in both production and local dev with one build.
+ * - Production (e.g. https://payroll.hcsolutions-rw.com): uses same origin → /api on same domain.
+ * - Local (localhost / 127.0.0.1): uses VITE_API_BASE_URL if set, else http://localhost:4000/api.
+ */
 const resolveApiBase = () => {
+  const origin = window.location.origin;
+  const isLocal =
+    origin.includes("localhost:") ||
+    origin.includes("127.0.0.1:");
+
+  if (!isLocal && origin.startsWith("http")) {
+    return normalizeBase(`${origin}/api`);
+  }
+
   const envBase = import.meta.env.VITE_API_BASE_URL?.trim();
   if (envBase) {
     return normalizeBase(envBase);
   }
-
-  const origin = window.location.origin;
-  if (origin.includes("localhost:5173") || origin.includes("localhost:5174")) {
-    return "http://localhost:4000/api";
-  }
-
-  if (origin.startsWith("http")) {
-    return normalizeBase(`${origin}/api`);
-  }
-
   return "http://localhost:4000/api";
 };
 
@@ -93,6 +97,28 @@ const request = async (path, { method = "GET", body, token, signal, headers } = 
 export const apiClient = {
   get: (path, options) => request(path, { ...options, method: "GET" }),
   post: (path, body, options) => request(path, { ...options, method: "POST", body }),
+  postForm: async (path, formData, options = {}) => {
+    const url = `${API_BASE_URL}${path}`;
+    const headers = {};
+    if (options.token) headers.Authorization = `Bearer ${options.token}`;
+    const res = await fetch(url, {
+      method: "POST",
+      headers,
+      body: formData,
+    });
+    return parseResponse(res);
+  },
+  putForm: async (path, formData, options = {}) => {
+    const url = `${API_BASE_URL}${path}`;
+    const headers = {};
+    if (options.token) headers.Authorization = `Bearer ${options.token}`;
+    const res = await fetch(url, {
+      method: "PUT",
+      headers,
+      body: formData,
+    });
+    return parseResponse(res);
+  },
   put: (path, body, options) => request(path, { ...options, method: "PUT", body }),
   patch: (path, body, options) => request(path, { ...options, method: "PATCH", body }),
   delete: (path, options) => request(path, { ...options, method: "DELETE" }),

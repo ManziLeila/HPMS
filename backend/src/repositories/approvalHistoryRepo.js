@@ -1,11 +1,10 @@
 import pool from '../config/database.js';
 
 class ApprovalHistoryRepository {
-  // Log an approval action
-  async create({ batchId, actionBy, actionType, comments, previousStatus, newStatus, ipAddress, userAgent, metadata = {} }) {
+  async create({ periodId, actionBy, actionType, comments, previousStatus, newStatus, ipAddress, userAgent, metadata = {} }) {
     const query = `
       INSERT INTO hpms_core.approval_history (
-        batch_id, action_by, action_type, comments, 
+        period_id, action_by, action_type, comments,
         previous_status, new_status, ip_address, user_agent, metadata
       )
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
@@ -13,7 +12,7 @@ class ApprovalHistoryRepository {
     `;
 
     const result = await pool.query(query, [
-      batchId,
+      periodId,
       actionBy,
       actionType,
       comments,
@@ -27,78 +26,72 @@ class ApprovalHistoryRepository {
     return result.rows[0];
   }
 
-  // Get history for a specific batch
-  async getByBatch(batchId) {
+  async getByPeriod(periodId) {
     const query = `
-      SELECT 
+      SELECT
         ah.*,
-        e.full_name as action_by_name,
-        e.email as action_by_email,
-        e.role as action_by_role
+        u.full_name  AS action_by_name,
+        u.email      AS action_by_email,
+        u.role       AS action_by_role
       FROM hpms_core.approval_history ah
-      JOIN hpms_core.employees e ON ah.action_by = e.employee_id
-      WHERE ah.batch_id = $1
+      LEFT JOIN hpms_core.users u ON u.user_id = ah.action_by
+      WHERE ah.period_id = $1
       ORDER BY ah.created_at DESC
     `;
-
-    const result = await pool.query(query, [batchId]);
+    const result = await pool.query(query, [periodId]);
     return result.rows;
   }
 
-  // Get recent actions by a user
   async getByUser(userId, limit = 20) {
     const query = `
-      SELECT 
+      SELECT
         ah.*,
-        pb.batch_name,
-        pb.period_month,
-        pb.period_year
+        c.name         AS client_name,
+        pp.period_month,
+        pp.period_year
       FROM hpms_core.approval_history ah
-      JOIN hpms_core.payroll_batches pb ON ah.batch_id = pb.batch_id
+      LEFT JOIN hpms_core.payroll_periods pp ON pp.period_id = ah.period_id
+      LEFT JOIN hpms_core.clients c         ON c.client_id  = pp.client_id
       WHERE ah.action_by = $1
       ORDER BY ah.created_at DESC
       LIMIT $2
     `;
-
     const result = await pool.query(query, [userId, limit]);
     return result.rows;
   }
 
-  // Get all approval history with pagination
   async getAll(limit = 50, offset = 0) {
     const query = `
-      SELECT 
+      SELECT
         ah.*,
-        e.full_name as action_by_name,
-        e.email as action_by_email,
-        pb.batch_name,
-        pb.period_month,
-        pb.period_year
+        u.full_name    AS action_by_name,
+        u.email        AS action_by_email,
+        c.name         AS client_name,
+        pp.period_month,
+        pp.period_year
       FROM hpms_core.approval_history ah
-      JOIN hpms_core.employees e ON ah.action_by = e.employee_id
-      JOIN hpms_core.payroll_batches pb ON ah.batch_id = pb.batch_id
+      LEFT JOIN hpms_core.users           u  ON u.user_id   = ah.action_by
+      LEFT JOIN hpms_core.payroll_periods pp ON pp.period_id = ah.period_id
+      LEFT JOIN hpms_core.clients         c  ON c.client_id  = pp.client_id
       ORDER BY ah.created_at DESC
       LIMIT $1 OFFSET $2
     `;
-
     const result = await pool.query(query, [limit, offset]);
     return result.rows;
   }
 
-  // Get approval statistics
   async getStats(startDate, endDate) {
     const query = `
-      SELECT 
+      SELECT
         action_type,
-        COUNT(*) as count,
-        COUNT(DISTINCT action_by) as unique_approvers,
-        COUNT(DISTINCT batch_id) as unique_batches
+        COUNT(*)                  AS count,
+        COUNT(DISTINCT action_by) AS unique_approvers,
+        COUNT(DISTINCT period_id) AS unique_periods
       FROM hpms_core.approval_history
       WHERE created_at BETWEEN $1 AND $2
       GROUP BY action_type
       ORDER BY count DESC
     `;
-
     const result = await pool.query(query, [startDate, endDate]);
     return result.rows;
   }

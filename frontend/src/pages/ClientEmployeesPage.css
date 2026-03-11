@@ -106,6 +106,15 @@
 .client-employees-summary__actions {
     display: flex;
     justify-content: flex-end;
+    gap: 12px;
+}
+
+.client-employees-summary__btn-contract--view {
+    background: #64748b;
+}
+
+.client-employees-summary__btn-contract--view:hover {
+    background: #475569;
 }
 
 .client-employees-summary__btn-contract {
@@ -175,4 +184,19 @@
 
 .client-employees-contract-link:hover {
     color: #e08218;
+}
+
+.contract-details {
+    padding: 16px 0;
+}
+
+.contract-details p {
+    margin: 0 0 8px;
+    font-size: 0.95rem;
+}
+
+.client-employees-page .form-hint {
+    font-size: 0.85rem;
+    color: #64748b;
+    margin-top: 4px;
 }

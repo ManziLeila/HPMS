@@ -96,6 +96,9 @@ export const AuthProvider = ({ children }) => {
         console.warn('Failed to notify backend about logout', error);
       }
     }
+    try {
+      sessionStorage.removeItem('hpms_mgmt_unlocked');
+    } catch {}
     setUser(null);
     setToken(null);
     window.localStorage.removeItem(STORAGE_KEY);

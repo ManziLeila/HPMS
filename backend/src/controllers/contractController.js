@@ -1,6 +1,8 @@
+import fs from 'node:fs/promises';
 import { z } from 'zod';
 import contractService from '../services/contractService.js';
-import { badRequest, forbidden } from '../utils/httpError.js';
+import fileStorageService from '../services/fileStorageService.js';
+import { badRequest, forbidden, notFound } from '../utils/httpError.js';
 
 /* ── validation ─────────────────────────────────────────────── */
 const createSchema = z.object({
@@ -28,7 +30,7 @@ export const create = async (req, res, next) => {
     try {
         if (!CAN_MANAGE.includes(req.user.role)) throw forbidden('Insufficient permissions');
         const data = createSchema.parse(req.body);
-        const contract = await contractService.create({ ...data, createdBy: req.user.id });
+        const contract = await contractService.create({ ...data, createdBy: null });
         res.status(201).json({ success: true, data: contract });
     } catch (e) { next(e); }
 };
@@ -73,6 +75,21 @@ export const getExpiring = async (req, res, next) => {
         const days = +(req.query.days || '30');
         const contracts = await contractService.expiring(days);
         res.json({ success: true, data: contracts, count: contracts.length });
+    } catch (e) { next(e); }
+};
+
+export const downloadContractDocument = async (req, res, next) => {
+    try {
+        const id = +req.params.id;
+        if (isNaN(id)) throw badRequest('Invalid contract ID');
+        const contract = await contractService.findById(id);
+        if (!contract || !contract.contract_document_path) throw notFound('Contract document not found');
+        const fullPath = fileStorageService.getContractPath(contract.contract_document_path);
+        const content = await fs.readFile(fullPath);
+        const filename = contract.contract_document_path.split('/').pop() || 'contract.pdf';
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+        res.setHeader('Content-Type', 'application/octet-stream');
+        res.send(content);
     } catch (e) { next(e); }
 };
 

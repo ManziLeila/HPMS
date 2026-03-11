@@ -11,9 +11,9 @@ const STATUS_META = {
   PENDING: { label: 'Pending', color: '#f59e0b' },
   HR_APPROVED: { label: 'HR Approved', color: '#10b981' },
   HR_REJECTED: { label: 'HR Rejected', color: '#ef4444' },
-  MD_APPROVED: { label: 'MD Approved', color: '#6366f1' },
+  MD_APPROVED: { label: 'Approved', color: '#6366f1' },
   REJECTED: { label: 'Rejected', color: '#ef4444' },
-  SENT_TO_BANK: { label: 'Paid', color: '#0ea5e9' },
+  SENT_TO_BANK: { label: 'Approved', color: '#0ea5e9' },
 };
 
 const Badge = ({ status }) => {
@@ -41,6 +41,7 @@ const ReportsPage = () => {
     year: current.getFullYear(),
     month: current.getMonth() + 1,
     frequency: 'all',
+    statusFilter: 'all',
   });
   const [monthlyReport, setMonthlyReport] = useState([]);
   const [recentSalaries, setRecentSalaries] = useState([]);
@@ -49,6 +50,14 @@ const ReportsPage = () => {
   const [actionMsg, setActionMsg] = useState(null); // feedback for save/delete/download
 
   const { year, month } = filters;
+
+  const filteredMonthlyReport = useMemo(() => {
+    if (!monthlyReport.length) return [];
+    if (filters.statusFilter === 'approved') {
+      return monthlyReport.filter((row) => row.hr_status === 'MD_APPROVED' || row.hr_status === 'SENT_TO_BANK');
+    }
+    return monthlyReport;
+  }, [monthlyReport, filters.statusFilter]);
 
   const loadMonthlyReport = useCallback(async () => {
     if (!token) return;
@@ -86,7 +95,7 @@ const ReportsPage = () => {
   }, [loadRecentSalaries]);
 
   const totals = useMemo(() => {
-    if (!monthlyReport.length) {
+    if (!filteredMonthlyReport.length) {
       return {
         gross: 0,
         paye: 0,
@@ -95,7 +104,7 @@ const ReportsPage = () => {
         takeHome: 0,
       };
     }
-    return monthlyReport.reduce(
+    return filteredMonthlyReport.reduce(
       (acc, row) => {
         const gross = Number(row.gross_salary || 0);
         const net = row.net_salary != null ? Number(row.net_salary) : 0;
@@ -111,7 +120,7 @@ const ReportsPage = () => {
       },
       { gross: 0, paye: 0, deductions: 0, employer: 0, takeHome: 0 },
     );
-  }, [monthlyReport]);
+  }, [filteredMonthlyReport]);
 
   const handleDownloadPayslip = async (salary) => {
     if (!token) return;
@@ -277,6 +286,19 @@ const ReportsPage = () => {
               <option value="daily">Daily (Wages)</option>
             </select>
           </label>
+          <label>
+            Status
+            <select
+              name="statusFilter"
+              value={filters.statusFilter}
+              onChange={(event) =>
+                setFilters((prev) => ({ ...prev, statusFilter: event.target.value }))
+              }
+            >
+              <option value="all">All</option>
+              <option value="approved">Approved only</option>
+            </select>
+          </label>
           <button type="button" onClick={loadMonthlyReport} disabled={loading}>
             {loading ? 'Refreshing…' : 'Refresh'}
           </button>
@@ -366,7 +388,7 @@ const ReportsPage = () => {
               </tr>
             </thead>
             <tbody>
-              {monthlyReport.length === 0 && (
+              {filteredMonthlyReport.length === 0 && (
                 <tr>
                   <td colSpan="8">
                     No payroll records found for this period.
@@ -377,7 +399,7 @@ const ReportsPage = () => {
                   </td>
                 </tr>
               )}
-              {monthlyReport.map((row) => (
+              {filteredMonthlyReport.map((row) => (
                 <tr key={row.salary_id}>
                   <td>
                     <p className="reports-page__employee-name">{row.full_name}</p>

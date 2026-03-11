@@ -7,6 +7,7 @@ import {
   getSalaryDetail,
   hrReviewSalary,
   bulkHrReviewSalaries,
+  mdReviewSalary,
   updateSalary,
   deleteSalary,
   resetPeriod,
@@ -22,8 +23,10 @@ import { sendPayslipEmailManually } from '../controllers/sendPayslipManually.js'
 
 const router = Router();
 
-// Allow HR, Admin (legacy), and Finance Officer to manage salaries
-router.use(authenticate, requireRole(['Admin', 'HR', 'FinanceOfficer']));
+// ── MD Review (Managing Director only) ─
+router.post('/:salaryId/md-review', authenticate, requireRole(['ManagingDirector']), mdReviewSalary);
+
+router.use(authenticate, requireRole(['HR', 'FinanceOfficer']));
 router.post('/', createSalary);
 router.post('/preview', previewSalary);
 router.get('/reports/monthly', getMonthlyReport);

@@ -3,7 +3,7 @@ import db from './db.js';
 const clientRepo = {
   async list({ limit = 50, offset = 0 } = {}) {
     const { rows } = await db.query(
-      `SELECT client_id, name, created_at
+      `SELECT client_id, name, email, contact_info, created_at
        FROM hpms_core.clients
        ORDER BY name ASC
        LIMIT $1 OFFSET $2`,
@@ -14,7 +14,7 @@ const clientRepo = {
 
   async findById(clientId) {
     const { rows } = await db.query(
-      `SELECT client_id, name, created_at
+      `SELECT client_id, name, email, contact_info, created_at
        FROM hpms_core.clients
        WHERE client_id = $1`,
       [clientId],
@@ -29,23 +29,25 @@ const clientRepo = {
     return parseInt(rows[0].total, 10);
   },
 
-  async create({ name }) {
+  async create({ name, email, contactInfo }) {
     const { rows } = await db.query(
-      `INSERT INTO hpms_core.clients (name)
-       VALUES ($1)
-       RETURNING client_id, name, created_at`,
-      [name],
+      `INSERT INTO hpms_core.clients (name, email, contact_info)
+       VALUES ($1, $2, $3)
+       RETURNING client_id, name, email, contact_info, created_at`,
+      [name, email || null, contactInfo || null],
     );
     return rows[0];
   },
 
-  async update({ clientId, name }) {
+  async update({ clientId, name, email, contactInfo }) {
     const { rows } = await db.query(
       `UPDATE hpms_core.clients
-       SET name = $2
+       SET name = $2,
+           email = $3,
+           contact_info = $4
        WHERE client_id = $1
-       RETURNING client_id, name, created_at`,
-      [clientId, name],
+       RETURNING client_id, name, email, contact_info, created_at`,
+      [clientId, name, email ?? null, contactInfo ?? null],
     );
     return rows[0];
   },

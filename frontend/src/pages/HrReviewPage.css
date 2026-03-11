@@ -68,6 +68,11 @@
     color: #92400e;
 }
 
+.hrp__tab-badge--ok {
+    background: #ede9fe;
+    color: #5b21b6;
+}
+
 /* ── salary filter row ────────────────────────────── */
 .hrp__sal-filters {
     display: flex;
@@ -848,4 +853,306 @@
     margin: 6px 0 0;
     font-size: 0.75rem;
     color: #94a3b8;
+}
+
+.hrp__forwarded-note {
+    padding: 12px 16px;
+    margin: 12px 0 0;
+    background: #ede9fe;
+    color: #5b21b6;
+    border-radius: 8px;
+    font-size: 0.83rem;
+    line-height: 1.5;
+}
+
+/* ── Spin animation ──────────────────────────────────────── */
+.hrp__spin { animation: hrp-spin 1s linear infinite; }
+@keyframes hrp-spin { to { transform: rotate(360deg); } }
+
+/* ── Period cards (client-grouped view) ──────────────────── */
+.hrp__period-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+.hrp__period-card {
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.hrp__period-card:last-child { border-bottom: none; }
+
+.hrp__period-card--open { background: #fafbff; }
+
+.hrp__period-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 24px;
+    cursor: pointer;
+    gap: 12px;
+    transition: background 0.15s;
+}
+
+.hrp__period-header:hover { background: #f8fafc; }
+
+.hrp__period-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+    min-width: 0;
+}
+
+.hrp__period-toggle {
+    color: #94a3b8;
+    flex-shrink: 0;
+    display: flex;
+}
+
+.hrp__period-client {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #1e293b;
+    margin: 0 0 3px;
+}
+
+.hrp__period-meta {
+    font-size: 0.82rem;
+    color: #64748b;
+    margin: 0;
+}
+
+.hrp__period-right {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.hrp__period-employees {
+    padding: 0 24px 20px;
+    border-top: 1px solid #e2e8f0;
+}
+
+/* ── Employee table inside period card ───────────────────── */
+.hrp__emp-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.86rem;
+    margin-top: 16px;
+}
+
+.hrp__emp-table th {
+    background: #f8fafc;
+    padding: 8px 12px;
+    text-align: left;
+    font-size: 0.73rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #64748b;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.hrp__emp-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid #f1f5f9;
+    color: #334155;
+    vertical-align: middle;
+}
+
+.hrp__emp-table tbody tr:last-child td { border-bottom: none; }
+.hrp__emp-table tbody tr:hover { background: #f8fafc; }
+
+.hrp__emp-name {
+    font-weight: 600;
+    color: #1e293b;
+    margin: 0 0 2px;
+    font-size: 0.88rem;
+}
+
+.hrp__emp-email {
+    font-size: 0.78rem;
+    color: #94a3b8;
+}
+
+/* ── Expandable employee row with full details ───────────────── */
+.hrp__emp-row {
+    cursor: pointer;
+}
+
+.hrp__emp-row:hover { background: #f0f9ff !important; }
+
+.hrp__emp-toggle {
+    display: inline-flex;
+    margin-right: 8px;
+    color: #94a3b8;
+    vertical-align: middle;
+}
+
+.hrp__emp-dept {
+    font-size: 0.75rem;
+    color: #64748b;
+}
+
+.hrp__emp-detail-row td {
+    padding: 0 !important;
+    border-bottom: 1px solid #f1f5f9;
+    vertical-align: top;
+}
+
+.hrp__emp-detail {
+    padding: 16px 20px;
+    background: #f8fafc;
+    border-left: 3px solid #6366f1;
+}
+
+.hrp__emp-detail-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+}
+
+.hrp__emp-detail-grid section h4 {
+    margin: 0 0 8px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #64748b;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.hrp__emp-detail-grid section ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.hrp__emp-detail-grid section li {
+    padding: 4px 0;
+    font-size: 0.82rem;
+    color: #334155;
+}
+
+.hrp__emp-detail-grid section li strong {
+    color: #0d1b2a;
+}
+
+/* ── Computation formulas (formula + result) ───────────────── */
+.hrp__formula-title {
+    margin: 0 0 12px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #64748b;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.hrp__formula-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.hrp__formula-item {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 6px;
+    font-size: 0.82rem;
+    padding: 6px 10px;
+    background: #fff;
+    border-radius: 6px;
+    border: 1px solid #e2e8f0;
+}
+
+.hrp__formula-label {
+    font-weight: 600;
+    color: #334155;
+    min-width: 120px;
+}
+
+.hrp__formula-expr {
+    color: #64748b;
+    flex: 1;
+    font-family: ui-monospace, monospace;
+    font-size: 0.78rem;
+}
+
+.hrp__formula-result {
+    font-weight: 700;
+    color: #10b981;
+    font-variant-numeric: tabular-nums;
+}
+
+/* ── Per-employee Approve/Reject ───────────────────────────────── */
+.hrp__emp-status {
+    display: inline-block;
+    margin-left: 8px;
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 0.72rem;
+    font-weight: 700;
+}
+
+.hrp__emp-status--ok {
+    background: #d1fae5;
+    color: #047857;
+}
+
+.hrp__emp-status--err {
+    background: #fef2f2;
+    color: #b91c1c;
+}
+
+.hrp__emp-actions {
+    margin: 16px 0;
+    padding: 12px 0;
+    border-top: 1px solid #e2e8f0;
+}
+
+.hrp__emp-action-btns {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.hrp__reject-inline {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.hrp__reject-inline-ta {
+    padding: 8px 12px;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-family: inherit;
+    resize: vertical;
+    min-height: 60px;
+}
+
+.hrp__reject-inline-ta:focus {
+    border-color: #ef4444;
+    outline: none;
+}
+
+.hrp__reject-inline-btns {
+    display: flex;
+    gap: 8px;
+}
+
+.hrp__emp-status-msg {
+    margin: 0;
+    font-size: 0.9rem;
+    color: #64748b;
 }

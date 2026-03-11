@@ -1,5 +1,6 @@
 import nodemailer from 'nodemailer';
 import dayjs from 'dayjs';
+import config from '../config/env.js';
 import { formatCurrency } from '../utils/currency.js';
 import { salaryProcessedTemplate, payslipDeliveryTemplate, foNotificationTemplate } from '../utils/emailTemplates.js';
 
@@ -218,7 +219,7 @@ export const sendWelcomeEmail = async ({ employeeEmail, employeeName, temporaryP
 
     const fromEmail = process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER;
     const fromName = process.env.SMTP_FROM_NAME || 'HC Solutions Payroll';
-    const loginUrl = process.env.APP_URL || 'http://localhost:5173';
+    const loginUrl = config.appUrl;
 
     const html = `
         <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.08)">

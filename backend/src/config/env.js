@@ -53,6 +53,7 @@ const envSchema = z.object({
   SMS_API_KEY: z.string().optional(),
   SMS_USERNAME: z.string().optional(),
   SMS_SENDER_ID: z.string().optional(),
+  EMPLOYEE_FORM_EMAIL_PREVIEW: z.string().optional().default('false').transform((v) => v === 'true'),
 });
 
 const parsed = envSchema.safeParse(process.env);
@@ -94,6 +95,14 @@ if (!jwtConfig.publicKey && !jwtConfig.secret) {
 }
 
 const corsOrigins = env.CORS_ORIGINS.split(',').map((origin) => origin.trim()).filter(Boolean);
+const isProduction = env.NODE_ENV === 'production';
+const productionDomain = 'https://payroll.hcsolutions-rw.com';
+const effectiveCorsOrigins =
+  isProduction && (corsOrigins.length === 0 || corsOrigins.includes('https://yourdomain.com'))
+    ? [productionDomain]
+    : corsOrigins.length
+      ? corsOrigins
+      : ['http://localhost:5173'];
 
 const config = {
   nodeEnv: env.NODE_ENV,
@@ -111,7 +120,10 @@ const config = {
     mfaIssuer: env.MFA_ISSUER,
   },
   encryption: { masterKey: env.ENCRYPTION_MASTER_KEY },
-  cors: { origins: corsOrigins },
+  cors: { origins: effectiveCorsOrigins },
+  appUrl:
+    process.env.APP_URL ||
+    (isProduction ? productionDomain : 'http://localhost:5173'),
   logging: { level: env.LOG_LEVEL },
   isDevelopment: env.NODE_ENV === 'development',
   isProduction: env.NODE_ENV === 'production',
@@ -123,6 +135,7 @@ const config = {
     username: env.SMS_USERNAME,
     senderId: env.SMS_SENDER_ID,
   },
+  employeeFormEmailPreview: env.EMPLOYEE_FORM_EMAIL_PREVIEW,
 };
 
 if (config.isDevelopment) {
@@ -148,7 +161,7 @@ if (config.isDevelopment) {
   console.warn(`  Database: ${maskUrl}`);
   console.warn(`  DB user: ${dbUser}`);
   console.warn(`  JWT: ${jwtConfig.secret ? 'Secret-based' : 'Key-based'}`);
-  console.warn(`  CORS Origins: ${corsOrigins.join(', ')}`);
+  console.warn(`  CORS Origins: ${effectiveCorsOrigins.join(', ')}`);
   console.warn(`  Log Level: ${config.logging.level}\n`);
 }
 

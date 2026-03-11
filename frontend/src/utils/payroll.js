@@ -1,10 +1,13 @@
-const currency = (value) =>
-  new Intl.NumberFormat('en-RW', {
-    style: 'currency',
-    currency: 'RWF',
+/** Format as RWF (Rwandan Franc) - always show RWF, not RF */
+const currency = (value) => {
+  const num = Number(value);
+  const n = Math.max(Number.isFinite(num) ? num : 0, 0);
+  const formatted = new Intl.NumberFormat('en-RW', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
-  }).format(value);
+  }).format(n);
+  return `RWF ${formatted}`;
+};
 
 const clampNumber = (value) => {
   const numeric = Number(value);
@@ -124,4 +127,70 @@ export const calculatePayroll = (payload) => {
 };
 
 export const formatCurrency = (value) => currency(Math.max(clampNumber(value), 0));
+
+/**
+ * Build computation formulas for HR/MD approval view.
+ * Returns array of { label, formula, amount } for each payroll line.
+ * Amounts are rounded to whole RWF for display (entry form values stay as entered).
+ * Includes employee deductions and employer contributions (occupational hazard separate).
+ */
+export const getComputationFormulas = (s) => {
+  const snap = s?.snapshot || {};
+  const allow = snap.allowances || {};
+  const basic = Number(snap.basicSalary) || 0;
+  const transport = Number(allow.transport) || 0;
+  const housing = Number(allow.housing) || 0;
+  const performance = Number(allow.performance) || 0;
+  const gross = Number(s.gross_salary ?? snap.grossSalary) || 0;
+  const paye = Number(s.paye ?? snap.paye) || 0;
+  const rssb = Number(snap.rssbEePension ?? s.rssb_pension) || 0;
+  const maternity = Number(snap.rssbEeMaternity) || 0;
+  const rama = Number(snap.ramaInsuranceEmployee) || 0;
+  const includeMedical = snap.includeMedical !== false;
+  const netBeforeCbhi = Number(snap.netBeforeCbhi) || 0;
+  const cbhi = Number(snap.cbhiEmployee) || 0;
+  const advance = Number(snap.advanceAmount) || 0;
+  const net = Number(s.net_salary ?? snap.netPaidToBank ?? snap.netSalary) || 0;
+  const round = (v) => Math.round(Number(v) || 0);
+  const hazard = Number(snap.hazardContribution) ?? round(basic * 0.02);
+  const rssbEr = Number(snap.rssbErPension) ?? round(gross * 0.06);
+  const maternityEr = Number(snap.rssbErMaternity) ?? round(basic * 0.003);
+  const ramaEr = includeMedical ? (Number(snap.ramaInsuranceEmployer) ?? round(basic * 0.075)) : 0;
+
+  const items = [
+    { section: 'Earnings' },
+    {
+      label: 'Gross Salary',
+      formula: `Basic (${basic.toLocaleString()}) + Transport (${transport.toLocaleString()}) + Housing (${housing.toLocaleString()}) + Performance (${performance.toLocaleString()})`,
+      amount: round(gross),
+    },
+    { section: 'Employee deductions' },
+    {
+      label: 'PAYE',
+      formula: 'Progressive tax: 0% on first 60,000 RWF, 10% on next 40,000, 20% on next 100,000, 30% above 200,000',
+      amount: round(paye),
+    },
+    { label: 'RSSB Pension (employee)', formula: '6% of Gross Salary', amount: round(rssb) },
+    { label: 'RSSB Maternity (employee)', formula: '0.3% of Basic Salary', amount: round(maternity) },
+    ...(includeMedical ? [{ label: 'RAMA (Medical) (employee)', formula: '7.5% of Basic Salary', amount: round(rama) }] : []),
+    {
+      label: 'NET (before CBHI)',
+      formula: includeMedical ? 'Gross − PAYE − RSSB Pension − Maternity − RAMA' : 'Gross − PAYE − RSSB Pension − Maternity',
+      amount: round(netBeforeCbhi),
+    },
+    { label: 'CBHI', formula: '0.5% of NET (before CBHI)', amount: round(cbhi) },
+    { label: 'Advance', formula: 'Deducted amount', amount: round(advance) },
+    {
+      label: 'Net Pay',
+      formula: 'NET (before CBHI) − CBHI − Advance',
+      amount: round(net),
+    },
+    { section: 'Employer contributions' },
+    { label: 'RSSB Pension (employer)', formula: '6% of Gross Salary', amount: rssbEr },
+    { label: 'RSSB Maternity (employer)', formula: '0.3% of Basic Salary', amount: maternityEr },
+    ...(includeMedical ? [{ label: 'RAMA (Medical) (employer)', formula: '7.5% of Basic Salary', amount: ramaEr }] : []),
+    { label: 'Occupational Hazard (employer)', formula: '2% of Basic Salary', amount: hazard },
+  ];
+  return items;
+};
 
