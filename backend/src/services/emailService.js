@@ -4,27 +4,20 @@ import config from '../config/env.js';
 import { formatCurrency } from '../utils/currency.js';
 import { salaryProcessedTemplate, payslipDeliveryTemplate, foNotificationTemplate } from '../utils/emailTemplates.js';
 
-// Create reusable transporter
-let transporter = null;
-
+// Create reusable transporter (reset on each call so config changes take effect)
 const getTransporter = () => {
-  if (!transporter) {
-    const smtpConfig = {
-      host: process.env.SMTP_HOST || 'smtp.gmail.com',
-      port: parseInt(process.env.SMTP_PORT || '587', 10),
-      secure: process.env.SMTP_SECURE === 'true', // true for 465, false for other ports
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASSWORD,
-      },
-    };
+  const smtpConfig = {
+    host: process.env.SMTP_HOST || 'smtp.gmail.com',
+    port: parseInt(process.env.SMTP_PORT || '587', 10),
+    secure: process.env.SMTP_SECURE === 'true',
+    auth: {
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASSWORD,
+    },
+  };
 
-    // Only create transporter if SMTP credentials are configured
-    if (smtpConfig.auth.user && smtpConfig.auth.pass) {
-      transporter = nodemailer.createTransport(smtpConfig);
-    }
-  }
-  return transporter;
+  if (!smtpConfig.auth.user || !smtpConfig.auth.pass) return null;
+  return nodemailer.createTransport(smtpConfig);
 };
 
 /**
@@ -325,11 +318,75 @@ export const sendFONotification = async ({
   }
 };
 
+/**
+ * Generic approval-workflow notification email
+ * event: 'SUBMITTED' | 'HR_APPROVED' | 'HR_REJECTED' | 'MD_APPROVED' | 'MD_REJECTED'
+ */
+export const sendApprovalNotification = async ({
+  toEmail,
+  event,
+  clientName,
+  periodLabel,
+  salaryCount,
+  actorName,
+  comments,
+}) => {
+  if (!toEmail) return { success: false, reason: 'No recipient email configured' };
+
+  try {
+    const transport = getTransporter();
+    if (!transport) return { success: false, reason: 'SMTP not configured' };
+
+    const fromEmail = process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER;
+    const fromName = process.env.SMTP_FROM_NAME || 'HC Solutions Payroll';
+
+    const META = {
+      SUBMITTED:    { subject: '📋 New Payroll Submitted for HR Review',          color: '#f5911f', action: 'A new payroll batch has been submitted for your review.' },
+      HR_APPROVED:  { subject: '✅ Payroll Forwarded to MD for Final Approval',    color: '#6366f1', action: 'HR has reviewed and approved the payroll. It now awaits MD final approval.' },
+      HR_REJECTED:  { subject: '❌ Payroll Submission Rejected by HR',             color: '#ef4444', action: 'HR has rejected the payroll submission. Please review the comments and resubmit.' },
+      MD_APPROVED:  { subject: '✅ Payroll Approved by Managing Director',          color: '#10b981', action: 'The Managing Director has given final approval. You may now process payments.' },
+      MD_REJECTED:  { subject: '❌ Payroll Rejected by Managing Director',          color: '#ef4444', action: 'The Managing Director has rejected the payroll. Please review the comments.' },
+    };
+
+    const meta = META[event] || META.SUBMITTED;
+
+    const html = `
+      <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.08)">
+        <div style="background:linear-gradient(135deg,#003661 0%,#004d8a 100%);padding:28px 40px;text-align:center">
+          <h1 style="color:#fff;margin:0;font-size:20px;font-weight:700">HC Solutions Payroll System</h1>
+          <p style="color:rgba(255,255,255,0.85);margin:6px 0 0;font-size:13px">Approval Workflow Notification</p>
+        </div>
+        <div style="padding:28px 36px">
+          <div style="border-left:4px solid ${meta.color};padding-left:14px;margin-bottom:22px">
+            <p style="margin:0;font-size:15px;color:#1e293b;font-weight:600">${meta.action}</p>
+          </div>
+          <table style="width:100%;border-collapse:collapse;font-size:14px">
+            <tr style="background:#f8fafc"><td style="padding:8px 12px;color:#64748b;font-weight:600;width:40%">Client</td><td style="padding:8px 12px;color:#1e293b">${clientName || '—'}</td></tr>
+            <tr><td style="padding:8px 12px;color:#64748b;font-weight:600">Pay Period</td><td style="padding:8px 12px;color:#1e293b">${periodLabel || '—'}</td></tr>
+            <tr style="background:#f8fafc"><td style="padding:8px 12px;color:#64748b;font-weight:600">Employees</td><td style="padding:8px 12px;color:#1e293b">${salaryCount ?? '—'}</td></tr>
+            <tr><td style="padding:8px 12px;color:#64748b;font-weight:600">By</td><td style="padding:8px 12px;color:#1e293b">${actorName || '—'}</td></tr>
+            ${comments ? `<tr style="background:#f8fafc"><td style="padding:8px 12px;color:#64748b;font-weight:600">Comments</td><td style="padding:8px 12px;color:#1e293b">${comments}</td></tr>` : ''}
+          </table>
+        </div>
+        <div style="background:#f8fafc;padding:16px 36px;text-align:center;border-top:1px solid #e2e8f0">
+          <p style="margin:0;font-size:11px;color:#94a3b8">HC Solutions Ltd · Payroll Management System · Automated notification</p>
+        </div>
+      </div>`;
+
+    await transport.sendMail({ from: `"${fromName}" <${fromEmail}>`, to: toEmail, subject: meta.subject, html });
+    return { success: true };
+  } catch (error) {
+    console.error('Failed to send approval notification email:', error);
+    return { success: false, error: error.message };
+  }
+};
+
 export default {
   sendSalaryProcessedEmail,
   sendTestEmail,
   sendPayslipEmail,
   sendWelcomeEmail,
   sendFONotification,
+  sendApprovalNotification,
 };
 

@@ -332,20 +332,6 @@ const salaryRepo = {
   },
 
   /**
-   * Set all salaries in a period to SENT_TO_BANK when Finance marks the period as sent to bank.
-   * Payslip emails are only allowed after this (so email confirms payment was sent).
-   */
-  async bulkSetSentToBankByPeriod(periodId) {
-    const { rowCount } = await db.query(
-      `UPDATE hpms_core.salaries
-       SET hr_status = 'SENT_TO_BANK', updated_at = NOW()
-       WHERE period_id = $1`,
-      [periodId],
-    );
-    return rowCount;
-  },
-
-  /**
    * Bulk-approve all PENDING salary records for a period.
    * Returns the updated rows joined with employee info for notifications.
    */

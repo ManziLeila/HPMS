@@ -55,15 +55,18 @@ class NotificationRepository {
   }
 
   // Get notifications for a user
+  // Note: batch_id in notifications stores period_id (payroll_periods); payroll_batches was dropped in migration 007
   async getByUser(userId, limit = 50, offset = 0, unreadOnly = false) {
     let query = `
       SELECT 
         n.*,
-        pb.batch_name,
-        pb.period_month,
-        pb.period_year
+        pp.client_id,
+        c.name AS batch_name,
+        pp.period_month,
+        pp.period_year
       FROM hpms_core.notifications n
-      LEFT JOIN hpms_core.payroll_batches pb ON n.batch_id = pb.batch_id
+      LEFT JOIN hpms_core.payroll_periods pp ON n.batch_id = pp.period_id
+      LEFT JOIN hpms_core.clients c ON c.client_id = pp.client_id
       WHERE n.user_id = $1
     `;
 
@@ -140,11 +143,12 @@ class NotificationRepository {
     const query = `
       SELECT 
         n.*,
-        pb.batch_name,
-        pb.period_month,
-        pb.period_year
+        c.name AS batch_name,
+        pp.period_month,
+        pp.period_year
       FROM hpms_core.notifications n
-      LEFT JOIN hpms_core.payroll_batches pb ON n.batch_id = pb.batch_id
+      LEFT JOIN hpms_core.payroll_periods pp ON n.batch_id = pp.period_id
+      LEFT JOIN hpms_core.clients c ON c.client_id = pp.client_id
       WHERE n.notification_id = $1
     `;
 

@@ -1,13 +1,17 @@
 import PDFDocument from 'pdfkit';
 import { PassThrough } from 'stream';
+import { createReadStream, existsSync } from 'fs';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 import dayjs from 'dayjs';
 import { formatCurrency } from '../utils/currency.js';
-import { numberToWords } from '../utils/numberToWords.js';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const LOGO_PATH = join(__dirname, '../assets/hc-solutions-logo.png');
 
 /**
- * Generate a professional payslip PDF matching the reference design
+ * Generate a professional payslip PDF
  * Clean, business-style layout with bordered tables
- * Uses pipe() as required by PDFKit for proper streaming
  */
 export const generatePayslipPdf = ({ employee, salary, payrollSnapshot }) =>
   new Promise((resolve, reject) => {
@@ -27,44 +31,48 @@ export const generatePayslipPdf = ({ employee, salary, payrollSnapshot }) =>
     doc.on('error', reject);
     doc.pipe(pass);
 
-    // Defensive: ensure required structures exist (use snap for all reads)
     const snap = payrollSnapshot || {};
-    const allowances = snap.allowances || {
-      transport: 0,
-      housing: 0,
-      performance: 0,
-      variable: 0,
-    };
+    const allowances = snap.allowances || { transport: 0, housing: 0, performance: 0, variable: 0 };
     const basicSalary = snap.basicSalary ?? 0;
 
-    const pageWidth = 595.28; // A4 width in points
+    const pageWidth = 595.28;
     const margin = 50;
     const contentWidth = pageWidth - 2 * margin;
 
     // ========================================
-    // HEADER SECTION - Centered
+    // HEADER — Logo + Company Info
     // ========================================
+    let headerY = 50;
+
+    // Logo — top left
+    const logoSize = 60;
+    if (existsSync(LOGO_PATH)) {
+      doc.image(LOGO_PATH, margin, headerY, { width: logoSize, height: logoSize });
+    }
+
+    // Company name + title — centered beside logo
     doc
-      .fontSize(24)
+      .fontSize(22)
       .font('Helvetica-Bold')
-      .text('Payslip', margin, 50, { align: 'center', width: contentWidth });
+      .fillColor('#000000')
+      .text('Payslip', margin, headerY + 4, { align: 'center', width: contentWidth });
 
     doc
-      .fontSize(16)
+      .fontSize(14)
       .font('Helvetica-Bold')
-      .text('HC Solutions', margin, 85, { align: 'center', width: contentWidth });
+      .text('HC Solutions', margin, headerY + 30, { align: 'center', width: contentWidth });
 
     doc
-      .fontSize(11)
+      .fontSize(10)
       .font('Helvetica')
-      .text('Kigali, Rwanda', margin, 110, { align: 'center', width: contentWidth });
+      .text('Kigali, Rwanda', margin, headerY + 50, { align: 'center', width: contentWidth });
 
-    doc.moveDown(2);
+    headerY += logoSize + 10;
 
     // ========================================
-    // EMPLOYEE INFORMATION - Two Columns
+    // EMPLOYEE INFORMATION — Two Columns
     // ========================================
-    const infoStartY = doc.y + 10;
+    const infoStartY = headerY + 75;
     const leftColX = margin;
     const rightColX = margin + contentWidth / 2 + 20;
 
@@ -81,105 +89,81 @@ export const generatePayslipPdf = ({ employee, salary, payrollSnapshot }) =>
 
     doc.fontSize(10).font('Helvetica').text('Pay Period', leftColX, infoStartY + 20);
     const payPeriodStr = salary?.payPeriod ? dayjs(salary.payPeriod).format('MMMM YYYY') : 'N/A';
-    doc
-      .fontSize(11)
-      .font('Helvetica-Bold')
-      .text(payPeriodStr, leftColX + 120, infoStartY + 20);
+    doc.fontSize(11).font('Helvetica-Bold').text(payPeriodStr, leftColX + 120, infoStartY + 20);
 
     doc.fontSize(10).font('Helvetica').text('Worked Days', leftColX, infoStartY + 40);
-    doc
-      .fontSize(11)
-      .font('Helvetica-Bold')
-      .text(salary.workedDays || '26', leftColX + 120, infoStartY + 40);
+    doc.fontSize(11).font('Helvetica-Bold').text(String(salary.workedDays || '26'), leftColX + 120, infoStartY + 40);
 
     // Right Column
     doc.fontSize(10).font('Helvetica').text('Employee name', rightColX, infoStartY);
     doc.fontSize(11).font('Helvetica-Bold').text(employee?.fullName || 'N/A', rightColX + 120, infoStartY);
 
     doc.fontSize(10).font('Helvetica').text('Designation', rightColX, infoStartY + 20);
-    doc
-      .fontSize(11)
-      .font('Helvetica-Bold')
-      .text(employee.role || 'Employee', rightColX + 120, infoStartY + 20);
+    doc.fontSize(11).font('Helvetica-Bold').text(employee.role || 'Employee', rightColX + 120, infoStartY + 20);
 
     doc.fontSize(10).font('Helvetica').text('Department', rightColX, infoStartY + 40);
-    doc
-      .fontSize(11)
-      .font('Helvetica-Bold')
-      .text(employee.department || 'N/A', rightColX + 120, infoStartY + 40);
-
-    doc.moveDown(4);
+    doc.fontSize(11).font('Helvetica-Bold').text(employee.department || 'N/A', rightColX + 120, infoStartY + 40);
 
     // ========================================
     // EARNINGS TABLE
     // ========================================
-    const earningsTableY = doc.y + 10;
     const tableX = margin;
     const tableWidth = contentWidth;
     const col1Width = tableWidth * 0.7;
     const col2Width = tableWidth * 0.3;
+    const rowH = 22;
+
+    let currentY = infoStartY + 70;
 
     // Table header
-    doc.rect(tableX, earningsTableY, tableWidth, 25).stroke();
-    doc.rect(tableX, earningsTableY, col1Width, 25).stroke();
-    doc
-      .fontSize(12)
-      .font('Helvetica-Bold')
-      .text('Earnings', tableX + 10, earningsTableY + 8);
-    doc.text('Amount', tableX + col1Width + 10, earningsTableY + 8);
+    doc.rect(tableX, currentY, tableWidth, 25).stroke();
+    doc.rect(tableX, currentY, col1Width, 25).stroke();
+    doc.fontSize(12).font('Helvetica-Bold').fillColor('#000000').text('Earnings', tableX + 10, currentY + 8);
+    doc.text('Amount', tableX + col1Width + 10, currentY + 8);
+    currentY += 25;
 
-    let currentY = earningsTableY + 25;
-
-    // Earnings rows (use safe allowances/basicSalary)
     const earningsItems = [
-      { label: 'Basic Salary', amount: basicSalary },
-      { label: 'Transport Allowance', amount: allowances.transport },
-      { label: 'Housing Allowance', amount: allowances.housing },
-      { label: 'Performance Allowance', amount: allowances.performance },
+      { label: 'Basic Salary',           amount: basicSalary },
+      { label: 'Transport Allowance',    amount: allowances.transport },
+      { label: 'Housing Allowance',      amount: allowances.housing },
+      { label: 'Performance Allowance',  amount: allowances.performance },
     ];
 
     earningsItems.forEach((item) => {
-      doc.rect(tableX, currentY, tableWidth, 20).stroke();
-      doc.rect(tableX, currentY, col1Width, 20).stroke();
-      doc.fontSize(10).font('Helvetica').text(item.label, tableX + 10, currentY + 6);
-      doc.text(formatCurrency(item.amount).replace('RWF ', ''), tableX + col1Width + 10, currentY + 6, {
-        width: col2Width - 20,
-        align: 'right',
-      });
-      currentY += 20;
+      doc.rect(tableX, currentY, tableWidth, rowH).stroke();
+      doc.rect(tableX, currentY, col1Width, rowH).stroke();
+      doc.fontSize(10).font('Helvetica').fillColor('#000000').text(item.label, tableX + 10, currentY + 6);
+      doc.fontSize(10).font('Helvetica').text(
+        formatCurrency(item.amount).replace('RWF ', ''),
+        tableX + col1Width + 10, currentY + 6,
+        { width: col2Width - 20, align: 'right' }
+      );
+      currentY += rowH;
     });
 
     // Total Earnings
-    doc.rect(tableX, currentY, tableWidth, 22).stroke();
-    doc.rect(tableX, currentY, col1Width, 22).stroke();
-    doc.fontSize(11).font('Helvetica-Bold').text('Total Earnings', tableX + 10, currentY + 6);
-    doc.text(formatCurrency(snap.grossSalary ?? 0).replace('RWF ', ''), tableX + col1Width + 10, currentY + 6, {
-      width: col2Width - 20,
-      align: 'right',
-    });
-
-    currentY += 35;
+    doc.rect(tableX, currentY, tableWidth, rowH).stroke();
+    doc.rect(tableX, currentY, col1Width, rowH).stroke();
+    doc.fontSize(11).font('Helvetica-Bold').fillColor('#000000').text('Total Earnings', tableX + 10, currentY + 5);
+    doc.text(
+      formatCurrency(snap.grossSalary ?? 0).replace('RWF ', ''),
+      tableX + col1Width + 10, currentY + 5,
+      { width: col2Width - 20, align: 'right' }
+    );
+    currentY += rowH + 12;
 
     // ========================================
     // DEDUCTIONS TABLE
     // ========================================
-    const deductionsTableY = currentY;
+    doc.rect(tableX, currentY, tableWidth, 25).stroke();
+    doc.rect(tableX, currentY, col1Width, 25).stroke();
+    doc.fontSize(12).font('Helvetica-Bold').fillColor('#000000').text('Deductions', tableX + 10, currentY + 8);
+    doc.text('Amount', tableX + col1Width + 10, currentY + 8);
+    currentY += 25;
 
-    // Table header
-    doc.rect(tableX, deductionsTableY, tableWidth, 25).stroke();
-    doc.rect(tableX, deductionsTableY, col1Width, 25).stroke();
-    doc
-      .fontSize(12)
-      .font('Helvetica-Bold')
-      .text('Deductions', tableX + 10, deductionsTableY + 8);
-    doc.text('Amount', tableX + col1Width + 10, deductionsTableY + 8);
-
-    currentY = deductionsTableY + 25;
-
-    // Deductions rows
     const deductionsItems = [
-      { label: 'PAYE Tax', amount: snap.paye ?? 0 },
-      { label: 'RSSB Pension (6%)', amount: snap.rssbEePension ?? 0 },
+      { label: 'PAYE Tax',             amount: snap.paye ?? 0 },
+      { label: 'RSSB Pension (6%)',    amount: snap.rssbEePension ?? 0 },
       { label: 'RSSB Maternity (0.3%)', amount: snap.rssbEeMaternity ?? 0 },
     ];
 
@@ -190,110 +174,58 @@ export const generatePayslipPdf = ({ employee, salary, payrollSnapshot }) =>
       });
     }
 
-    deductionsItems.push({
-      label: 'CBHI (0.5%)',
-      amount: snap.cbhiEmployee ?? 0,
-    });
+    deductionsItems.push({ label: 'CBHI (0.5%)', amount: snap.cbhiEmployee ?? 0 });
 
     if ((snap.advanceAmount ?? 0) > 0) {
-      deductionsItems.push({
-        label: 'Advance Deduction',
-        amount: snap.advanceAmount,
-      });
+      deductionsItems.push({ label: 'Advance Deduction', amount: snap.advanceAmount });
     }
 
     deductionsItems.forEach((item) => {
-      doc.rect(tableX, currentY, tableWidth, 20).stroke();
-      doc.rect(tableX, currentY, col1Width, 20).stroke();
-      doc.fontSize(10).font('Helvetica').text(item.label, tableX + 10, currentY + 6);
-      doc.text(formatCurrency(item.amount).replace('RWF ', ''), tableX + col1Width + 10, currentY + 6, {
-        width: col2Width - 20,
-        align: 'right',
-      });
-      currentY += 20;
+      doc.rect(tableX, currentY, tableWidth, rowH).stroke();
+      doc.rect(tableX, currentY, col1Width, rowH).stroke();
+      doc.fontSize(10).font('Helvetica').fillColor('#000000').text(item.label, tableX + 10, currentY + 6);
+      doc.fontSize(10).font('Helvetica').text(
+        formatCurrency(item.amount).replace('RWF ', ''),
+        tableX + col1Width + 10, currentY + 6,
+        { width: col2Width - 20, align: 'right' }
+      );
+      currentY += rowH;
     });
 
     // Total Deductions
-    doc.rect(tableX, currentY, tableWidth, 22).stroke();
-    doc.rect(tableX, currentY, col1Width, 22).stroke();
-    doc.fontSize(11).font('Helvetica-Bold').text('Total Deductions', tableX + 10, currentY + 6);
+    doc.rect(tableX, currentY, tableWidth, rowH).stroke();
+    doc.rect(tableX, currentY, col1Width, rowH).stroke();
+    doc.fontSize(11).font('Helvetica-Bold').fillColor('#000000').text('Total Deductions', tableX + 10, currentY + 5);
     doc.text(
       formatCurrency(snap.totalEmployeeDeductions ?? 0).replace('RWF ', ''),
-      tableX + col1Width + 10,
-      currentY + 6,
-      {
-        width: col2Width - 20,
-        align: 'right',
-      }
+      tableX + col1Width + 10, currentY + 5,
+      { width: col2Width - 20, align: 'right' }
     );
-
-    currentY += 22;
+    currentY += rowH;
 
     // Net Pay (highlighted)
-    doc.rect(tableX, currentY, tableWidth, 25).fillAndStroke('#f0f0f0', '#000000');
-    doc.rect(tableX, currentY, col1Width, 25).stroke();
-    doc.fontSize(12).font('Helvetica-Bold').fillColor('#000000').text('Net Pay', tableX + 10, currentY + 8);
+    doc.rect(tableX, currentY, tableWidth, 26).fillAndStroke('#f0f0f0', '#000000');
+    doc.rect(tableX, currentY, col1Width, 26).stroke();
+    doc.fontSize(12).font('Helvetica-Bold').fillColor('#000000').text('Net Pay', tableX + 10, currentY + 7);
     doc.text(
       formatCurrency(snap.netPaidToBank || snap.netSalary || 0).replace('RWF ', ''),
-      tableX + col1Width + 10,
-      currentY + 8,
-      {
-        width: col2Width - 20,
-        align: 'right',
-      }
+      tableX + col1Width + 10, currentY + 7,
+      { width: col2Width - 20, align: 'right' }
     );
-
     currentY += 40;
 
     // ========================================
-    // NET PAY IN WORDS
-    // ========================================
-    const netAmount = snap.netPaidToBank ?? snap.netSalary ?? 0;
-    const amountInWords = numberToWords(Math.max(0, Number(netAmount) || 0));
-
-    doc
-      .fontSize(11)
-      .font('Helvetica-Bold')
-      .fillColor('#000000')
-      .text(amountInWords, margin, currentY, { align: 'center', width: contentWidth });
-
-    currentY += 40;
-
-    // ========================================
-    // SIGNATURE SECTION
-    // ========================================
-    const signatureY = currentY;
-    const signatureBoxHeight = 60;
-
-    // Draw signature boxes
-    doc.rect(tableX, signatureY, col1Width - 10, signatureBoxHeight).stroke();
-    doc.rect(tableX + col1Width + 10, signatureY, col2Width + (tableWidth - col1Width - col2Width) - 10, signatureBoxHeight).stroke();
-
-    // Labels
-    doc.fontSize(10).font('Helvetica').text('Employer Signature', tableX + 10, signatureY + 10);
-    doc.text('Employee Signature', tableX + col1Width + 20, signatureY + 10);
-
-    // Signature lines
-    doc
-      .moveTo(tableX + 10, signatureY + signatureBoxHeight - 15)
-      .lineTo(tableX + col1Width - 20, signatureY + signatureBoxHeight - 15)
-      .stroke();
-
-    doc
-      .moveTo(tableX + col1Width + 20, signatureY + signatureBoxHeight - 15)
-      .lineTo(tableX + tableWidth - 10, signatureY + signatureBoxHeight - 15)
-      .stroke();
-
-    currentY = signatureY + signatureBoxHeight + 30;
-
-    // ========================================
-    // FOOTER
+    // FOOTER — Generated-by statement
     // ========================================
     doc
       .fontSize(9)
       .font('Helvetica')
-      .fillColor('#666666')
-      .text('This is system generated payslip', margin, currentY, { align: 'center', width: contentWidth });
+      .fillColor('#1e3a8a')
+      .text(
+        'This payslip was generated by HC Solutions Payroll System.',
+        margin, currentY,
+        { align: 'center', width: contentWidth }
+      );
 
     doc.end();
   });

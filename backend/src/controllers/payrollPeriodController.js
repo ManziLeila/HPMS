@@ -1,7 +1,42 @@
 import { z } from 'zod';
+import dayjs from 'dayjs';
+import logger from '../config/logger.js';
 import payrollPeriodService from '../services/payrollPeriodService.js';
 import { ROLES } from '../constants/roles.js';
 import { badRequest, forbidden } from '../utils/httpError.js';
+import settingsRepo from '../repositories/settingsRepo.js';
+import { sendApprovalNotification } from '../services/emailService.js';
+
+// Helper: send notification fire-and-forget (errors must not break the main flow)
+async function notifyApproval({ event, period, actorName, comments }) {
+    try {
+        const [hrEmail, mdEmail, foEmail] = await Promise.all([
+            settingsRepo.get('hr_notification_email'),
+            settingsRepo.get('md_notification_email'),
+            settingsRepo.get('fo_notification_email'),
+        ]);
+
+        const periodLabel = period
+            ? dayjs(`${period.period_year}-${String(period.period_month).padStart(2, '0')}-01`).format('MMMM YYYY')
+            : '';
+
+        const toEmail = event === 'SUBMITTED' ? hrEmail
+            : event === 'HR_APPROVED'          ? mdEmail
+            : foEmail; // HR_REJECTED, MD_APPROVED, MD_REJECTED → notify FO
+
+        await sendApprovalNotification({
+            toEmail,
+            event,
+            clientName: period?.client_name || '',
+            periodLabel,
+            salaryCount: Number(period?.salary_count ?? 0),
+            actorName,
+            comments,
+        });
+    } catch (err) {
+        logger.warn({ err }, '[approval-notify] Failed to send notification email (non-blocking)');
+    }
+}
 
 const submitSchema = z.object({
     clientId:    z.number().int().positive(),
@@ -25,7 +60,7 @@ export const listDashboard = async (req, res, next) => {
 // ── Finance Officer: list ready-to-submit and submitted periods ──────────────
 export const listMyPeriods = async (req, res, next) => {
     try {
-        if (req.user.role !== ROLES.FINANCE_OFFICER) {
+        if (req.user.role !== ROLES.FINANCE_OFFICER && req.user.role !== ROLES.ADMIN) {
             throw forbidden('Only Finance Officers can view their payroll periods');
         }
 
@@ -41,7 +76,7 @@ export const listMyPeriods = async (req, res, next) => {
 // ── Finance Officer: submit a client+month for HR review ─────────────────────
 export const submitPeriod = async (req, res, next) => {
     try {
-        if (req.user.role !== ROLES.FINANCE_OFFICER) {
+        if (req.user.role !== ROLES.FINANCE_OFFICER && req.user.role !== ROLES.ADMIN) {
             throw forbidden('Only Finance Officers can submit payroll periods');
         }
 
@@ -52,6 +87,8 @@ export const submitPeriod = async (req, res, next) => {
             ipAddress:   req.ip,
             userAgent:   req.headers['user-agent'],
         });
+
+        notifyApproval({ event: 'SUBMITTED', period, actorName: req.user.email });
 
         res.status(201).json({
             success: true,
@@ -64,7 +101,7 @@ export const submitPeriod = async (req, res, next) => {
 // ── HR: list submitted periods ───────────────────────────────────────────────
 export const listPendingForHR = async (req, res, next) => {
     try {
-        if (req.user.role !== ROLES.HR) {
+        if (req.user.role !== ROLES.HR && req.user.role !== ROLES.ADMIN) {
             throw forbidden('Only HR Managers can view pending payroll periods');
         }
 
@@ -76,7 +113,7 @@ export const listPendingForHR = async (req, res, next) => {
 // ── HR: list periods forwarded to MD ───────────────────────────────────────
 export const listHRApproved = async (req, res, next) => {
     try {
-        if (req.user.role !== ROLES.HR) {
+        if (req.user.role !== ROLES.HR && req.user.role !== ROLES.ADMIN) {
             throw forbidden('Only HR Managers can view forwarded payroll periods');
         }
 
@@ -88,7 +125,7 @@ export const listHRApproved = async (req, res, next) => {
 // ── HR: review (approve/reject) a period ────────────────────────────────────
 export const hrReview = async (req, res, next) => {
     try {
-        if (req.user.role !== ROLES.HR) {
+        if (req.user.role !== ROLES.HR && req.user.role !== ROLES.ADMIN) {
             throw forbidden('Only HR Managers can review payroll periods');
         }
 
@@ -106,6 +143,13 @@ export const hrReview = async (req, res, next) => {
             userAgent: req.headers['user-agent'],
         });
 
+        notifyApproval({
+            event: action === 'APPROVE' ? 'HR_APPROVED' : 'HR_REJECTED',
+            period,
+            actorName: req.user.email,
+            comments,
+        });
+
         res.json({
             success: true,
             message: action === 'APPROVE'
@@ -119,7 +163,7 @@ export const hrReview = async (req, res, next) => {
 // ── MD: list HR-approved periods ─────────────────────────────────────────────
 export const listPendingForMD = async (req, res, next) => {
     try {
-        if (req.user.role !== ROLES.MANAGING_DIRECTOR) {
+        if (req.user.role !== ROLES.MANAGING_DIRECTOR && req.user.role !== ROLES.ADMIN) {
             throw forbidden('Only the Managing Director can view this queue');
         }
 
@@ -131,7 +175,7 @@ export const listPendingForMD = async (req, res, next) => {
 // ── MD: final approve/reject ─────────────────────────────────────────────────
 export const mdReview = async (req, res, next) => {
     try {
-        if (req.user.role !== ROLES.MANAGING_DIRECTOR) {
+        if (req.user.role !== ROLES.MANAGING_DIRECTOR && req.user.role !== ROLES.ADMIN) {
             throw forbidden('Only the Managing Director can give final approval');
         }
 
@@ -149,6 +193,13 @@ export const mdReview = async (req, res, next) => {
             userAgent: req.headers['user-agent'],
         });
 
+        notifyApproval({
+            event: action === 'APPROVE' ? 'MD_APPROVED' : 'MD_REJECTED',
+            period,
+            actorName: req.user.email,
+            comments,
+        });
+
         res.json({
             success: true,
             message: action === 'APPROVE'
@@ -159,31 +210,10 @@ export const mdReview = async (req, res, next) => {
     } catch (err) { next(err); }
 };
 
-// ── Finance Officer: send to bank ────────────────────────────────────────────
-export const sendToBank = async (req, res, next) => {
-    try {
-        if (req.user.role !== ROLES.FINANCE_OFFICER) {
-            throw forbidden('Only Finance Officers can initiate bank transfers');
-        }
-
-        const periodId = Number(req.params.id);
-        if (!periodId) throw badRequest('Invalid period ID');
-
-        const period = await payrollPeriodService.sendToBank({
-            periodId,
-            userId:    req.user.id,
-            ipAddress: req.ip,
-            userAgent: req.headers['user-agent'],
-        });
-
-        res.json({ success: true, message: 'Payroll sent to bank successfully', data: period });
-    } catch (err) { next(err); }
-};
-
 // ── Get ready-to-submit detail (FO preview before submit) ────────────────────
 export const getReadyDetail = async (req, res, next) => {
     try {
-        if (req.user.role !== ROLES.FINANCE_OFFICER) {
+        if (req.user.role !== ROLES.FINANCE_OFFICER && req.user.role !== ROLES.ADMIN) {
             throw forbidden('Only Finance Officers can preview ready-to-submit payroll');
         }
         const clientId = Number(req.query.clientId);
@@ -208,17 +238,31 @@ export const getPeriod = async (req, res, next) => {
     } catch (err) { next(err); }
 };
 
-// ── Send payslip emails for a period (only after status is SENT_TO_BANK) ─────
+// ── Send payslip emails for a period (only after MD approval) ─────────────────
 export const sendPeriodEmails = async (req, res, next) => {
+    const correlationId = req.id || req.headers?.['x-correlation-id'] || 'no-id';
     try {
         const periodId = Number(req.params.id);
+        logger.info({ correlationId, periodId, userId: req.user?.id }, '[send-emails] sendPeriodEmails start');
+
         if (!periodId) throw badRequest('Invalid period ID');
 
         const period = await payrollPeriodService.getById(periodId);
-        if (period.status !== 'SENT_TO_BANK') {
+        if (!period) {
+            logger.warn({ correlationId, periodId }, '[send-emails] period not found');
+            throw badRequest('Payroll period not found');
+        }
+
+        const isMdApproved = period.status === 'MD_APPROVED';
+
+        logger.info({ correlationId, periodId, status: period.status, isMdApproved }, '[send-emails] period status check');
+
+        if (!isMdApproved) {
+            logger.warn({ correlationId, periodId, status: period.status }, '[send-emails] 403 — period not MD approved');
             return res.status(403).json({
-                success: false,
-                message: 'Payslip emails can only be sent after the payroll has been sent to the bank (HR and MD approved, and Finance has marked "Sent to bank").',
+                error: {
+                    message: `Payslip emails can only be sent after MD approval. Current status: ${period.status}.`,
+                },
             });
         }
 
@@ -246,7 +290,7 @@ export const downloadPeriodPayslips = async (req, res, next) => {
 // ── Finance Officer: unsubmit a period (remove from HR queue, salaries go back to ready) ─
 export const unsubmitPeriod = async (req, res, next) => {
     try {
-        if (req.user.role !== ROLES.FINANCE_OFFICER) {
+        if (req.user.role !== ROLES.FINANCE_OFFICER && req.user.role !== ROLES.ADMIN) {
             throw forbidden('Only Finance Officers can unsubmit payroll periods');
         }
         const periodId = Number(req.params.id);

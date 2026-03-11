@@ -19,7 +19,7 @@ export const generateMonthlyPayrollExcel = async ({ data, year, month }) => {
     workbook.modified = new Date();
 
     // Company header
-    worksheet.mergeCells('A1:I1');
+    worksheet.mergeCells('A1:K1');
     const titleCell = worksheet.getCell('A1');
     titleCell.value = 'HC SOLUTIONS - PAYROLL MANAGEMENT SYSTEM';
     titleCell.font = { size: 16, bold: true, color: { argb: 'FF0EA5E9' } };
@@ -27,7 +27,7 @@ export const generateMonthlyPayrollExcel = async ({ data, year, month }) => {
     worksheet.getRow(1).height = 30;
 
     // Report period
-    worksheet.mergeCells('A2:I2');
+    worksheet.mergeCells('A2:K2');
     const periodCell = worksheet.getCell('A2');
     periodCell.value = `Monthly Payroll Report - ${dayjs(`${year}-${month}-01`).format('MMMM YYYY')}`;
     periodCell.font = { size: 12, bold: true };
@@ -37,7 +37,7 @@ export const generateMonthlyPayrollExcel = async ({ data, year, month }) => {
     // Add empty row
     worksheet.addRow([]);
 
-    // Column headers
+    // Column headers (formulas match payroll: Gross = Basic+Transport+Housing+Performance; Deductions = PAYE+RSSB+Maternity+RAMA+CBHI+Advance; Net = Gross - Deductions)
     const headerRow = worksheet.addRow([
         'Employee Name',
         'Email',
@@ -48,6 +48,8 @@ export const generateMonthlyPayrollExcel = async ({ data, year, month }) => {
         'Total Deductions',
         'Net Salary',
         'Employer Contributions',
+        'Formula (Gross)',
+        'Formula (Deductions)',
     ]);
 
     // Style header row
@@ -77,13 +79,15 @@ export const generateMonthlyPayrollExcel = async ({ data, year, month }) => {
     let totalNet = 0;
     let totalEmployer = 0;
 
-    // Add data rows
+    // Add data rows (formulas: Gross = Basic+Transport+Housing+Performance; Deductions = PAYE+RSSB 6%+Maternity 0.3%+RAMA 7.5%+CBHI 0.5%+Advance; Net = Gross - Deductions)
     data.forEach((record) => {
-        const gross = Number(record.gross_salary || 0);
-        const paye = Number(record.paye || 0);
-        const deductions = gross - paye; // Simplified - should include all deductions
-        const net = gross - paye;
-        const employer = Number(record.total_employer_contrib || 0);
+        const gross = Math.round(Number(record.gross_salary || 0));
+        const paye = Math.round(Number(record.paye || 0));
+        const deductions = Number(record.total_deductions) ?? Math.max(0, gross - (Number(record.net_salary) || 0));
+        const net = Math.round(Number(record.net_salary ?? record.gross_salary - deductions) || 0);
+        const employer = Math.round(Number(record.total_employer_contrib || 0));
+        const formulaGross = 'Basic + Transport + Housing + Performance';
+        const formulaDed = 'PAYE + RSSB 6% + Maternity 0.3% + RAMA 7.5% + CBHI 0.5% + Advance';
 
         totalGross += gross;
         totalPaye += paye;
@@ -101,6 +105,8 @@ export const generateMonthlyPayrollExcel = async ({ data, year, month }) => {
             deductions,
             net,
             employer,
+            formulaGross,
+            formulaDed,
         ]);
 
         // Format currency columns
@@ -127,11 +133,13 @@ export const generateMonthlyPayrollExcel = async ({ data, year, month }) => {
         '',
         '',
         '',
-        totalGross,
-        totalPaye,
-        totalDeductions,
-        totalNet,
-        totalEmployer,
+        Math.round(totalGross),
+        Math.round(totalPaye),
+        Math.round(totalDeductions),
+        Math.round(totalNet),
+        Math.round(totalEmployer),
+        '',
+        '',
     ]);
 
     // Style totals row
@@ -180,6 +188,8 @@ export const generateMonthlyPayrollExcel = async ({ data, year, month }) => {
         { key: 'deductions', width: 20 },
         { key: 'net', width: 18 },
         { key: 'employer', width: 22 },
+        { key: 'formulaGross', width: 38 },
+        { key: 'formulaDed', width: 42 },
     ];
 
     // Freeze header rows

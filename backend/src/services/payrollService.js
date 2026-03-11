@@ -1,4 +1,5 @@
 import { calculatePaye } from '../utils/paye.js';
+import { roundRwf } from '../utils/currency.js';
 
 const clamp = (value) => {
   const numeric = Number(value);
@@ -97,33 +98,40 @@ export const calculatePayroll = (payload) => {
   // Total Cost of Employment = Gross Salary + Employer Contributions
   const totalCostOfEmployment = grossSalary + totalEmployerContributions;
 
+  // Round all amounts to whole RWF (>= 0.5 → 1, < 0.5 → 0)
+  const r = roundRwf;
   return {
     frequency,
-    basicSalary,
-    allowances,
-    totalGross: grossSalary, // Alias for backward compatibility
-    grossSalary,
-    taxableIncome,
-    paye,
-    rssbEePension,
-    rssbErPension,
-    rssbEeMaternity,
-    rssbErMaternity,
-    ramaInsuranceEmployee,
-    ramaInsuranceEmployer,
-    medicalInsuranceEmployee: ramaInsuranceEmployee, // Alias for backward compatibility
-    medicalInsuranceEmployer: ramaInsuranceEmployer, // Alias for backward compatibility
-    netBeforeCbhi,
-    cbhiEmployee,
-    advanceAmount,
-    totalEmployeeDeductions,
-    netSalary,
-    netPaidToBank,
-    takeHomeSalary: netSalary, // Alias
-    netToBePaid: netPaidToBank, // Alias
-    hazardContribution,
-    totalEmployerContributions,
-    totalCostOfEmployment,
+    basicSalary: r(basicSalary),
+    allowances: {
+      variable: r(allowances.variable),
+      transport: r(allowances.transport),
+      housing: r(allowances.housing),
+      performance: r(allowances.performance),
+    },
+    totalGross: r(grossSalary),
+    grossSalary: r(grossSalary),
+    taxableIncome: r(taxableIncome),
+    paye: r(paye),
+    rssbEePension: r(rssbEePension),
+    rssbErPension: r(rssbErPension),
+    rssbEeMaternity: r(rssbEeMaternity),
+    rssbErMaternity: r(rssbErMaternity),
+    ramaInsuranceEmployee: r(ramaInsuranceEmployee),
+    ramaInsuranceEmployer: r(ramaInsuranceEmployer),
+    medicalInsuranceEmployee: r(ramaInsuranceEmployee),
+    medicalInsuranceEmployer: r(ramaInsuranceEmployer),
+    netBeforeCbhi: r(netBeforeCbhi),
+    cbhiEmployee: r(cbhiEmployee),
+    advanceAmount: r(advanceAmount),
+    totalEmployeeDeductions: r(totalEmployeeDeductions),
+    netSalary: r(netSalary),
+    netPaidToBank: r(netPaidToBank),
+    takeHomeSalary: r(netSalary),
+    netToBePaid: r(netPaidToBank),
+    hazardContribution: r(hazardContribution),
+    totalEmployerContributions: r(totalEmployerContributions),
+    totalCostOfEmployment: r(totalCostOfEmployment),
     includeMedical,
   };
 };

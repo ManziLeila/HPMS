@@ -11,9 +11,12 @@ const errorHandler = (err, req, res, next) => {
   const correlationId = req.id;
 
   if (status >= 500) {
-    logger.error({ err, correlationId }, 'Unhandled server error');
+    logger.error(
+      { err, correlationId, message: err?.message, stack: err?.stack, code: err?.code },
+      'Unhandled server error'
+    );
   } else {
-    logger.warn({ err, correlationId }, 'Client error');
+    logger.warn({ err, correlationId, message: err?.message }, 'Client error');
   }
 
   const basePayload = {

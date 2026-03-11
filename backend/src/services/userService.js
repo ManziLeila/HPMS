@@ -5,6 +5,15 @@ import { encryptField } from './encryptionService.js';
 
 const userService = {
   async createEmployee({ fullName, email, password, bankAccountEnc, role = 'Admin', rssbNumber, clientId, phoneNumber, bankName, accountHolderName }) {
+    if (email && clientId) {
+      const existing = await employeeRepo.findByEmailAndClient(email, clientId);
+      if (existing) {
+        const err = new Error('An employee with this email already exists for this client.');
+        err.status = 409;
+        err.code = 'DUPLICATE_EMAIL';
+        throw err;
+      }
+    }
     const passwordHash = await bcrypt.hash(password, 12);
     const mfaSecret = authenticator.generateSecret();
     return employeeRepo.create({

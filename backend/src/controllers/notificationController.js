@@ -1,12 +1,16 @@
+import logger from '../config/logger.js';
 import notificationService from '../services/notificationService.js';
 import { badRequest } from '../utils/httpError.js';
 
 // Get notifications for current user
 export const getMyNotifications = async (req, res, next) => {
+    const correlationId = req.id || req.headers?.['x-correlation-id'] || 'no-id';
     try {
         const limit = Number(req.query.limit) || 50;
         const offset = Number(req.query.offset) || 0;
         const unreadOnly = req.query.unreadOnly === 'true';
+
+        logger.info({ correlationId, userId: req.user?.id, limit, offset }, '[notifications] getMyNotifications start');
 
         const notifications = await notificationService.getUserNotifications(
             req.user.id,
@@ -15,12 +19,14 @@ export const getMyNotifications = async (req, res, next) => {
             unreadOnly
         );
 
+        logger.info({ correlationId, count: notifications?.length }, '[notifications] getMyNotifications success');
         res.json({
             success: true,
             data: notifications,
             pagination: { limit, offset },
         });
     } catch (error) {
+        logger.error({ err: error, correlationId, userId: req.user?.id, stack: error?.stack }, '[notifications] getMyNotifications failed');
         next(error);
     }
 };

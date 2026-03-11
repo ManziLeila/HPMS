@@ -15,6 +15,7 @@ import ContractsPage from './pages/ContractsPage.jsx';
 import ContractTemplatesPage from './pages/ContractTemplatesPage.jsx';
 import EmailSettingsPage from './pages/EmailSettingsPage.jsx';
 import SettingsPage from './pages/SettingsPage.jsx';
+import NotificationSettingsPage from './pages/NotificationSettingsPage.jsx';
 import PayrollPeriodsPage from './pages/PayrollPeriodsPage.jsx';
 import PayrollManagementPage from './pages/PayrollManagementPage.jsx';
 import ClientsPage from './pages/ClientsPage.jsx';
@@ -77,6 +78,7 @@ const App = () => (
       <Route path="/contract-templates" element={<ContractTemplatesPage />} />
       <Route path="/email-settings" element={<EmailSettingsPage />} />
       <Route path="/settings" element={<SettingsPage />} />
+      <Route path="/notification-settings" element={<NotificationSettingsPage />} />
       <Route path="/payroll-periods" element={<PayrollPeriodsPage />} />
       <Route path="/management-console" element={<ManagementConsoleOrRedirect />} />
     </Route>

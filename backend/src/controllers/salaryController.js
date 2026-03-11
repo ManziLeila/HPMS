@@ -644,8 +644,21 @@ export const exportMonthlyReportToExcel = async (req, res, next) => {
       return res.status(404).json({ error: { message: 'No payroll data found for this period' } });
     }
 
+    // Decrypt net and snapshot for Excel (formulas match payroll calculation)
+    const decryptedReport = report.map((row) => {
+      let net_salary = 0;
+      let total_deductions = 0;
+      try {
+        net_salary = Number(decryptField('net_paid_enc', row.net_paid_enc)) || 0;
+        total_deductions = Math.max(0, Number(row.gross_salary || 0) - net_salary);
+      } catch {
+        total_deductions = Number(row.paye || 0);
+      }
+      return { ...row, net_salary, total_deductions };
+    });
+
     const excelBuffer = await generateMonthlyPayrollExcel({
-      data: report,
+      data: decryptedReport,
       year: params.year,
       month: params.month,
     });

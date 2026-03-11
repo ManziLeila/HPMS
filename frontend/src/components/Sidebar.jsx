@@ -17,6 +17,7 @@ import {
   UserCog,
   X,
   Shield,
+  Bell,
 } from 'lucide-react';
 import useAuth from '../hooks/useAuth';
 import './Sidebar.css';
@@ -34,6 +35,7 @@ const ROUTE_MAP = {
     { path: '/contract-templates', label: 'Contract Templates', icon: Pencil },
     { path: '/reports', label: 'Reports', icon: FileText },
     { path: '/email-settings', label: 'Email Settings', icon: Mail },
+    { path: '/notification-settings', label: 'Notifications', icon: Bell },
     { path: '/settings', label: 'Settings', icon: Settings },
   ],
   HR: [
@@ -46,6 +48,7 @@ const ROUTE_MAP = {
     { path: '/hr-review', label: 'HR Review', icon: CheckSquare },
     { path: '/reports', label: 'Reports', icon: FileText },
     { path: '/email-settings', label: 'Email Settings', icon: Mail },
+    { path: '/notification-settings', label: 'Notifications', icon: Bell },
     { path: '/settings', label: 'Settings', icon: Settings },
   ],
   ManagingDirector: [
@@ -56,6 +59,7 @@ const ROUTE_MAP = {
     { path: '/md-approval', label: 'MD Approval', icon: ShieldCheck },
     { path: '/contracts', label: 'Contracts', icon: FileSignature },
     { path: '/reports', label: 'Reports', icon: FileText },
+    { path: '/notification-settings', label: 'Notifications', icon: Bell },
     { path: '/settings', label: 'Settings', icon: Settings },
   ],
   Admin: [
@@ -74,6 +78,7 @@ const ROUTE_MAP = {
     { path: '/contract-templates', label: 'Contract Templates', icon: Pencil },
     { path: '/reports', label: 'Reports', icon: FileText },
     { path: '/email-settings', label: 'Email Settings', icon: Mail },
+    { path: '/notification-settings', label: 'Notifications', icon: Bell },
     { path: '/settings', label: 'Settings', icon: Settings },
   ],
   TechAdmin: [

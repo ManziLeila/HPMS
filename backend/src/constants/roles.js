@@ -14,7 +14,6 @@ export const BATCH_STATUS = {
     HR_APPROVED: 'HR_APPROVED',
     MD_APPROVED: 'MD_APPROVED',
     REJECTED: 'REJECTED',
-    SENT_TO_BANK: 'SENT_TO_BANK',
 };
 
 // Approval action types
@@ -24,7 +23,6 @@ export const APPROVAL_ACTIONS = {
     HR_REJECT: 'HR_REJECT',
     MD_APPROVE: 'MD_APPROVE',
     MD_REJECT: 'MD_REJECT',
-    SEND_TO_BANK: 'SEND_TO_BANK',
     CANCEL: 'CANCEL',
 };
 
@@ -35,7 +33,6 @@ export const NOTIFICATION_TYPES = {
     PAYROLL_HR_REJECTED: 'PAYROLL_HR_REJECTED',
     PAYROLL_MD_APPROVED: 'PAYROLL_MD_APPROVED',
     PAYROLL_MD_REJECTED: 'PAYROLL_MD_REJECTED',
-    PAYROLL_SENT_TO_BANK: 'PAYROLL_SENT_TO_BANK',
     APPROVAL_REMINDER: 'APPROVAL_REMINDER',
     BATCH_CANCELLED: 'BATCH_CANCELLED',
     EMPLOYEE_ADDED: 'EMPLOYEE_ADDED',
@@ -58,7 +55,6 @@ export const ROLE_PERMISSIONS = {
         'view_reports',
         'create_batch',
         'submit_batch',
-        'send_to_bank', // Only after full approval
     ],
     [ROLES.HR]: [
         'view_employees',
@@ -74,7 +70,6 @@ export const ROLE_PERMISSIONS = {
         'view_financial_summary',
         'final_approve',
         'final_reject',
-        'authorize_bank_transfer',
         'view_audit_trail',
     ],
     [ROLES.EMPLOYEE]: [
@@ -92,7 +87,6 @@ export const ALL_PERMISSION_KEYS = [
     'view_reports',
     'create_batch',
     'submit_batch',
-    'send_to_bank',
     'view_salaries',
     'view_batches',
     'approve_batch',
@@ -102,7 +96,6 @@ export const ALL_PERMISSION_KEYS = [
     'view_financial_summary',
     'final_approve',
     'final_reject',
-    'authorize_bank_transfer',
     'view_audit_trail',
     'view_own_payslip',
 ];
@@ -119,7 +112,6 @@ export const getRolesForAction = (action) => {
         create_batch: [ROLES.FINANCE_OFFICER],
         approve_hr: [ROLES.HR],
         approve_md: [ROLES.MANAGING_DIRECTOR],
-        send_to_bank: [ROLES.FINANCE_OFFICER, ROLES.MANAGING_DIRECTOR],
     };
     return roleMap[action] || [];
 };

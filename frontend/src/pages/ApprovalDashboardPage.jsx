@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { 
-    BarChart3, ClipboardList, Check, AlertCircle, ArrowRight, 
-    Clock, CheckCircle, XCircle, DollarSign, Building2, Users, 
-    Mail, Eye, MoreVertical, Download
+    BarChart3, ClipboardList, AlertCircle, ArrowRight, 
+    Clock, CheckCircle, XCircle, Building2, Users, 
+    Mail, Eye, Download
 } from 'lucide-react';
 import { apiClient, API_BASE_URL } from '../api/client';
 import useAuth from '../hooks/useAuth';
@@ -11,14 +11,13 @@ import './ApprovalDashboardPage.css';
 
 /* ─────────────────────── STATUS CONFIGURATION ─────────────────────── */
 const STATUS_CONFIG = {
-    SUBMITTED:    { label: 'Awaiting HR Review',    color: '#f59e0b', icon: Clock,      stage: 1 },
-    PENDING:      { label: 'Awaiting HR Review',    color: '#f59e0b', icon: Clock,      stage: 1 },
-    HR_APPROVED:  { label: 'HR Approved → MD Review', color: '#6366f1', icon: Users,   stage: 2 },
-    MD_APPROVED:  { label: 'Completed',             color: '#10b981', icon: CheckCircle, stage: 3 },
-    SENT_TO_BANK: { label: 'Completed',             color: '#10b981', icon: DollarSign, stage: 4 },
-    HR_REJECTED:  { label: 'Rejected by HR',        color: '#ef4444', icon: XCircle,   stage: 0 },
-    MD_REJECTED:  { label: 'Rejected by MD',        color: '#ef4444', icon: XCircle,   stage: 0 },
-    REJECTED:     { label: 'Rejected',              color: '#ef4444', icon: XCircle,   stage: 0 },
+    SUBMITTED:    { label: 'Awaiting HR Review',      color: '#f59e0b', icon: Clock,        stage: 1 },
+    PENDING:      { label: 'Awaiting HR Review',      color: '#f59e0b', icon: Clock,        stage: 1 },
+    HR_APPROVED:  { label: 'HR Approved → MD Review', color: '#6366f1', icon: Users,        stage: 2 },
+    MD_APPROVED:  { label: 'Completed',               color: '#10b981', icon: CheckCircle,  stage: 3 },
+    HR_REJECTED:  { label: 'Rejected by HR',          color: '#ef4444', icon: XCircle,      stage: 0 },
+    MD_REJECTED:  { label: 'Rejected by MD',          color: '#ef4444', icon: XCircle,      stage: 0 },
+    REJECTED:     { label: 'Rejected',                color: '#ef4444', icon: XCircle,      stage: 0 },
 };
 
 /* ─────────────────────── HEADER STATS ─────────────────────── */
@@ -61,12 +60,6 @@ const ApprovalTimeline = ({ batch }) => {
             date: batch.md_reviewed_at, 
             user: batch.md_reviewer_name,
             status: batch.md_status === 'APPROVED' ? 'complete' : batch.md_status === 'REJECTED' ? 'rejected' : 'pending'
-        },
-        { 
-            name: 'Payslips Sent', 
-            date: batch.sent_to_bank_at, 
-            user: 'Finance Officer',
-            status: batch.status === 'SENT_TO_BANK' ? 'complete' : 'pending'
         },
     ];
 
@@ -183,7 +176,7 @@ const BatchDetailModal = ({ batch, onClose }) => {
 /* ─────────────────────── BATCH TABLE CARD ─────────────────────── */
 const BatchCard = ({ batch, onDetails, onDownload, onSendEmails, actionLoading }) => {
     const config = STATUS_CONFIG[batch.status];
-    const isCompleted = ['MD_APPROVED', 'SENT_TO_BANK'].includes(batch.status);
+    const isCompleted = batch.status === 'MD_APPROVED';
     return (
         <div className="apd__batch-card">
             <div className="apd__card-header">
@@ -216,8 +209,8 @@ const BatchCard = ({ batch, onDetails, onDownload, onSendEmails, actionLoading }
 
                 {/* Mini Timeline */}
                 <div className="apd__mini-timeline">
-                    {['SUBMITTED', 'HR_APPROVED', 'MD_APPROVED', 'SENT_TO_BANK'].map((status, i) => {
-                        const isDone = ['SUBMITTED', 'HR_APPROVED', 'MD_APPROVED', 'SENT_TO_BANK'].indexOf(batch.status) >= i;
+                    {['SUBMITTED', 'HR_APPROVED', 'MD_APPROVED'].map((status, i) => {
+                        const isDone = ['SUBMITTED', 'HR_APPROVED', 'MD_APPROVED'].indexOf(batch.status) >= i;
                         const isReject = ['HR_REJECTED', 'MD_REJECTED', 'REJECTED'].includes(batch.status) && i === 0;
                         return (
                             <div key={status} className={`apd__timeline-dot ${isDone ? 'done' : isReject ? 'reject' : ''}`} />
@@ -277,8 +270,8 @@ const ApprovalDashboardPage = () => {
         md_reviewer_name:  p.md_reviewed_by_name,
         hr_comments:       p.hr_comments,
         md_comments:       p.md_comments,
-        hr_status:         p.status === 'HR_APPROVED' || p.status === 'MD_APPROVED' || p.status === 'SENT_TO_BANK' ? 'APPROVED' : null,
-        md_status:         p.status === 'MD_APPROVED' || p.status === 'SENT_TO_BANK' ? 'APPROVED' : null,
+        hr_status:         p.status === 'HR_APPROVED' || p.status === 'MD_APPROVED' ? 'APPROVED' : null,
+        md_status:         p.status === 'MD_APPROVED' ? 'APPROVED' : null,
     });
 
     const loadData = useCallback(async () => {
@@ -294,8 +287,7 @@ const ApprovalDashboardPage = () => {
             const pending    = normalized.filter(b => b.status === 'SUBMITTED').length;
             const hrApproved = normalized.filter(b => b.status === 'HR_APPROVED').length;
             const mdApproved = normalized.filter(b => b.status === 'MD_APPROVED').length;
-            const sent       = normalized.filter(b => b.status === 'SENT_TO_BANK').length;
-            setStats({ pendingHr: pending, hrApproved, pendingMd: hrApproved, mdApproved, sentToBank: sent });
+            setStats({ pendingHr: pending, hrApproved, pendingMd: hrApproved, mdApproved });
         } catch (e) {
             setMsg({ type: 'err', text: e.message || 'Failed to load payroll periods' });
         } finally {
@@ -369,7 +361,7 @@ const ApprovalDashboardPage = () => {
                     <StatsCard icon={Clock} label="Awaiting HR" value={stats.pendingHr || 0} color="#f59e0b" />
                     <StatsCard icon={Users} label="HR Approved" value={stats.hrApproved || 0} color="#6366f1" />
                     <StatsCard icon={Building2} label="Awaiting MD" value={stats.pendingMd || 0} color="#10b981" />
-                    <StatsCard icon={CheckCircle} label="Completed" value={(stats.sentToBank || 0) + (stats.mdApproved || 0)} color="#10b981" />
+                    <StatsCard icon={CheckCircle} label="Completed" value={stats.mdApproved || 0} color="#10b981" />
                 </div>
             )}
 
@@ -400,8 +392,8 @@ const ApprovalDashboardPage = () => {
                     MD Approved
                 </button>
                 <button 
-                    className={`apd__filter-btn ${filter === 'SENT_TO_BANK' ? 'active' : ''}`}
-                    onClick={() => setFilter('SENT_TO_BANK')}
+                    className={`apd__filter-btn ${filter === 'MD_APPROVED' ? 'active' : ''}`}
+                    onClick={() => setFilter('MD_APPROVED')}
                 >
                     Completed
                 </button>

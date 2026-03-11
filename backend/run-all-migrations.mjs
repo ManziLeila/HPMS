@@ -2,18 +2,35 @@ import pg from 'pg';
 import { readFileSync } from 'fs';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
+import { config as loadEnv } from 'dotenv';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+
+loadEnv({ path: join(__dirname, '.env') });
 
 // Get Database URL from environment or .env
 const DATABASE_URL = process.env.DATABASE_URL || 'postgres://postgres:keza123@localhost:5432/hpms_core';
 
 const migrations = [
+    'migrations/000_schema_and_base_tables.sql',
     'migrations/001_multi_level_approval_system.sql',
+    'migrations/001a_multi_level_approval_tables.sql',
+    'migrations/001b_multi_level_approval_triggers_views.sql',
     'migrations/002_contracts.sql',
     'migrations/003_contract_templates.sql',
     'migrations/004_clients.sql',
     'migrations/005_client_contracts.sql',
+    'migrations/005b_add_employee_roles_for_users.sql',
+    'migrations/006_separate_users.sql',
+    'migrations/007_payroll_periods.sql',
+    'migrations/008_add_delete_salary_audit_action.sql',
+    'migrations/009_unassigned_client.sql',
+    'migrations/010_client_employee_contract_fields.sql',
+    'migrations/011_salary_md_review.sql',
+    'migrations/012_add_admin_role.sql',
+    'migrations/013_role_permissions.sql',
+    'migrations/014_add_tech_admin_role.sql',
+    'migrations/015_add_management_audit_actions.sql',
 ];
 
 const pool = new pg.Pool({ connectionString: DATABASE_URL });

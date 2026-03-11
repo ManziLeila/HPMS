@@ -37,11 +37,13 @@ export const sendPayslipEmailManually = async (req, res, next) => {
             throw notFound('Salary record not found');
         }
 
-        // Only allow sending after payroll has been sent to the bank (everyone has approved and money sent)
-        if (employeeData.hr_status !== 'SENT_TO_BANK') {
+        // Allow sending after MD approval (HR_APPROVED → MD_APPROVED is the full approval chain)
+        const allowedStatuses = ['MD_APPROVED', 'HR_APPROVED'];
+        if (!allowedStatuses.includes(employeeData.hr_status)) {
             return res.status(403).json({
-                success: false,
-                message: 'Payslip emails can only be sent after the payroll has been sent to the bank (HR and MD approved, and Finance has marked "Sent to bank").',
+                error: {
+                    message: `Payslip emails can only be sent after MD approval. Current status: ${employeeData.hr_status}. Complete the workflow: HR approve → MD approve.`,
+                },
             });
         }
 

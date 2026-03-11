@@ -27,6 +27,17 @@ const employeeRepo = {
     return rows[0];
   },
 
+  async findByEmailAndClient(email, clientId) {
+    if (!email) return undefined;
+    const { rows } = await db.query(
+      `SELECT employee_id, full_name, email, client_id
+       FROM hpms_core.employees
+       WHERE email = $1 AND client_id = $2`,
+      [email, clientId],
+    );
+    return rows[0];
+  },
+
   async list({ limit = 25, offset = 0 }) {
     const { rows } = await db.query(
       `SELECT employee_id, full_name, email, role, created_at,

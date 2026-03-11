@@ -154,6 +154,25 @@ const DashboardPage = () => {
         <p className="dash-v2__welcome-sub">Here&apos;s your overview</p>
       </section>
 
+      {/* Upcoming Dates — prominently at top */}
+      {upcomingList.length > 0 && (
+        <div className="dash-v2__upcoming-banner">
+          <h3 className="dash-v2__upcoming-banner-title"><Calendar size={22} /> Upcoming Dates</h3>
+          <ul className="dash-v2__upcoming-banner-list">
+            {upcomingList.slice(0, 4).map((item, i) => (
+              <li key={i} className="dash-v2__upcoming-banner-item">
+                <span className="dash-v2__upcoming-banner-name">{item.title}</span>
+                <span className="dash-v2__upcoming-banner-date">{item.date}</span>
+                {item.meta && <span className="dash-v2__upcoming-banner-meta">{item.meta}</span>}
+              </li>
+            ))}
+          </ul>
+          <button type="button" className="dash-v2__upcoming-banner-link" onClick={() => navigate('/clients')}>
+            View all <ChevronRight size={16} />
+          </button>
+        </div>
+      )}
+
       {/* Top row: 4 cards */}
       <div className="dash-v2__row1">
         {/* A) Payroll at a glance */}

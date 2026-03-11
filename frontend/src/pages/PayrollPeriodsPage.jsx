@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
     Mail, Trash2, X, CheckCircle, Clock, XCircle,
-    DollarSign, Send, RefreshCw, Inbox, ArrowRight, Download,
+    Send, RefreshCw, Inbox, ArrowRight, Download,
     ChevronDown, ChevronRight, Banknote, Eye,
 } from 'lucide-react';
 import { apiClient, API_BASE_URL } from '../api/client';
@@ -19,7 +19,6 @@ const STATUS_META = {
     HR_APPROVED:  { label: 'Forwarded to MD',   color: '#6366f1', Icon: ArrowRight },
     MD_APPROVED:  { label: 'Completed',          color: '#10b981', Icon: CheckCircle },
     REJECTED:     { label: 'Rejected',           color: '#ef4444', Icon: XCircle },
-    SENT_TO_BANK: { label: 'Completed',          color: '#10b981', Icon: DollarSign },
 };
 
 const Badge = ({ status }) => {
@@ -78,7 +77,6 @@ const PayrollPeriodsPage = () => {
     const [msg, setMsg]                   = useState(null);
     const [submitLoading, setSubmitLoading] = useState(false);
     const [sendLoading, setSendLoading]   = useState(false);
-    const [sendToBankLoading, setSendToBankLoading] = useState(false);
     const [summaryLoading, setSummaryLoading] = useState(false);
     const [unsubmitLoading, setUnsubmitLoading] = useState(false);
 
@@ -205,19 +203,6 @@ const PayrollPeriodsPage = () => {
         } finally { setEmailLoading(false); }
     };
 
-    /* ── Send to bank (Finance marks payroll as sent; then Send emails is allowed) ── */
-    const handleSendToBank = async (p) => {
-        if (!p?.period_id) return;
-        setSendToBankLoading(true);
-        try {
-            await apiClient.post(`/payroll-periods/${p.period_id}/send-to-bank`, {}, { token });
-            setMsg({ type: 'ok', text: `${p.client_name} — Payroll marked as sent to bank. You can now send payslip emails.` });
-            load();
-        } catch (e) {
-            setMsg({ type: 'err', text: e.message || 'Failed to mark as sent to bank' });
-        } finally { setSendToBankLoading(false); }
-    };
-
     /* ── Detail modal ────────────────────────────────────────────────────── */
     const openDetail = async (p) => {
         setDetailLoading(true);
@@ -245,12 +230,12 @@ const PayrollPeriodsPage = () => {
         finally { setPreviewLoading(false); }
     };
 
-    const STATUS_ORDER = ['SUBMITTED', 'HR_APPROVED', 'MD_APPROVED', 'REJECTED', 'SENT_TO_BANK'];
+    const STATUS_ORDER = ['SUBMITTED', 'HR_APPROVED', 'MD_APPROVED', 'REJECTED'];
     const sorted = [...myPeriods].sort((a, b) =>
         STATUS_ORDER.indexOf(a.status) - STATUS_ORDER.indexOf(b.status)
     );
 
-    const mdApproved  = sorted.filter(p => ['MD_APPROVED', 'SENT_TO_BANK'].includes(p.status)).length;
+    const mdApproved  = sorted.filter(p => p.status === 'MD_APPROVED').length;
     const pending     = sorted.filter(p => p.status === 'SUBMITTED').length;
 
     return (
@@ -382,19 +367,8 @@ const PayrollPeriodsPage = () => {
                                                         <Trash2 size={15} aria-hidden /> Unsubmit
                                                     </button>
                                                 )}
-                                                {['MD_APPROVED', 'SENT_TO_BANK'].includes(p.status) && (
+                                                {p.status === 'MD_APPROVED' && (
                                                     <>
-                                                        {p.status === 'MD_APPROVED' && (
-                                                            <button
-                                                                className="pp__btn"
-                                                                style={{ borderColor: '#0ea5e9', color: '#0369a1', background: '#e0f2fe' }}
-                                                                disabled={sendToBankLoading}
-                                                                onClick={() => handleSendToBank(p)}
-                                                                title="Mark payroll as sent to bank — then you can send payslip emails"
-                                                            >
-                                                                <DollarSign size={15} aria-hidden /> Send to bank
-                                                            </button>
-                                                        )}
                                                         <button
                                                             className="pp__btn pp__btn--view"
                                                             disabled={sendLoading}
@@ -402,15 +376,13 @@ const PayrollPeriodsPage = () => {
                                                         >
                                                             <Download size={15} aria-hidden /> Download Payslips
                                                         </button>
-                                                        {p.status === 'SENT_TO_BANK' && (
-                                                            <button
-                                                                className="pp__btn pp__btn--email"
-                                                                onClick={() => setEmailConfirm(p)}
-                                                                title="Send payslip emails only after payroll has been sent to the bank"
-                                                            >
-                                                                <Mail size={15} aria-hidden /> Send Emails
-                                                            </button>
-                                                        )}
+                                                        <button
+                                                            className="pp__btn pp__btn--email"
+                                                            onClick={() => setEmailConfirm(p)}
+                                                            title="Send payslip emails to employees"
+                                                        >
+                                                            <Mail size={15} aria-hidden /> Send Emails
+                                                        </button>
                                                     </>
                                                 )}
                                             </div>

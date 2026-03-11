@@ -2,7 +2,7 @@ import db from '../repositories/db.js';
 
 export const getDashboardStats = async (req, res, next) => {
   try {
-    // Count only real payroll employees — exclude system login roles
+    // Count active payroll employees (role=Employee); system users are in hpms_core.users
     const employeeCount = await db.query(
       `SELECT COUNT(*) as count FROM hpms_core.employees
        WHERE role = 'Employee'

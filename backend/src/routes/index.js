@@ -11,6 +11,7 @@ import notificationRoutes from './notificationRoutes.js';
 import contractRoutes from './contractRoutes.js';
 import contractTemplateRoutes, { downloadContractPDF } from './contractTemplateRoutes.js';
 import managementRoutes from './managementRoutes.js';
+import settingsRoutes from './settingsRoutes.js';
 import { getDashboardStats } from '../controllers/dashboardController.js';
 import { sendTestEmailHandler, getEmailStatus, getEmailPreview } from '../controllers/emailController.js';
 import { authenticate, requireRole } from '../middleware/authMiddleware.js';
@@ -34,6 +35,7 @@ router.use('/contracts', contractRoutes);
 router.get('/contracts/:id/pdf', authenticate, downloadContractPDF);
 router.use('/contract-templates', contractTemplateRoutes);
 router.use('/management', managementRoutes);
+router.use('/settings', settingsRoutes);
 
 // Email routes
 router.get('/email/status', authenticate, getEmailStatus);

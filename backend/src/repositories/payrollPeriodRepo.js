@@ -5,7 +5,7 @@ class PayrollPeriodRepository {
 
   #baseSelect = `
     SELECT pp.*,
-           c.name                  AS client_name,
+           COALESCE(c.name, 'Deleted Client') AS client_name,
            COUNT(s.salary_id)      AS salary_count,
            COALESCE(SUM(s.gross_salary), 0) AS total_gross,
            COALESCE(SUM(s.paye), 0)         AS total_paye,
@@ -13,7 +13,7 @@ class PayrollPeriodRepository {
            hru.full_name           AS hr_reviewed_by_name,
            mdu.full_name           AS md_reviewed_by_name
     FROM hpms_core.payroll_periods pp
-    JOIN hpms_core.clients c   ON c.client_id  = pp.client_id
+    LEFT JOIN hpms_core.clients c   ON c.client_id  = pp.client_id
     LEFT JOIN hpms_core.salaries s ON s.period_id = pp.period_id
     LEFT JOIN hpms_core.users sub ON sub.user_id  = pp.submitted_by
     LEFT JOIN hpms_core.users hru ON hru.user_id  = pp.hr_reviewed_by
@@ -104,10 +104,20 @@ class PayrollPeriodRepository {
     return rows;
   }
 
+  // Ensure "Unassigned" client exists for employees with no client
+  async ensureUnassignedClient() {
+    await pool.query(
+      `INSERT INTO hpms_core.clients (name)
+       SELECT 'Unassigned'
+       WHERE NOT EXISTS (SELECT 1 FROM hpms_core.clients WHERE name = 'Unassigned')`,
+    );
+  }
+
   // Client+month groups with salary records but not yet submitted
   // Returns ALL unsubmitted groups (any FO can submit)
-  // Employees with client_id NULL are grouped under "Unassigned" client (if it exists)
+  // Employees with client_id NULL are grouped under "Unassigned" client
   async getReadyToSubmit() {
+    await this.ensureUnassignedClient();
     const { rows } = await pool.query(
       `WITH ua AS (SELECT client_id FROM hpms_core.clients WHERE name = 'Unassigned' LIMIT 1)
        SELECT COALESCE(e.client_id, ua.client_id)::INTEGER     AS client_id,
@@ -187,20 +197,6 @@ class PayrollPeriodRepository {
        WHERE period_id = $1
        RETURNING *`,
       [periodId, status, reviewedBy, comments],
-    );
-    return rows[0];
-  }
-
-  async markSentToBank(periodId, userId) {
-    const { rows } = await pool.query(
-      `UPDATE hpms_core.payroll_periods
-       SET status          = 'SENT_TO_BANK',
-           sent_to_bank_by = $2,
-           sent_to_bank_at = NOW(),
-           updated_at      = NOW()
-       WHERE period_id = $1
-       RETURNING *`,
-      [periodId, userId],
     );
     return rows[0];
   }

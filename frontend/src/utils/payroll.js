@@ -1,10 +1,13 @@
-/** Format as RWF (Rwandan Franc) - always show RWF, not RF */
+/** Round to whole RWF: >= 0.5 rounds up, < 0.5 rounds down */
+export const roundRwf = (value) => Math.round(Number(value) || 0);
+
+/** Format as RWF (Rwandan Franc) - whole numbers only */
 const currency = (value) => {
   const num = Number(value);
-  const n = Math.max(Number.isFinite(num) ? num : 0, 0);
+  const n = roundRwf(Math.max(Number.isFinite(num) ? num : 0, 0));
   const formatted = new Intl.NumberFormat('en-RW', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
   }).format(n);
   return `RWF ${formatted}`;
 };
@@ -144,53 +147,113 @@ export const getComputationFormulas = (s) => {
   const gross = Number(s.gross_salary ?? snap.grossSalary) || 0;
   const paye = Number(s.paye ?? snap.paye) || 0;
   const rssb = Number(snap.rssbEePension ?? s.rssb_pension) || 0;
-  const maternity = Number(snap.rssbEeMaternity) || 0;
-  const rama = Number(snap.ramaInsuranceEmployee) || 0;
+  const round = (v) => roundRwf(v);
   const includeMedical = snap.includeMedical !== false;
-  const netBeforeCbhi = Number(snap.netBeforeCbhi) || 0;
-  const cbhi = Number(snap.cbhiEmployee) || 0;
   const advance = Number(snap.advanceAmount) || 0;
   const net = Number(s.net_salary ?? snap.netPaidToBank ?? snap.netSalary) || 0;
-  const round = (v) => Math.round(Number(v) || 0);
-  const hazard = Number(snap.hazardContribution) ?? round(basic * 0.02);
-  const rssbEr = Number(snap.rssbErPension) ?? round(gross * 0.06);
-  const maternityEr = Number(snap.rssbErMaternity) ?? round(basic * 0.003);
-  const ramaEr = includeMedical ? (Number(snap.ramaInsuranceEmployer) ?? round(basic * 0.075)) : 0;
 
+  // When snapshot has zeros but gross exists, recalculate derived values
+  const effectiveBasic = basic > 0 ? basic : (gross - transport - housing - performance > 0 ? gross - transport - housing - performance : gross);
+  const rssbVal = rssb > 0 ? rssb : round(gross * 0.06);
+  const maternity = Number(snap.rssbEeMaternity) || round((basic > 0 ? basic : effectiveBasic) * 0.003);
+  const rama = Number(snap.ramaInsuranceEmployee) || (includeMedical ? round((basic > 0 ? basic : effectiveBasic) * 0.075) : 0);
+  const computedNetBeforeCbhi = gross - paye - rssbVal - maternity - rama;
+  const netBeforeCbhi = (() => {
+    const stored = Number(snap.netBeforeCbhi);
+    if (stored > 0) return stored;
+    return gross > 0 ? computedNetBeforeCbhi : 0;
+  })();
+  const computedCbhi = netBeforeCbhi * 0.005;
+  const cbhi = (() => {
+    const stored = Number(snap.cbhiEmployee);
+    if (stored > 0) return stored;
+    return gross > 0 ? computedCbhi : 0;
+  })();
+
+  // Employer contributions: recalculate when snapshot has zeros but gross exists
+  const hazardVal = round(Number(snap.hazardContribution) || effectiveBasic * 0.02);
+  const rssbErVal = round(Number(snap.rssbErPension) || gross * 0.06);
+  const maternityErVal = round(Number(snap.rssbErMaternity) || effectiveBasic * 0.003);
+  const ramaErVal = includeMedical ? round(Number(snap.ramaInsuranceEmployer) || effectiveBasic * 0.075) : 0;
+
+  const displayBasic = basic > 0 ? basic : effectiveBasic;
   const items = [
     { section: 'Earnings' },
     {
       label: 'Gross Salary',
-      formula: `Basic (${basic.toLocaleString()}) + Transport (${transport.toLocaleString()}) + Housing (${housing.toLocaleString()}) + Performance (${performance.toLocaleString()})`,
+      formula: `Basic (${displayBasic.toLocaleString()}) + Transport (${transport.toLocaleString()}) + Housing (${housing.toLocaleString()}) + Performance (${performance.toLocaleString()})`,
       amount: round(gross),
+      rawValue: gross,
     },
     { section: 'Employee deductions' },
     {
       label: 'PAYE',
       formula: 'Progressive tax: 0% on first 60,000 RWF, 10% on next 40,000, 20% on next 100,000, 30% above 200,000',
       amount: round(paye),
+      rawValue: paye,
     },
-    { label: 'RSSB Pension (employee)', formula: '6% of Gross Salary', amount: round(rssb) },
-    { label: 'RSSB Maternity (employee)', formula: '0.3% of Basic Salary', amount: round(maternity) },
-    ...(includeMedical ? [{ label: 'RAMA (Medical) (employee)', formula: '7.5% of Basic Salary', amount: round(rama) }] : []),
+    { label: 'RSSB Pension (employee)', formula: `6% of Gross (${gross.toLocaleString()})`, amount: round(rssbVal), rawValue: rssbVal },
+    { label: 'RSSB Maternity (employee)', formula: `0.3% of Basic (${displayBasic.toLocaleString()})`, amount: round(maternity), rawValue: maternity },
+    ...(includeMedical ? [{ label: 'RAMA (Medical) (employee)', formula: `7.5% of Basic (${displayBasic.toLocaleString()})`, amount: round(rama), rawValue: rama }] : []),
     {
       label: 'NET (before CBHI)',
       formula: includeMedical ? 'Gross − PAYE − RSSB Pension − Maternity − RAMA' : 'Gross − PAYE − RSSB Pension − Maternity',
       amount: round(netBeforeCbhi),
+      rawValue: netBeforeCbhi,
     },
-    { label: 'CBHI', formula: '0.5% of NET (before CBHI)', amount: round(cbhi) },
-    { label: 'Advance', formula: 'Deducted amount', amount: round(advance) },
+    { label: 'CBHI', formula: `0.5% of NET (before CBHI) = ${netBeforeCbhi.toLocaleString()} × 0.005`, amount: round(cbhi), rawValue: cbhi },
+    { label: 'Advance', formula: 'Deducted amount', amount: round(advance), rawValue: advance },
     {
       label: 'Net Pay',
       formula: 'NET (before CBHI) − CBHI − Advance',
       amount: round(net),
+      rawValue: net,
     },
     { section: 'Employer contributions' },
-    { label: 'RSSB Pension (employer)', formula: '6% of Gross Salary', amount: rssbEr },
-    { label: 'RSSB Maternity (employer)', formula: '0.3% of Basic Salary', amount: maternityEr },
-    ...(includeMedical ? [{ label: 'RAMA (Medical) (employer)', formula: '7.5% of Basic Salary', amount: ramaEr }] : []),
-    { label: 'Occupational Hazard (employer)', formula: '2% of Basic Salary', amount: hazard },
+    { label: 'RSSB Pension (employer)', formula: `6% of Gross (${gross.toLocaleString()})`, amount: rssbErVal },
+    { label: 'RSSB Maternity (employer)', formula: `0.3% of Basic (${effectiveBasic.toLocaleString()})`, amount: maternityErVal },
+    ...(includeMedical ? [{ label: 'RAMA (Medical) (employer)', formula: `7.5% of Basic (${effectiveBasic.toLocaleString()})`, amount: ramaErVal }] : []),
+    { label: 'Occupational Hazard (employer)', formula: `2% of Basic (${effectiveBasic.toLocaleString()})`, amount: hazardVal },
   ];
   return items;
+};
+
+/**
+ * Build computation formulas from form values (e.g. Edit Salary modal).
+ * Uses calculatePayroll to compute all values, then formats for display.
+ */
+export const getComputationFormulasFromPayload = (payload) => {
+  if (!payload) return [];
+  const calc = calculatePayroll({
+    baseSalary: Number(payload.baseSalary) ?? 0,
+    transportAllowance: Number(payload.transportAllowance) ?? 0,
+    housingAllowance: Number(payload.housingAllowance) ?? 0,
+    performanceAllowance: Number(payload.performanceAllowance) ?? 0,
+    advanceAmount: Number(payload.advanceAmount) ?? 0,
+    includeMedical: payload.includeMedical !== false,
+  });
+  return getComputationFormulas({
+    gross_salary: calc.grossSalary,
+    paye: calc.paye,
+    net_salary: calc.netSalary,
+    snapshot: {
+      basicSalary: calc.basicSalary,
+      grossSalary: calc.grossSalary,
+      allowances: calc.allowances,
+      paye: calc.paye,
+      rssbEePension: calc.rssbEePension,
+      rssbEeMaternity: calc.rssbEeMaternity,
+      ramaInsuranceEmployee: calc.ramaInsuranceEmployee,
+      netBeforeCbhi: calc.netBeforeCbhi,
+      cbhiEmployee: calc.cbhiEmployee,
+      netPaidToBank: calc.netSalary,
+      advanceAmount: calc.advanceAmount,
+      includeMedical: calc.includeMedical,
+      rssbErPension: calc.rssbErPension,
+      rssbErMaternity: calc.rssbErMaternity,
+      ramaInsuranceEmployer: calc.ramaInsuranceEmployer,
+      hazardContribution: calc.hazardContribution,
+    },
+  });
 };
 

@@ -13,7 +13,6 @@ const STATUS_META = {
   HR_REJECTED: { label: 'HR Rejected', color: '#ef4444' },
   MD_APPROVED: { label: 'Approved', color: '#6366f1' },
   REJECTED: { label: 'Rejected', color: '#ef4444' },
-  SENT_TO_BANK: { label: 'Approved', color: '#0ea5e9' },
 };
 
 const Badge = ({ status }) => {
@@ -54,7 +53,7 @@ const ReportsPage = () => {
   const filteredMonthlyReport = useMemo(() => {
     if (!monthlyReport.length) return [];
     if (filters.statusFilter === 'approved') {
-      return monthlyReport.filter((row) => row.hr_status === 'MD_APPROVED' || row.hr_status === 'SENT_TO_BANK');
+      return monthlyReport.filter((row) => row.hr_status === 'MD_APPROVED');
     }
     return monthlyReport;
   }, [monthlyReport, filters.statusFilter]);

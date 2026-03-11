@@ -3,7 +3,7 @@ import { Trash2, Eye, Pencil, AlertTriangle, ChevronDown, ChevronRight, Building
 import './ReportsPage.css';
 import { apiClient } from '../api/client';
 import useAuth from '../hooks/useAuth.js';
-import { formatCurrency, getComputationFormulas } from '../utils/payroll';
+import { formatCurrency, getComputationFormulas, getComputationFormulasFromPayload } from '../utils/payroll';
 import { Link } from 'react-router-dom';
 
 const current = new Date();
@@ -14,7 +14,6 @@ const STATUS_META = {
     HR_REJECTED: { label: 'HR Rejected', color: '#ef4444' },
     MD_APPROVED: { label: 'Approved', color: '#6366f1' },
     REJECTED:    { label: 'Rejected', color: '#ef4444' },
-    SENT_TO_BANK:{ label: 'Approved', color: '#0ea5e9' },
 };
 
 const Badge = ({ status }) => {
@@ -352,7 +351,7 @@ const PayrollManagementPage = () => {
             {/* Modals */}
             {editingSalary && (
                 <div className="modal-overlay" onClick={() => !editLoading && setEditingSalary(null)}>
-                    <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '560px' }}>
+                    <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '640px' }}>
                         <h2>Edit Salary Amounts</h2>
                         {editingSalary.hr_comment && (
                             <div style={{ padding: '10px', background: '#fef2f2', border: '1px solid #fee2e2', borderRadius: '8px', marginBottom: '15px' }}>
@@ -377,9 +376,23 @@ const PayrollManagementPage = () => {
                                 <label>Performance</label>
                                 <input type="number" value={editingSalary.performanceAllowance} onChange={e => setEditingSalary({ ...editingSalary, performanceAllowance: e.target.value })} />
                             </div>
+                            <div className="form-group">
+                                <label>Advance (deduction)</label>
+                                <input type="number" value={editingSalary.advanceAmount ?? ''} onChange={e => setEditingSalary({ ...editingSalary, advanceAmount: e.target.value })} placeholder="0" />
+                            </div>
                         </div>
-                        <div style={{ marginTop: '16px', padding: '12px', background: '#f8fafc', borderRadius: '8px', fontSize: '0.9rem' }}>
-                            <strong>Computation breakdown</strong> (updates after save): Gross = Basic + Transport + Housing + Performance → PAYE, RSSB, RAMA, CBHI, Advance → Net Pay. Employer: RSSB 6%, Maternity 0.3%, RAMA 7.5%, Occupational Hazard 2%.
+                        <div className="pp__formula-list" style={{ marginTop: '16px', padding: '12px', background: '#f8fafc', borderRadius: '8px', fontSize: '0.9rem', textAlign: 'left' }}>
+                            <strong>Computation breakdown</strong> (live preview):
+                            {(getComputationFormulasFromPayload(editingSalary) || []).map((item, i) => (
+                                item.section ? (
+                                    <div key={i} style={{ fontWeight: 700, marginTop: '12px', marginBottom: '4px' }}>{item.section}</div>
+                                ) : (
+                                    <div key={i} className="pp__formula-item" style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', padding: '4px 0' }}>
+                                        <span><strong>{item.label}:</strong> {item.formula}</span>
+                                        <span>= {formatCurrency(item.amount)}</span>
+                                    </div>
+                                )
+                            ))}
                         </div>
                         <div className="modal-actions">
                             <button disabled={editLoading} onClick={() => setEditingSalary(null)}>Cancel</button>
@@ -399,7 +412,7 @@ const PayrollManagementPage = () => {
                                     <div key={i} style={{ fontWeight: 700, marginTop: '12px', marginBottom: '4px' }}>{item.section}</div>
                                 ) : (
                                     <div key={i} className="pp__formula-item" style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', padding: '4px 0' }}>
-                                        <span><strong>{item.label}:</strong> {item.formula}</span>
+                                        <span><strong>{item.label}:</strong> {item.formula}{item.amount === 0 && item.rawValue != null && item.rawValue !== 0 ? ` (raw: ${Number(item.rawValue).toFixed(2)})` : ''}</span>
                                         <span>= {formatCurrency(item.amount)}</span>
                                     </div>
                                 )

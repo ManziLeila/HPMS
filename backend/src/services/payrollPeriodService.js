@@ -10,20 +10,15 @@ import nodemailer from 'nodemailer';
 
 // ── Email transport ──────────────────────────────────────────────────────────
 
-let _transporter = null;
 const getTransporter = () => {
-    if (!_transporter) {
-        const cfg = {
-            host: process.env.SMTP_HOST || 'smtp.gmail.com',
-            port: parseInt(process.env.SMTP_PORT || '587', 10),
-            secure: process.env.SMTP_SECURE === 'true',
-            auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASSWORD },
-        };
-        if (cfg.auth.user && cfg.auth.pass) {
-            _transporter = nodemailer.createTransport(cfg);
-        }
-    }
-    return _transporter;
+    const cfg = {
+        host: process.env.SMTP_HOST || 'smtp.gmail.com',
+        port: parseInt(process.env.SMTP_PORT || '587', 10),
+        secure: process.env.SMTP_SECURE === 'true',
+        auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASSWORD },
+    };
+    if (!cfg.auth.user || !cfg.auth.pass) return null;
+    return nodemailer.createTransport(cfg);
 };
 
 const sendEmail = async (to, subject, html) => {
@@ -233,7 +228,7 @@ class PayrollPeriodService {
                     userId: fo.user_id,
                     type: 'PAYROLL_MD_APPROVED',
                     title: 'Payroll Approved — Ready to Process',
-                    message: `The payroll for ${periodLabel} has been fully approved by the MD. You can now send to bank and distribute payslips.`,
+                    message: `The payroll for ${periodLabel} has been fully approved by the MD. Payslip emails are now being sent to employees.`,
                     batchId: periodId,
                     priority: 'HIGH',
                     actionUrl: '/payroll-periods',
@@ -243,7 +238,7 @@ class PayrollPeriodService {
                     fo.email,
                     `🎉 Payroll Approved — ${periodLabel}`,
                     `<p>The payroll for <strong>${period.client_name}</strong> (${monthName(period.period_month)} ${period.period_year}) has received final approval from the Managing Director.</p>
-                     <p>Please log in to process the bank transfer and send payslip emails.</p>`
+                     <p>Payslip emails are automatically being sent to all employees.</p>`
                 );
             }
         } else {
@@ -262,33 +257,6 @@ class PayrollPeriodService {
         }
 
         return await payrollPeriodRepo.getById(periodId);
-    }
-
-    // ── Finance Officer: mark sent to bank ───────────────────────────────────
-    async sendToBank({ periodId, userId, ipAddress, userAgent }) {
-        const period = await payrollPeriodRepo.getById(periodId);
-        if (!period) throw notFound('Payroll period not found');
-        if (period.status !== 'MD_APPROVED') {
-            throw badRequest('Only MD-approved periods can be sent to bank');
-        }
-
-        const updated = await payrollPeriodRepo.markSentToBank(periodId, userId);
-
-        // Mark all salaries in this period as SENT_TO_BANK so payslip emails are only allowed after this
-        await salaryRepo.bulkSetSentToBankByPeriod(periodId);
-
-        await approvalHistoryRepo.create({
-            periodId,
-            actionBy: userId,
-            actionType: 'SENT_TO_BANK',
-            comments: null,
-            previousStatus: 'MD_APPROVED',
-            newStatus: 'SENT_TO_BANK',
-            ipAddress,
-            userAgent,
-        });
-
-        return updated;
     }
 
     // ── Queries ──────────────────────────────────────────────────────────────
@@ -415,7 +383,7 @@ class PayrollPeriodService {
             return await payrollPeriodRepo.list({ statuses: ['SUBMITTED', 'HR_APPROVED'] });
         }
         if (role === 'ManagingDirector') {
-            return await payrollPeriodRepo.list({ statuses: ['HR_APPROVED', 'MD_APPROVED', 'SENT_TO_BANK'] });
+            return await payrollPeriodRepo.list({ statuses: ['HR_APPROVED', 'MD_APPROVED'] });
         }
         return [];
     }

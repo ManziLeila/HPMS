@@ -7,7 +7,7 @@ import employeeRepo from '../repositories/employeeRepo.js';
 import auditService from '../services/auditService.js';
 import { generatePayslipPdf } from '../services/payslipService.js';
 import notificationService from '../services/notificationService.js';
-// import { sendPayslipEmail } from '../services/emailService.js';
+import { sendPayslipEmail } from '../services/emailService.js';
 import JSZip from 'jszip';
 
 const bulkSalarySchema = z.object({
@@ -105,21 +105,25 @@ export const bulkUploadSalaries = async (req, res, next) => {
                 // Create or get employee
                 let employee;
                 try {
-                    // Try to find by email first (if email provided)
+                    // Try to find by email + client first (exact match), then fall back to email only
                     let existingEmployee = null;
                     if (email) {
-                        existingEmployee = await employeeRepo.findByEmail(email);
+                        if (clientId != null) {
+                            existingEmployee = await employeeRepo.findByEmailAndClient(email, clientId);
+                        }
+                        if (!existingEmployee) {
+                            // No match for this client — don't reuse employees from other clients
+                            existingEmployee = null;
+                        }
                     }
                     if (existingEmployee) {
                         employee = existingEmployee;
-                        // Update RSSB and/or client_id when needed
+                        // Update RSSB number if missing
                         const needsRssb = rssbNumber && !existingEmployee.rssb_number;
-                        const needsClient = clientId != null && existingEmployee.client_id !== clientId;
-                        if (needsRssb || needsClient) {
+                        if (needsRssb) {
                             employee = await employeeRepo.update({
                                 employeeId: existingEmployee.employee_id,
-                                rssbNumber: needsRssb ? String(rssbNumber).trim() : undefined,
-                                clientId: needsClient ? clientId : undefined,
+                                rssbNumber: String(rssbNumber).trim(),
                             });
                         }
                     } else {
@@ -381,6 +385,32 @@ export const downloadBulkPayslips = async (req, res, next) => {
  */
 export const sendBulkPayslipEmails = async (req, res, next) => {
     try {
+        if (!process.env.SMTP_USER || !process.env.SMTP_PASSWORD) {
+            return res.status(503).json({
+                error: {
+                    message: 'SMTP is not configured. Please add SMTP_USER and SMTP_PASSWORD to the backend .env file.',
+                },
+            });
+        }
+
+        // Verify SMTP connection before trying to send any emails
+        try {
+            const nodemailer = (await import('nodemailer')).default;
+            const verifyTransport = nodemailer.createTransport({
+                host: process.env.SMTP_HOST || 'smtp.gmail.com',
+                port: parseInt(process.env.SMTP_PORT || '587', 10),
+                secure: process.env.SMTP_SECURE === 'true',
+                auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASSWORD },
+            });
+            await verifyTransport.verify();
+        } catch (smtpErr) {
+            return res.status(503).json({
+                error: {
+                    message: `SMTP connection failed: ${smtpErr.message}. Check your SMTP_HOST, SMTP_USER and SMTP_PASSWORD settings.`,
+                },
+            });
+        }
+
         const { salaryIds } = req.body;
 
         if (!salaryIds || !Array.isArray(salaryIds) || salaryIds.length === 0) {
@@ -502,9 +532,28 @@ export const sendBulkPayslipEmails = async (req, res, next) => {
                     month: 'long',
                     day: 'numeric',
                 });
+                const displayMonth = record.pay_period
+                    ? new Date(record.pay_period).toLocaleDateString('en-US', { year: 'numeric', month: 'long' })
+                    : periodStr;
+                const formattedNetSalary = new Intl.NumberFormat('en-RW', { style: 'currency', currency: 'RWF' }).format(payrollSnapshot.netSalary);
 
                 // Send email
-                // Payslip emails are now sent only after all approvals and after send-to-bank, not here.
+                const emailResult = await sendPayslipEmail({
+                    employeeEmail: record.email,
+                    employeeName: record.full_name,
+                    employeeId: record.employee_id,
+                    payPeriod: displayMonth,
+                    netSalary: formattedNetSalary,
+                    payDate: formattedPayDate,
+                    pdfBuffer,
+                    filename,
+                    companyName: process.env.SMTP_FROM_NAME || 'HC Solutions Payroll',
+                    senderName: req.user?.email || 'Payroll Team',
+                });
+
+                if (!emailResult.success) {
+                    throw new Error(emailResult.error || emailResult.reason || 'Failed to send email');
+                }
 
                 results.successful.push({
                     salaryId,
@@ -532,6 +581,17 @@ export const sendBulkPayslipEmails = async (req, res, next) => {
             userAgent: req.headers['user-agent'],
             correlationId: req.id,
         });
+
+        // When ALL emails failed, return 503 so user sees the actual error (e.g. SMTP auth failed)
+        if (results.failed.length === results.total && results.failed.length > 0) {
+            const firstError = results.failed[0].error || 'Unknown error';
+            return res.status(503).json({
+                error: {
+                    message: `All ${results.total} emails failed to send. First error: ${firstError}`,
+                    results,
+                },
+            });
+        }
 
         res.json({
             message: `Sent ${results.successful.length} of ${results.total} emails successfully.`,
