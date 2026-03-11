@@ -274,6 +274,9 @@ class PayrollPeriodService {
 
         const updated = await payrollPeriodRepo.markSentToBank(periodId, userId);
 
+        // Mark all salaries in this period as SENT_TO_BANK so payslip emails are only allowed after this
+        await salaryRepo.bulkSetSentToBankByPeriod(periodId);
+
         await approvalHistoryRepo.create({
             periodId,
             actionBy: userId,

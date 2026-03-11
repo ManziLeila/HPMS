@@ -215,30 +215,32 @@ export const createSalary = async (req, res, next) => {
       correlationId: req.id,
     });
 
-    // Prepare email preview data for frontend (don't auto-send)
+    // Prepare email preview data for frontend when env allows (EMPLOYEE_FORM_EMAIL_PREVIEW=true)
     let emailPreviewData = null;
-    const employeeData = await salaryRepo.findByIdWithEmployee(salaryRecord.salary_id);
-    if (employeeData && employeeData.email_notifications_enabled !== false) {
-      const formattedPayPeriod = new Date(payload.payPeriod).toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
-      const formattedNetSalary = new Intl.NumberFormat('en-RW', { style: 'currency', currency: 'RWF' }).format(payrollSnapshot.netSalary);
+    if (config.employeeFormEmailPreview) {
+      const employeeData = await salaryRepo.findByIdWithEmployee(salaryRecord.salary_id);
+      if (employeeData && employeeData.email_notifications_enabled !== false) {
+        const formattedPayPeriod = new Date(payload.payPeriod).toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
+        const formattedNetSalary = new Intl.NumberFormat('en-RW', { style: 'currency', currency: 'RWF' }).format(payrollSnapshot.netSalary);
 
-      const payDate = new Date(payload.payPeriod);
-      payDate.setDate(payDate.getDate() + 2);
-      const formattedPayDate = payDate.toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-      });
+        const payDate = new Date(payload.payPeriod);
+        payDate.setDate(payDate.getDate() + 2);
+        const formattedPayDate = payDate.toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric'
+        });
 
-      emailPreviewData = {
-        employeeEmail: employeeData.email,
-        employeeName: employeeData.full_name,
-        employeeId: employeeData.employee_id,
-        payPeriod: formattedPayPeriod,
-        netSalary: formattedNetSalary,
-        payDate: formattedPayDate,
-        pdfFilename: `payslip-${employeeData.full_name.replace(/\s+/g, '-').toLowerCase()}-${payload.payPeriod}.pdf`,
-      };
+        emailPreviewData = {
+          employeeEmail: employeeData.email,
+          employeeName: employeeData.full_name,
+          employeeId: employeeData.employee_id,
+          payPeriod: formattedPayPeriod,
+          netSalary: formattedNetSalary,
+          payDate: formattedPayDate,
+          pdfFilename: `payslip-${employeeData.full_name.replace(/\s+/g, '-').toLowerCase()}-${payload.payPeriod}.pdf`,
+        };
+      }
     }
 
     // Respond immediately — notifications fire async

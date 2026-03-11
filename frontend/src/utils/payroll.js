@@ -131,6 +131,8 @@ export const formatCurrency = (value) => currency(Math.max(clampNumber(value), 0
 /**
  * Build computation formulas for HR/MD approval view.
  * Returns array of { label, formula, amount } for each payroll line.
+ * Amounts are rounded to whole RWF for display (entry form values stay as entered).
+ * Includes employee deductions and employer contributions (occupational hazard separate).
  */
 export const getComputationFormulas = (s) => {
   const snap = s?.snapshot || {};
@@ -149,50 +151,45 @@ export const getComputationFormulas = (s) => {
   const cbhi = Number(snap.cbhiEmployee) || 0;
   const advance = Number(snap.advanceAmount) || 0;
   const net = Number(s.net_salary ?? snap.netPaidToBank ?? snap.netSalary) || 0;
+  const round = (v) => Math.round(Number(v) || 0);
+  const hazard = Number(snap.hazardContribution) ?? round(basic * 0.02);
+  const rssbEr = Number(snap.rssbErPension) ?? round(gross * 0.06);
+  const maternityEr = Number(snap.rssbErMaternity) ?? round(basic * 0.003);
+  const ramaEr = includeMedical ? (Number(snap.ramaInsuranceEmployer) ?? round(basic * 0.075)) : 0;
 
   const items = [
+    { section: 'Earnings' },
     {
       label: 'Gross Salary',
       formula: `Basic (${basic.toLocaleString()}) + Transport (${transport.toLocaleString()}) + Housing (${housing.toLocaleString()}) + Performance (${performance.toLocaleString()})`,
-      amount: gross,
+      amount: round(gross),
     },
+    { section: 'Employee deductions' },
     {
       label: 'PAYE',
       formula: 'Progressive tax: 0% on first 60,000 RWF, 10% on next 40,000, 20% on next 100,000, 30% above 200,000',
-      amount: paye,
+      amount: round(paye),
     },
-    {
-      label: 'RSSB Pension',
-      formula: '6% of Gross Salary',
-      amount: rssb,
-    },
-    {
-      label: 'RSSB Maternity',
-      formula: '0.3% of Basic Salary',
-      amount: maternity,
-    },
-    // RAMA only shown when included on the sheet (Include RAMA = Yes)
-    ...(includeMedical ? [{
-      label: 'RAMA (Medical)',
-      formula: '7.5% of Basic Salary',
-      amount: rama,
-    }] : []),
+    { label: 'RSSB Pension (employee)', formula: '6% of Gross Salary', amount: round(rssb) },
+    { label: 'RSSB Maternity (employee)', formula: '0.3% of Basic Salary', amount: round(maternity) },
+    ...(includeMedical ? [{ label: 'RAMA (Medical) (employee)', formula: '7.5% of Basic Salary', amount: round(rama) }] : []),
     {
       label: 'NET (before CBHI)',
       formula: includeMedical ? 'Gross − PAYE − RSSB Pension − Maternity − RAMA' : 'Gross − PAYE − RSSB Pension − Maternity',
-      amount: netBeforeCbhi,
+      amount: round(netBeforeCbhi),
     },
-    {
-      label: 'CBHI',
-      formula: '0.5% of NET (before CBHI)',
-      amount: cbhi,
-    },
-    { label: 'Advance', formula: 'Deducted amount', amount: advance },
+    { label: 'CBHI', formula: '0.5% of NET (before CBHI)', amount: round(cbhi) },
+    { label: 'Advance', formula: 'Deducted amount', amount: round(advance) },
     {
       label: 'Net Pay',
       formula: 'NET (before CBHI) − CBHI − Advance',
-      amount: net,
+      amount: round(net),
     },
+    { section: 'Employer contributions' },
+    { label: 'RSSB Pension (employer)', formula: '6% of Gross Salary', amount: rssbEr },
+    { label: 'RSSB Maternity (employer)', formula: '0.3% of Basic Salary', amount: maternityEr },
+    ...(includeMedical ? [{ label: 'RAMA (Medical) (employer)', formula: '7.5% of Basic Salary', amount: ramaEr }] : []),
+    { label: 'Occupational Hazard (employer)', formula: '2% of Basic Salary', amount: hazard },
   ];
   return items;
 };

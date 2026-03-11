@@ -10,12 +10,12 @@ import { forbidden } from '../utils/httpError.js';
 import config from '../config/env.js';
 import auditService from '../services/auditService.js';
 
-// Tech Admin and Admin can access Management Console endpoints
-const MANAGEMENT_ROLES = ['TechAdmin', 'Admin'];
+// Only Admin can access Management Console endpoints
+const MANAGEMENT_ROLES = ['Admin'];
 
 const requireAdmin = (req, res, next) => {
   if (!req.user || !MANAGEMENT_ROLES.includes(req.user.role)) {
-    next(forbidden('Management Console is only available to Tech Admin or Admin'));
+    next(forbidden('Management Console is only available to administrators'));
     return;
   }
   next();
@@ -33,8 +33,6 @@ async function logManagementAction(req, actionType, details = {}) {
       correlationId: req.id,
     });
   } catch (e) {
-    // Never break primary flow because of audit failure
-    // eslint-disable-next-line no-console
     console.warn('Management audit log failed:', e.message);
   }
 }
@@ -50,18 +48,22 @@ export const verifyManagementAccess = async (req, res, next) => {
       next(forbidden('Only system users can access the Management Console'));
       return;
     }
+
     const { rows } = await pool.query(
       'SELECT password_hash FROM hpms_core.users WHERE user_id = $1',
       [req.user.id],
     );
+
     if (!rows.length) {
       next(forbidden('User not found'));
       return;
     }
+
     const valid = await bcrypt.compare(password.trim(), rows[0].password_hash);
     if (!valid) {
       return res.status(403).json({ error: { message: 'Incorrect password' } });
     }
+
     res.status(200).json({ ok: true });
   } catch (e) {
     next(e);
@@ -190,7 +192,7 @@ export const exportActivity = async (req, res, next) => {
 
     const csv = header + lines.join('\n');
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-    res.setHeader('Content-Disposition', 'attachment; filename=\"activity-log.csv\"');
+    res.setHeader('Content-Disposition', 'attachment; filename="activity-log.csv"');
     res.send(csv);
   } catch (e) {
     next(e);
@@ -209,11 +211,10 @@ export const getAllUsers = async (req, res, next) => {
   }
 };
 
-const ALLOWED_CREATE_ROLES = ['Admin', 'TechAdmin', 'FinanceOfficer', 'HR', 'ManagingDirector'];
+const ALLOWED_CREATE_ROLES = ['Admin', 'FinanceOfficer', 'HR', 'ManagingDirector'];
 
 function generateTemporaryPassword(length = 12) {
-  const chars =
-    'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$%';
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$%';
   const bytes = randomBytes(length);
   let s = '';
   for (let i = 0; i < length; i += 1) s += chars[bytes[i] % chars.length];
@@ -233,6 +234,7 @@ export const createUser = async (req, res, next) => {
     if (!fullName || !email) {
       return res.status(400).json({ error: { message: 'Full name and email are required' } });
     }
+
     if (!ALLOWED_CREATE_ROLES.includes(role)) {
       return res.status(400).json({ error: { message: 'Invalid role' } });
     }
@@ -241,11 +243,11 @@ export const createUser = async (req, res, next) => {
     if (generatePassword) {
       finalPassword = generateTemporaryPassword();
     }
+
     if (!finalPassword || finalPassword.length < 8) {
       return res.status(400).json({
         error: {
-          message:
-            'Provide a password (min 8 characters) or check \"Generate temporary password\"',
+          message: 'Provide a password (min 8 characters) or check "Generate temporary password"',
         },
       });
     }
@@ -325,14 +327,8 @@ export const updateRolePermissions = async (req, res, next) => {
   try {
     const { role } = req.params;
     const { permissions } = req.body;
-    const allowedRoles = [
-      'Admin',
-      'TechAdmin',
-      'FinanceOfficer',
-      'HR',
-      'ManagingDirector',
-      'Employee',
-    ];
+    const allowedRoles = ['Admin', 'FinanceOfficer', 'HR', 'ManagingDirector', 'Employee'];
+
     if (!allowedRoles.includes(role)) {
       return res.status(400).json({ error: { message: 'Invalid role' } });
     }
@@ -340,6 +336,7 @@ export const updateRolePermissions = async (req, res, next) => {
     const list = Array.isArray(permissions) ? permissions : [];
     const validKeys = new Set(ALL_PERMISSION_KEYS);
     const invalid = list.filter((p) => typeof p !== 'string' || !validKeys.has(p));
+
     if (invalid.length > 0) {
       return res
         .status(400)
@@ -355,6 +352,7 @@ export const updateRolePermissions = async (req, res, next) => {
       role,
       permissionCount: list.length,
     });
+
     res.json(updated);
   } catch (e) {
     next(e);
@@ -366,7 +364,8 @@ export const updateUserRole = async (req, res, next) => {
   try {
     const { id } = req.params;
     const { role } = req.body;
-    const allowedRoles = ['Admin', 'TechAdmin', 'FinanceOfficer', 'HR', 'ManagingDirector'];
+    const allowedRoles = ['Admin', 'FinanceOfficer', 'HR', 'ManagingDirector'];
+
     if (!role || !allowedRoles.includes(role)) {
       return res.status(400).json({ error: { message: 'Invalid role' } });
     }
@@ -375,6 +374,7 @@ export const updateUserRole = async (req, res, next) => {
       userId: parseInt(id, 10),
       role,
     });
+
     if (!updated) {
       return res.status(404).json({ error: { message: 'User not found' } });
     }
@@ -383,6 +383,7 @@ export const updateUserRole = async (req, res, next) => {
       userId: parseInt(id, 10),
       newRole: role,
     });
+
     res.json(updated);
   } catch (e) {
     next(e);
@@ -491,4 +492,3 @@ export const deleteUser = async (req, res, next) => {
 };
 
 export { requireAdmin };
-

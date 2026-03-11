@@ -53,11 +53,15 @@ const DetailSalaryRow = ({ s, formatCurrency }) => {
                     <h4 className="pp__formula-title"><Banknote size={14} /> Computation Breakdown (formula + result)</h4>
                     <div className="pp__formula-list">
                         {formulas.map((item, i) => (
-                            <div key={i} className="pp__formula-item">
-                                <span className="pp__formula-label">{item.label}:</span>
-                                <span className="pp__formula-expr">{item.formula}</span>
-                                <span className="pp__formula-result">= {formatCurrency(item.amount)}</span>
-                            </div>
+                            item.section ? (
+                                <div key={i} className="pp__formula-item pp__formula-section" style={{ fontWeight: 700, marginTop: '8px', marginBottom: '4px' }}>{item.section}</div>
+                            ) : (
+                                <div key={i} className="pp__formula-item">
+                                    <span className="pp__formula-label">{item.label}:</span>
+                                    <span className="pp__formula-expr">{item.formula}</span>
+                                    <span className="pp__formula-result">= {formatCurrency(item.amount)}</span>
+                                </div>
+                            )
                         ))}
                     </div>
                 </div>
@@ -74,6 +78,7 @@ const PayrollPeriodsPage = () => {
     const [msg, setMsg]                   = useState(null);
     const [submitLoading, setSubmitLoading] = useState(false);
     const [sendLoading, setSendLoading]   = useState(false);
+    const [sendToBankLoading, setSendToBankLoading] = useState(false);
     const [summaryLoading, setSummaryLoading] = useState(false);
     const [unsubmitLoading, setUnsubmitLoading] = useState(false);
 
@@ -198,6 +203,19 @@ const PayrollPeriodsPage = () => {
         } catch (e) {
             setMsg({ type: 'err', text: e.message || 'Failed to send emails' });
         } finally { setEmailLoading(false); }
+    };
+
+    /* ── Send to bank (Finance marks payroll as sent; then Send emails is allowed) ── */
+    const handleSendToBank = async (p) => {
+        if (!p?.period_id) return;
+        setSendToBankLoading(true);
+        try {
+            await apiClient.post(`/payroll-periods/${p.period_id}/send-to-bank`, {}, { token });
+            setMsg({ type: 'ok', text: `${p.client_name} — Payroll marked as sent to bank. You can now send payslip emails.` });
+            load();
+        } catch (e) {
+            setMsg({ type: 'err', text: e.message || 'Failed to mark as sent to bank' });
+        } finally { setSendToBankLoading(false); }
     };
 
     /* ── Detail modal ────────────────────────────────────────────────────── */
@@ -366,6 +384,17 @@ const PayrollPeriodsPage = () => {
                                                 )}
                                                 {['MD_APPROVED', 'SENT_TO_BANK'].includes(p.status) && (
                                                     <>
+                                                        {p.status === 'MD_APPROVED' && (
+                                                            <button
+                                                                className="pp__btn"
+                                                                style={{ borderColor: '#0ea5e9', color: '#0369a1', background: '#e0f2fe' }}
+                                                                disabled={sendToBankLoading}
+                                                                onClick={() => handleSendToBank(p)}
+                                                                title="Mark payroll as sent to bank — then you can send payslip emails"
+                                                            >
+                                                                <DollarSign size={15} aria-hidden /> Send to bank
+                                                            </button>
+                                                        )}
                                                         <button
                                                             className="pp__btn pp__btn--view"
                                                             disabled={sendLoading}
@@ -373,12 +402,15 @@ const PayrollPeriodsPage = () => {
                                                         >
                                                             <Download size={15} aria-hidden /> Download Payslips
                                                         </button>
-                                                        <button
-                                                            className="pp__btn pp__btn--email"
-                                                            onClick={() => setEmailConfirm(p)}
-                                                        >
-                                                            <Mail size={15} aria-hidden /> Send Emails
-                                                        </button>
+                                                        {p.status === 'SENT_TO_BANK' && (
+                                                            <button
+                                                                className="pp__btn pp__btn--email"
+                                                                onClick={() => setEmailConfirm(p)}
+                                                                title="Send payslip emails only after payroll has been sent to the bank"
+                                                            >
+                                                                <Mail size={15} aria-hidden /> Send Emails
+                                                            </button>
+                                                        )}
                                                     </>
                                                 )}
                                             </div>

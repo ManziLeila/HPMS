@@ -77,17 +77,25 @@ export const generateComputationSummaryPdf = ({ period, salaries }) =>
       y += 22;
 
       const formulas = getFormulas(s);
-      for (const item of formulas) {
+      for (let idx = 0; idx < formulas.length; idx++) {
+        const item = formulas[idx];
         if (y > 750) {
           doc.addPage();
           y = 50;
         }
         const labelW = 110;
         const amountW = 90;
+        const rowHeight = 18;
+        const isNetPay = item.label === 'Net Pay';
+
+        if (isNetPay) {
+          doc.rect(margin, y - 2, contentWidth, rowHeight + 4).fill('#FFFF00');
+          doc.fillColor('#000000');
+        }
         doc.fontSize(9).font('Helvetica').text(`${item.label}:`, margin, y, { width: labelW });
         doc.fontSize(8).font('Helvetica').text(item.formula, margin + labelW + 8, y, { width: contentWidth - labelW - amountW - 16 });
         doc.fontSize(9).font('Helvetica-Bold').text(formatCurrency(item.amount), margin + contentWidth - amountW, y, { width: amountW, align: 'right' });
-        y += 18;
+        y += rowHeight;
       }
 
       y += 16;

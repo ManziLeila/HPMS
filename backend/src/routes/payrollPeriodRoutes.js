@@ -13,6 +13,7 @@ router.get('/my-periods',   c.listMyPeriods);
 router.get('/ready-detail', c.getReadyDetail);
 router.post('/submit',      c.submitPeriod);
 router.post('/:id/unsubmit', c.unsubmitPeriod);
+router.post('/:id/send-to-bank', c.sendToBank);
 router.post('/:id/send-emails', c.sendPeriodEmails);
 router.post('/:id/download-payslips', c.downloadPeriodPayslips);
 

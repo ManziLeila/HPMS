@@ -53,6 +53,7 @@ const envSchema = z.object({
   SMS_API_KEY: z.string().optional(),
   SMS_USERNAME: z.string().optional(),
   SMS_SENDER_ID: z.string().optional(),
+  EMPLOYEE_FORM_EMAIL_PREVIEW: z.string().optional().default('false').transform((v) => v === 'true'),
 });
 
 const parsed = envSchema.safeParse(process.env);
@@ -134,6 +135,7 @@ const config = {
     username: env.SMS_USERNAME,
     senderId: env.SMS_SENDER_ID,
   },
+  employeeFormEmailPreview: env.EMPLOYEE_FORM_EMAIL_PREVIEW,
 };
 
 if (config.isDevelopment) {

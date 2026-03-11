@@ -3,7 +3,7 @@ import { Trash2, Eye, Pencil, AlertTriangle, ChevronDown, ChevronRight, Building
 import './ReportsPage.css';
 import { apiClient } from '../api/client';
 import useAuth from '../hooks/useAuth.js';
-import { formatCurrency } from '../utils/payroll';
+import { formatCurrency, getComputationFormulas } from '../utils/payroll';
 import { Link } from 'react-router-dom';
 
 const current = new Date();
@@ -12,9 +12,9 @@ const STATUS_META = {
     PENDING:     { label: 'Pending', color: '#f59e0b' },
     HR_APPROVED: { label: 'HR Approved', color: '#10b981' },
     HR_REJECTED: { label: 'HR Rejected', color: '#ef4444' },
-    MD_APPROVED: { label: 'MD Approved', color: '#6366f1' },
+    MD_APPROVED: { label: 'Approved', color: '#6366f1' },
     REJECTED:    { label: 'Rejected', color: '#ef4444' },
-    SENT_TO_BANK:{ label: 'Paid', color: '#0ea5e9' },
+    SENT_TO_BANK:{ label: 'Approved', color: '#0ea5e9' },
 };
 
 const Badge = ({ status }) => {
@@ -352,7 +352,7 @@ const PayrollManagementPage = () => {
             {/* Modals */}
             {editingSalary && (
                 <div className="modal-overlay" onClick={() => !editLoading && setEditingSalary(null)}>
-                    <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                    <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '560px' }}>
                         <h2>Edit Salary Amounts</h2>
                         {editingSalary.hr_comment && (
                             <div style={{ padding: '10px', background: '#fef2f2', border: '1px solid #fee2e2', borderRadius: '8px', marginBottom: '15px' }}>
@@ -378,6 +378,9 @@ const PayrollManagementPage = () => {
                                 <input type="number" value={editingSalary.performanceAllowance} onChange={e => setEditingSalary({ ...editingSalary, performanceAllowance: e.target.value })} />
                             </div>
                         </div>
+                        <div style={{ marginTop: '16px', padding: '12px', background: '#f8fafc', borderRadius: '8px', fontSize: '0.9rem' }}>
+                            <strong>Computation breakdown</strong> (updates after save): Gross = Basic + Transport + Housing + Performance → PAYE, RSSB, RAMA, CBHI, Advance → Net Pay. Employer: RSSB 6%, Maternity 0.3%, RAMA 7.5%, Occupational Hazard 2%.
+                        </div>
                         <div className="modal-actions">
                             <button disabled={editLoading} onClick={() => setEditingSalary(null)}>Cancel</button>
                             <button disabled={editLoading} onClick={handleSaveEdit} className="btn-save">Save Changes</button>
@@ -388,12 +391,19 @@ const PayrollManagementPage = () => {
 
             {viewingSalary && (
                 <div className="reports-page__modal">
-                    <div className="reports-page__modal-content" style={{ maxWidth: '500px' }}>
+                    <div className="reports-page__modal-content" style={{ maxWidth: '640px' }}>
                         <h3>Breakdown for {viewingSalary.employee?.full_name || viewingSalary.full_name}</h3>
-                        <div style={{ margin: '20px 0' }}>
-                            <p>Gross: {formatCurrency(viewingSalary.gross_salary)}</p>
-                            <p>Tax: {formatCurrency(viewingSalary.paye)}</p>
-                            <p>Net: {formatCurrency(viewingSalary.snapshot?.netPaidToBank || viewingSalary.net_salary)}</p>
+                        <div className="pp__formula-list" style={{ margin: '16px 0', textAlign: 'left' }}>
+                            {(getComputationFormulas(viewingSalary) || []).map((item, i) => (
+                                item.section ? (
+                                    <div key={i} style={{ fontWeight: 700, marginTop: '12px', marginBottom: '4px' }}>{item.section}</div>
+                                ) : (
+                                    <div key={i} className="pp__formula-item" style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', padding: '4px 0' }}>
+                                        <span><strong>{item.label}:</strong> {item.formula}</span>
+                                        <span>= {formatCurrency(item.amount)}</span>
+                                    </div>
+                                )
+                            ))}
                         </div>
                         <button onClick={() => setViewingSalary(null)} className="reports-page__modal-btn">Close</button>
                     </div>

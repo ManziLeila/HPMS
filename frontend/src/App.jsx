@@ -34,10 +34,11 @@ function DashboardOrRedirect() {
   return <DashboardPage />;
 }
 
-/** Management Console is for Tech Admin only; everyone else (including Admin) is redirected. */
+/** Management Console is for Tech Admin and Admin; others are redirected. */
 function ManagementConsoleOrRedirect() {
   const { user } = useAuth();
-  if (user?.role !== 'TechAdmin') {
+  const canAccess = user?.role === 'TechAdmin' || user?.role === 'Admin';
+  if (!canAccess) {
     return <Navigate to="/dashboard" replace />;
   }
   return (

@@ -208,11 +208,20 @@ export const getPeriod = async (req, res, next) => {
     } catch (err) { next(err); }
 };
 
-// ── Send payslip emails for a period (MD_APPROVED or SENT_TO_BANK) ───────────
+// ── Send payslip emails for a period (only after status is SENT_TO_BANK) ─────
 export const sendPeriodEmails = async (req, res, next) => {
     try {
         const periodId = Number(req.params.id);
         if (!periodId) throw badRequest('Invalid period ID');
+
+        const period = await payrollPeriodService.getById(periodId);
+        if (period.status !== 'SENT_TO_BANK') {
+            return res.status(403).json({
+                success: false,
+                message: 'Payslip emails can only be sent after the payroll has been sent to the bank (HR and MD approved, and Finance has marked "Sent to bank").',
+            });
+        }
+
         const salaryIds = await payrollPeriodService.getSalaryIdsForPeriod(periodId);
         if (!salaryIds.length) throw badRequest('No salary records in this period');
         req.body = { salaryIds };

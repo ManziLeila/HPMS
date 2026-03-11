@@ -60,6 +60,7 @@ const ROUTE_MAP = {
   ],
   Admin: [
     { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { path: '/management-console', label: 'Management Console', icon: Shield },
     { path: '/approval-dashboard', label: 'Approvals', icon: BarChart3 },
     { path: '/clients', label: 'Clients', icon: Users },
     { path: '/users', label: 'Users', icon: UserCog },
