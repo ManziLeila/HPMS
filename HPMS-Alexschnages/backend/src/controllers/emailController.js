@@ -2,6 +2,17 @@ import { z } from 'zod';
 import { createTransport } from 'nodemailer';
 import { payslipDeliveryTemplate } from '../utils/emailTemplates.js';
 
+/** Extract a user-friendly message from nodemailer/SMTP errors */
+function extractEmailErrorMessage(err, fallback) {
+    const msg = err?.message || err?.reason || fallback;
+    const code = err?.code;
+    const resp = err?.response;
+    if (code === 'EAUTH') return `SMTP authentication failed. Check SMTP_USER and SMTP_PASSWORD. ${resp || ''}`.trim();
+    if (code === 'ECONNECTION' || code === 'ETIMEDOUT' || code === 'ENOTFOUND') return `Cannot connect to SMTP server. Check SMTP_HOST and SMTP_PORT. ${msg}`.trim();
+    if (code === 'ESOCKET') return `SMTP connection error. Verify host/port and firewall. ${msg}`.trim();
+    return msg || fallback;
+}
+
 const testEmailSchema = z.object({
     email: z.string().email('Invalid email address'),
     sampleData: z.object({
@@ -84,11 +95,10 @@ export const sendTestEmailHandler = async (req, res, next) => {
         });
     } catch (error) {
         console.error('Test email error:', error);
+        const msg = extractEmailErrorMessage(error, 'Failed to send test email');
         res.status(500).json({
             success: false,
-            error: {
-                message: error.message || 'Failed to send test email',
-            },
+            error: { message: msg },
         });
     }
 };

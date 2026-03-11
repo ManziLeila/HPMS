@@ -30,7 +30,7 @@ const sendEmail = async (to, subject, html) => {
     try {
         const t = getTransporter();
         if (!t) { console.warn('SMTP not configured — email not sent:', subject); return; }
-        const from = `"${process.env.SMTP_FROM_NAME || 'HC Solutions Payroll'}" <${process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER}>`;
+        const from = `"${process.env.SMTP_FROM_NAME || 'HC Solutions Payroll'}" <${process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER || 'payroll@hcsolutions.rw'}>`;
         await t.sendMail({ from, to, subject, html });
     } catch (err) {
         console.error('Email send error:', err.message);

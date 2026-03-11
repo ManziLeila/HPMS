@@ -56,7 +56,14 @@ const parseResponse = async (response) => {
     if (response.status === 401) {
       clearAuthAndRedirect();
     }
-    const message = payload?.error?.message || "Request failed";
+    const message =
+      payload?.error?.message ||
+      payload?.message ||
+      (typeof payload?.error === "string" ? payload.error : null) ||
+      payload?.error?.hint ||
+      (response.status >= 500 ? `Server error (${response.status})` : null) ||
+      response.statusText ||
+      "Request failed";
     const error = new Error(message);
     error.status = response.status;
     throw error;

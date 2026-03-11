@@ -45,7 +45,7 @@ export const sendSalaryProcessedEmail = async ({
       return { success: false, reason: 'SMTP not configured' };
     }
 
-    const fromEmail = process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER;
+    const fromEmail = process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER || 'payroll@hcsolutions.rw';
     const fromName = process.env.SMTP_FROM_NAME || 'HC Solutions Payroll';
 
     const htmlContent = salaryProcessedTemplate({
@@ -84,7 +84,7 @@ export const sendTestEmail = async (toEmail) => {
       throw new Error('SMTP not configured');
     }
 
-    const fromEmail = process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER;
+    const fromEmail = process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER || 'payroll@hcsolutions.rw';
     const fromName = process.env.SMTP_FROM_NAME || 'HC Solutions Payroll';
 
     const mailOptions = {
@@ -138,7 +138,7 @@ export const sendPayslipEmail = async ({
       return { success: false, reason: 'Invalid PDF buffer' };
     }
 
-    const fromEmail = process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER;
+    const fromEmail = process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER || 'payroll@hcsolutions.rw';
     const fromName = process.env.SMTP_FROM_NAME || 'HC Solutions Payroll';
 
     // Use custom message if provided, otherwise use template
@@ -216,7 +216,7 @@ export const sendWelcomeEmail = async ({ employeeEmail, employeeName, temporaryP
       return { success: false, reason: 'SMTP not configured' };
     }
 
-    const fromEmail = process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER;
+    const fromEmail = process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER || 'payroll@hcsolutions.rw';
     const fromName = process.env.SMTP_FROM_NAME || 'HC Solutions Payroll';
     const loginUrl = process.env.APP_URL || 'http://localhost:5173';
 
@@ -297,7 +297,7 @@ export const sendFONotification = async ({
     const transport = getTransporter();
     if (!transport) return { success: false, reason: 'SMTP not configured' };
 
-    const fromEmail = process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER;
+    const fromEmail = process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER || 'payroll@hcsolutions.rw';
     const fromName = process.env.SMTP_FROM_NAME || 'HC Solutions Payroll';
 
     const html = foNotificationTemplate({
