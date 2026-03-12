@@ -14,6 +14,13 @@ import managementRoutes from './managementRoutes.js';
 import settingsRoutes from './settingsRoutes.js';
 import { getDashboardStats } from '../controllers/dashboardController.js';
 import { sendTestEmailHandler, getEmailStatus, getEmailPreview } from '../controllers/emailController.js';
+import {
+  listEmailTemplates,
+  getEmailTemplate,
+  createEmailTemplate,
+  updateEmailTemplate,
+  deleteEmailTemplate,
+} from '../controllers/emailTemplateController.js';
 import { authenticate, requireRole } from '../middleware/authMiddleware.js';
 import { listAllClientContracts, getExpiringClientContracts } from '../controllers/clientContractController.js';
 
@@ -41,6 +48,13 @@ router.use('/settings', settingsRoutes);
 router.get('/email/status', authenticate, getEmailStatus);
 router.post('/email/test', authenticate, sendTestEmailHandler);
 router.post('/email/preview', authenticate, getEmailPreview);
+
+// Email template CRUD (all authenticated users can view; HR/FO/Admin can modify)
+router.get('/email/templates', authenticate, listEmailTemplates);
+router.get('/email/templates/:id', authenticate, getEmailTemplate);
+router.post('/email/templates', authenticate, requireRole(['HR', 'FinanceOfficer', 'Admin', 'TechAdmin']), createEmailTemplate);
+router.put('/email/templates/:id', authenticate, requireRole(['HR', 'FinanceOfficer', 'Admin', 'TechAdmin']), updateEmailTemplate);
+router.delete('/email/templates/:id', authenticate, requireRole(['HR', 'FinanceOfficer', 'Admin', 'TechAdmin']), deleteEmailTemplate);
 
 export default router;
 

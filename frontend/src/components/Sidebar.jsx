@@ -12,6 +12,7 @@ import {
   Layers,
   Settings,
   Mail,
+  MailCheck,
   Calculator,
   BarChart3,
   UserCog,
@@ -35,6 +36,7 @@ const ROUTE_MAP = {
     { path: '/contract-templates', label: 'Contract Templates', icon: Pencil },
     { path: '/reports', label: 'Reports', icon: FileText },
     { path: '/email-settings', label: 'Email Settings', icon: Mail },
+    { path: '/email-templates', label: 'Email Templates', icon: MailCheck },
     { path: '/notification-settings', label: 'Notifications', icon: Bell },
     { path: '/settings', label: 'Settings', icon: Settings },
   ],
@@ -48,6 +50,7 @@ const ROUTE_MAP = {
     { path: '/hr-review', label: 'HR Review', icon: CheckSquare },
     { path: '/reports', label: 'Reports', icon: FileText },
     { path: '/email-settings', label: 'Email Settings', icon: Mail },
+    { path: '/email-templates', label: 'Email Templates', icon: MailCheck },
     { path: '/notification-settings', label: 'Notifications', icon: Bell },
     { path: '/settings', label: 'Settings', icon: Settings },
   ],
@@ -59,6 +62,7 @@ const ROUTE_MAP = {
     { path: '/md-approval', label: 'MD Approval', icon: ShieldCheck },
     { path: '/contracts', label: 'Contracts', icon: FileSignature },
     { path: '/reports', label: 'Reports', icon: FileText },
+    { path: '/email-templates', label: 'Email Templates', icon: MailCheck },
     { path: '/notification-settings', label: 'Notifications', icon: Bell },
     { path: '/settings', label: 'Settings', icon: Settings },
   ],
@@ -78,11 +82,13 @@ const ROUTE_MAP = {
     { path: '/contract-templates', label: 'Contract Templates', icon: Pencil },
     { path: '/reports', label: 'Reports', icon: FileText },
     { path: '/email-settings', label: 'Email Settings', icon: Mail },
+    { path: '/email-templates', label: 'Email Templates', icon: MailCheck },
     { path: '/notification-settings', label: 'Notifications', icon: Bell },
     { path: '/settings', label: 'Settings', icon: Settings },
   ],
   TechAdmin: [
     { path: '/management-console', label: 'Management Console', icon: Shield },
+    { path: '/email-templates', label: 'Email Templates', icon: MailCheck },
   ],
 };
 
@@ -139,7 +145,7 @@ const Sidebar = ({ onClose }) => {
             }}
             onClick={() => onClose?.()}
           >
-            <route.icon className="sidebar__link-icon" size={18} />
+            <route.icon className="sidebar__link-icon" size={16} />
             <span>{route.label}</span>
           </NavLink>
         ))}

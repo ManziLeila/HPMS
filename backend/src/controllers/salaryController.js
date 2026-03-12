@@ -7,7 +7,8 @@ import employeeRepo from '../repositories/employeeRepo.js';
 import auditService from '../services/auditService.js';
 import { notFound } from '../utils/httpError.js';
 import { generatePayslipPdf } from '../services/payslipService.js';
-import { sendSalaryProcessedEmail, sendFONotification } from '../services/emailService.js';
+import { sendSalaryProcessedEmail, sendFONotification, sendApprovalNotification } from '../services/emailService.js';
+import settingsRepo from '../repositories/settingsRepo.js';
 import { generateMonthlyPayrollExcel } from '../services/excelService.js';
 import notificationService from '../services/notificationService.js';
 import fileStorageService from '../services/fileStorageService.js';
@@ -77,6 +78,9 @@ export const hrReviewSalary = async (req, res, next) => {
     const creator = await salaryRepo.getCreatedBy(salaryId);
     const record = await salaryRepo.findByIdWithEmployee(salaryId);
 
+    const periodLabel = new Date(updated.pay_period).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+    const appUrl = config.appUrl;
+
     if (creator?.employee_id) {
       // In-app notification
       await notificationService.notifyFOSalaryReviewed({
@@ -88,18 +92,34 @@ export const hrReviewSalary = async (req, res, next) => {
         reviewedByName: reviewerName,
       });
 
-      // Email notification
-      const appUrl = config.appUrl;
+      // Email the Finance Officer about the HR decision
       await sendFONotification({
         foEmail: creator.email,
         foName: creator.full_name,
-        period: new Date(updated.pay_period).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }),
+        period: periodLabel,
         status: newStatus,
         count: 1,
         reviewedBy: reviewerName,
         comment,
         actionUrl: `${appUrl}/hr-review`,
       });
+    }
+
+    // If HR approved → also email the MD so they know there is a payroll awaiting final approval
+    if (newStatus === 'HR_APPROVED') {
+      const settings = await settingsRepo.getMany(['md_notification_email']);
+      const mdEmail = settings.md_notification_email;
+      if (mdEmail) {
+        await sendApprovalNotification({
+          toEmail: mdEmail,
+          event: 'HR_APPROVED',
+          clientName: record?.client_name || record?.company_name || '—',
+          periodLabel,
+          salaryCount: 1,
+          actorName: reviewerName,
+          comments: comment,
+        });
+      }
     }
 
     res.json({ success: true, salary: updated });
@@ -118,10 +138,44 @@ export const mdReviewSalary = async (req, res, next) => {
     const { action, comment } = mdReviewSchema.parse(req.body);
 
     const newStatus = action === 'APPROVE' ? 'MD_APPROVED' : 'MD_REJECTED';
-    const reviewedBy = req.user.id;
+    const reviewerName = req.user.fullName || req.user.email || 'Managing Director';
 
-    const updated = await salaryRepo.mdReview({ salaryId, status: newStatus, comment, reviewedBy });
+    const updated = await salaryRepo.mdReview({ salaryId, status: newStatus, comment, reviewedBy: req.user.id });
     if (!updated) throw notFound('Salary record not found or not yet HR-approved');
+
+    // Email the Finance Officer about the MD decision
+    const record = await salaryRepo.findByIdWithEmployee(salaryId);
+    const periodLabel = new Date(updated.pay_period).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+    const settings = await settingsRepo.getMany(['fo_notification_email', 'hr_notification_email']);
+
+    const foEmail = settings.fo_notification_email;
+    if (foEmail) {
+      await sendApprovalNotification({
+        toEmail: foEmail,
+        event: newStatus, // 'MD_APPROVED' or 'MD_REJECTED'
+        clientName: record?.client_name || record?.company_name || '—',
+        periodLabel,
+        salaryCount: 1,
+        actorName: reviewerName,
+        comments: comment,
+      });
+    }
+
+    // If MD rejected, also notify HR so they know to fix and resubmit
+    if (newStatus === 'MD_REJECTED') {
+      const hrEmail = settings.hr_notification_email;
+      if (hrEmail) {
+        await sendApprovalNotification({
+          toEmail: hrEmail,
+          event: 'MD_REJECTED',
+          clientName: record?.client_name || record?.company_name || '—',
+          periodLabel,
+          salaryCount: 1,
+          actorName: reviewerName,
+          comments: comment,
+        });
+      }
+    }
 
     res.json({ success: true, salary: updated });
   } catch (error) {
@@ -172,6 +226,23 @@ export const bulkHrReviewSalaries = async (req, res, next) => {
           actionUrl: `${appUrl}/hr-review`,
         }));
         await Promise.allSettled(emailPromises);
+      }
+
+      // If bulk HR approved → also email MD to notify them for final approval
+      if (newStatus === 'HR_APPROVED') {
+        const settings = await settingsRepo.getMany(['md_notification_email']);
+        const mdEmail = settings.md_notification_email;
+        if (mdEmail) {
+          await sendApprovalNotification({
+            toEmail: mdEmail,
+            event: 'HR_APPROVED',
+            clientName: '—',
+            periodLabel,
+            salaryCount: updated.length,
+            actorName: reviewerName,
+            comments: comment,
+          });
+        }
       }
     }
 
@@ -844,14 +915,25 @@ export const submitMonthForReview = async (req, res, next) => {
       userAgent: req.headers['user-agent'],
     });
 
-    // Notify HR
+    // Email HR to notify them the payroll is ready for review
     try {
-      await sendFONotification('HR', {
-        title: 'Payroll Month Ready for Review',
-        body: `Finance has confirmed the payroll for ${year}/${month} is ready for HR review.`
-      });
+      const settings = await settingsRepo.getMany(['hr_notification_email']);
+      const hrEmail = settings.hr_notification_email;
+      if (hrEmail) {
+        const periodLabel = new Date(year, month - 1, 1).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+        const actorName = req.user.fullName || req.user.email || 'Finance Officer';
+        await sendApprovalNotification({
+          toEmail: hrEmail,
+          event: 'SUBMITTED',
+          clientName: '—',
+          periodLabel,
+          salaryCount: records.length,
+          actorName,
+          comments: null,
+        });
+      }
     } catch (e) {
-      console.warn('Notification failed but month was submitted', e.message);
+      console.warn('[submitMonthForReview] HR email notification failed:', e.message);
     }
 
     res.json({ success: true, message: 'Monthly payroll submitted for HR review' });
