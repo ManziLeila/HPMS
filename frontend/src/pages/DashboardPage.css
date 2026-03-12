@@ -109,11 +109,20 @@
   background: rgba(255, 255, 255, 0.35);
 }
 
-/* ── Row 1: 3 cards (glance + stat + quick actions) ─────────── */
+/* ── Row 1: glance (left) | right-col stacked (upcoming + pipeline + quick) */
 .dash-v2__row1 {
   display: grid;
-  grid-template-columns: 1.8fr 1fr minmax(0, 1fr);
-  gap: 24px;
+  grid-template-columns: 1.1fr 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+/* Right column: Upcoming Dates → Pipeline → Quick Actions */
+.dash-v2__right-col {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
 }
 
 /* A) Payroll at a glance */
@@ -230,6 +239,116 @@
   font-weight: 500;
 }
 
+/* Payroll Pipeline widget */
+.dash-v2__pipeline {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 14px 16px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.dash-v2__pipeline-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.dash-v2__pipeline-title {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.dash-v2__pipeline-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  background: none;
+  border: none;
+  color: #003661;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  padding: 0;
+}
+.dash-v2__pipeline-link:hover { text-decoration: underline; }
+
+.dash-v2__pipeline-steps {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dash-v2__pipeline-step {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #f8fafc;
+  border-radius: 10px;
+  padding: 10px 10px;
+  border: 1px solid #f1f5f9;
+}
+
+.dash-v2__pipeline-step-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: #fff;
+}
+.dash-v2__pipeline-step-icon--pending { background: #f5911f; }
+.dash-v2__pipeline-step-icon--hr      { background: #6366f1; }
+.dash-v2__pipeline-step-icon--md      { background: #10b981; }
+
+.dash-v2__pipeline-step-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.dash-v2__pipeline-step-count {
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: #0f172a;
+  line-height: 1;
+}
+
+.dash-v2__pipeline-step-label {
+  font-size: 0.68rem;
+  color: #94a3b8;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.dash-v2__pipeline-sep {
+  color: #cbd5e1;
+  flex-shrink: 0;
+}
+
+.dash-v2__pipeline-rejected {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  padding: 6px 10px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #dc2626;
+}
+
 /* D) Quick Actions */
 .dash-v2__quick {
   background: #fff;
@@ -316,10 +435,10 @@
   color: #fff;
 }
 
-/* ── Row 2: This month | Upcoming Dates ──────────────────────── */
+/* ── Row 2: This month (full width) ──────────────────────────── */
 .dash-v2__row2 {
   display: grid;
-  grid-template-columns: 1.2fr 1fr;
+  grid-template-columns: 1fr;
   gap: 24px;
 }
 
@@ -400,79 +519,131 @@
 }
 
 /* Upcoming Dates card */
+/* ── Upcoming Dates card ──────────────────────────────────────── */
 .dash-v2__upcoming {
   background: #fff;
   border: 1px solid #e2e8f0;
   border-radius: 14px;
-  padding: 28px 26px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  padding: 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .dash-v2__upcoming-head {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 18px;
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid #f1f5f9;
+  background: linear-gradient(135deg, #003661 0%, #004d8a 100%);
+}
+
+.dash-v2__upcoming-head-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dash-v2__upcoming-head-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  background: rgba(255,255,255,0.2);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
 .dash-v2__upcoming-title {
   margin: 0;
-  font-size: 1.05rem;
+  font-size: 1rem;
   font-weight: 700;
-  color: #0f172a;
+  color: #fff;
+}
+
+.dash-v2__upcoming-count {
+  background: #f5911f;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 20px;
+  line-height: 1.4;
 }
 
 .dash-v2__upcoming-arrow {
-  background: none;
+  background: rgba(255,255,255,0.15);
   border: none;
-  color: #94a3b8;
+  color: #fff;
   cursor: pointer;
-  padding: 4px;
+  padding: 5px 7px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 6px;
+  border-radius: 7px;
+  transition: background 0.15s;
 }
-
 .dash-v2__upcoming-arrow:hover {
-  color: #64748b;
-  background: #f1f5f9;
+  background: rgba(255,255,255,0.28);
 }
 
 .dash-v2__upcoming-list {
   list-style: none;
   margin: 0;
-  padding: 0;
+  padding: 6px 0;
   display: flex;
   flex-direction: column;
+  flex: 1;
 }
 
+/* Each item */
 .dash-v2__upcoming-item {
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 14px 0;
-  border-bottom: 1px solid #f1f5f9;
-  font-size: 0.95rem;
+  gap: 10px;
+  padding: 11px 20px;
+  border-bottom: 1px solid #f8fafc;
+  position: relative;
+  transition: background 0.15s;
 }
+.dash-v2__upcoming-item:last-child { border-bottom: none; }
+.dash-v2__upcoming-item:hover { background: #f8fafc; }
 
-.dash-v2__upcoming-item:last-child {
-  border-bottom: none;
+/* Left urgency stripe */
+.dash-v2__upcoming-urgency-bar {
+  position: absolute;
+  left: 0;
+  top: 6px;
+  bottom: 6px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
 }
+.dash-v2__upcoming-urgency-bar--critical { background: #ef4444; }
+.dash-v2__upcoming-urgency-bar--warning  { background: #f5911f; }
+.dash-v2__upcoming-urgency-bar--ok       { background: #10b981; }
+.dash-v2__upcoming-urgency-bar--normal   { background: #94a3b8; }
 
-.dash-v2__upcoming-item--empty .dash-v2__upcoming-text {
-  gap: 4px;
-}
-.dash-v2__upcoming-item--empty .dash-v2__upcoming-date {
-  font-size: 0.8rem;
-  color: #94a3b8;
-}
-
-.dash-v2__upcoming-icon {
-  color: #64748b;
+/* Icon dot */
+.dash-v2__upcoming-dot {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
+  color: #fff;
 }
+.dash-v2__upcoming-dot--critical { background: #ef4444; box-shadow: 0 2px 8px rgba(239,68,68,0.35); }
+.dash-v2__upcoming-dot--warning  { background: #f5911f; box-shadow: 0 2px 8px rgba(245,145,31,0.35); }
+.dash-v2__upcoming-dot--ok       { background: #10b981; box-shadow: 0 2px 8px rgba(16,185,129,0.3); }
+.dash-v2__upcoming-dot--normal   { background: #94a3b8; }
 
+/* Text */
 .dash-v2__upcoming-text {
   display: flex;
   flex-direction: column;
@@ -480,21 +651,63 @@
   flex: 1;
   min-width: 0;
 }
-
 .dash-v2__upcoming-name {
-  font-weight: 600;
+  font-size: 0.88rem;
+  font-weight: 700;
   color: #0f172a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
-
 .dash-v2__upcoming-date {
-  font-size: 0.82rem;
+  font-size: 0.78rem;
   color: #64748b;
 }
 
-.dash-v2__upcoming-meta {
-  font-size: 0.82rem;
-  color: #94a3b8;
+/* Days-remaining badge */
+.dash-v2__upcoming-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 20px;
+  white-space: nowrap;
   flex-shrink: 0;
+}
+.dash-v2__upcoming-badge--critical { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+.dash-v2__upcoming-badge--warning  { background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa; }
+.dash-v2__upcoming-badge--ok       { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
+.dash-v2__upcoming-badge--normal   { background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; }
+
+/* Empty state */
+.dash-v2__upcoming-item--empty {
+  flex-direction: row;
+  align-items: center;
+  padding: 14px 16px;
+  gap: 12px;
+}
+.dash-v2__upcoming-empty-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  background: #f1f5f9;
+  color: #94a3b8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.dash-v2__upcoming-item--empty .dash-v2__upcoming-text {
+  align-items: flex-start;
+  text-align: left;
+  gap: 3px;
+}
+.dash-v2__upcoming-item--empty .dash-v2__upcoming-name {
+  color: #475569;
+  font-size: 0.9rem;
+}
+.dash-v2__upcoming-item--empty .dash-v2__upcoming-date {
+  font-size: 0.8rem;
+  color: #94a3b8;
 }
 
 /* ── Row 3: Payroll Trend chart | Recent Activity ─────────────── */
@@ -627,7 +840,7 @@
 /* ── Responsive ──────────────────────────────────────────────── */
 @media (max-width: 1200px) {
   .dash-v2__row1 {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr;
   }
 
   .dash-v2__glance-metrics {
@@ -684,10 +897,14 @@
   }
 
   .dash-v2__glance,
-  .dash-v2__stat,
   .dash-v2__quick,
   .dash-v2__month,
-  .dash-v2__upcoming,
+  .dash-v2__upcoming-head {
+    padding: 14px 16px 12px;
+  }
+  .dash-v2__upcoming-item {
+    padding: 10px 16px;
+  }
   .dash-v2__chart,
   .dash-v2__activity {
     padding: 20px 16px;

@@ -165,6 +165,28 @@
     background: #e08218;
 }
 
+.client-employees-page .btn-bulk-upload {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 18px;
+    background: #fff;
+    color: #003661;
+    border: 2px solid #003661;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.95rem;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.18s, color 0.18s, box-shadow 0.18s;
+}
+
+.client-employees-page .btn-bulk-upload:hover {
+    background: #003661;
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(0, 54, 97, 0.22);
+}
+
 .client-employees-contract-hint {
     margin-top: 16px;
     font-size: 0.9rem;

@@ -44,12 +44,35 @@ export const getDashboardStats = async (req, res, next) => {
       total_paye: 0,
     };
 
+    // Payroll approval pipeline counts
+    const pipelineData = await db.query(
+      `SELECT
+          COUNT(*) FILTER (WHERE hr_status = 'PENDING')      AS pending,
+          COUNT(*) FILTER (WHERE hr_status = 'HR_APPROVED')  AS hr_approved,
+          COUNT(*) FILTER (WHERE hr_status = 'MD_APPROVED')  AS md_approved,
+          COUNT(*) FILTER (WHERE hr_status = 'HR_REJECTED')  AS hr_rejected,
+          COUNT(*) FILTER (WHERE hr_status = 'MD_REJECTED')  AS md_rejected
+       FROM hpms_core.salaries
+       WHERE EXTRACT(YEAR FROM pay_period) = $1
+         AND EXTRACT(MONTH FROM pay_period) = $2`,
+      [currentYear, currentMonth],
+    );
+
+    const pipeline = pipelineData.rows[0] || {};
+
     res.json({
       totalEmployees: Number(employeeCount.rows[0]?.count || 0),
       monthlyPayrollCost: Number(stats.total_employer_cost || 0),
       monthlyGross: Number(stats.total_gross || 0),
       monthlyPaye: Number(stats.total_paye || 0),
       payrollRuns: Number(stats.payroll_runs || 0),
+      pipeline: {
+        pending:    Number(pipeline.pending    || 0),
+        hrApproved: Number(pipeline.hr_approved || 0),
+        mdApproved: Number(pipeline.md_approved || 0),
+        hrRejected: Number(pipeline.hr_rejected || 0),
+        mdRejected: Number(pipeline.md_rejected || 0),
+      },
       chartData: chartData.rows.map((row) => ({
         month: new Date(row.month).toLocaleDateString('en-US', { month: 'short' }),
         payroll: Number(row.payroll || 0),
