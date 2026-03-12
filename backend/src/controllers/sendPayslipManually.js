@@ -60,6 +60,18 @@ export const sendPayslipEmailManually = async (req, res, next) => {
 
         const payrollSnapshot = decryptPayrollSnapshot(employeeData.payroll_snapshot_enc);
 
+        // Override with authoritative stored net salary so the payslip matches the DB
+        if (employeeData.net_paid_enc) {
+            try {
+                const storedNet = Number(decryptField('net_paid_enc', employeeData.net_paid_enc)) || 0;
+                if (storedNet > 0) {
+                    payrollSnapshot.storedNetSalary = storedNet;
+                    payrollSnapshot.netPaidToBank = storedNet;
+                    payrollSnapshot.netSalary = storedNet;
+                }
+            } catch { /* fall through */ }
+        }
+
         // Decrypt bank account if available
         let bankAccountNumber = null;
         if (employeeData.account_number_enc) {
