@@ -9,6 +9,10 @@ import {
   Calendar,
   AlertCircle,
   ChevronRight,
+  Clock,
+  CheckCircle2,
+  ShieldCheck,
+  XCircle,
 } from 'lucide-react';
 import {
   LineChart,
@@ -63,6 +67,7 @@ const DashboardPage = () => {
     monthlyGross: 0,
     monthlyPaye: 0,
     payrollRuns: 0,
+    pipeline: { pending: 0, hrApproved: 0, mdApproved: 0, hrRejected: 0, mdRejected: 0 },
     chartData: [],
   });
   const [expiringContracts, setExpiringContracts] = useState([]);
@@ -130,10 +135,13 @@ const DashboardPage = () => {
       : 'No end date';
     const days = typeof c.days_remaining === 'number' ? c.days_remaining : null;
     const daysText = days != null ? `${days} day${days === 1 ? '' : 's'}` : 'soon';
+    const urgency = days == null ? 'normal' : days <= 7 ? 'critical' : days <= 14 ? 'warning' : 'ok';
     return {
-      title: `Client contract expires in ${daysText}`,
+      title: name,
       date: dateLabel,
-      meta: name,
+      daysText,
+      urgency,
+      days,
       icon: Calendar,
     };
   });
@@ -223,38 +231,132 @@ const DashboardPage = () => {
           </div>
         </div>
 
-        {/* B) Active Employees */}
-        <div className="dash-v2__stat">
-          <Users size={28} className="dash-v2__stat-icon" />
-          <span className="dash-v2__stat-value">{stats.totalEmployees}</span>
-          <span className="dash-v2__stat-label">Active Employees</span>
-        </div>
+        {/* B) Right column: Upcoming Dates → Pipeline → Quick Actions */}
+        <div className="dash-v2__right-col">
 
-        {/* C) Quick Actions */}
-        <div className="dash-v2__quick">
-          <div className="dash-v2__quick-head">
-            <h3 className="dash-v2__quick-title">Quick Actions</h3>
-            <button type="button" className="dash-v2__quick-viewall" onClick={() => navigate('/payroll-run')}>
-              View All &gt;
-            </button>
-          </div>
-          <div className="dash-v2__quick-grid">
-            {QUICK_ACTIONS.map(({ label, path, icon: Icon, primary }) => (
+          {/* Upcoming Dates — sits above Quick Actions */}
+          <div className="dash-v2__upcoming">
+            <div className="dash-v2__upcoming-head">
+              <div className="dash-v2__upcoming-head-left">
+                <span className="dash-v2__upcoming-head-icon"><Calendar size={16} /></span>
+                <h3 className="dash-v2__upcoming-title">Upcoming Dates</h3>
+                {upcomingList.length > 0 && (
+                  <span className="dash-v2__upcoming-count">{upcomingList.length}</span>
+                )}
+              </div>
               <button
-                key={path}
                 type="button"
-                className={`dash-v2__quick-btn ${primary ? 'dash-v2__quick-btn--primary' : ''}`}
-                onClick={() => navigate(path)}
+                className="dash-v2__upcoming-arrow"
+                onClick={() => navigate('/clients')}
+                aria-label="View all"
               >
-                <Icon size={20} strokeWidth={2} />
-                <span>{label}</span>
+                <ChevronRight size={18} />
               </button>
-            ))}
+            </div>
+            <ul className="dash-v2__upcoming-list">
+              {upcomingList.length === 0 ? (
+                <li className="dash-v2__upcoming-item dash-v2__upcoming-item--empty">
+                  <div className="dash-v2__upcoming-empty-icon"><Calendar size={20} /></div>
+                  <div className="dash-v2__upcoming-text">
+                    <span className="dash-v2__upcoming-name">No expiring contracts</span>
+                    <span className="dash-v2__upcoming-date">Contracts expiring in 30 days will appear here</span>
+                  </div>
+                </li>
+              ) : (
+                upcomingList.map((item, i) => (
+                  <li key={i} className={`dash-v2__upcoming-item dash-v2__upcoming-item--${item.urgency}`}>
+                    <div className={`dash-v2__upcoming-urgency-bar dash-v2__upcoming-urgency-bar--${item.urgency}`} />
+                    <div className={`dash-v2__upcoming-dot dash-v2__upcoming-dot--${item.urgency}`}>
+                      <Calendar size={13} />
+                    </div>
+                    <div className="dash-v2__upcoming-text">
+                      <span className="dash-v2__upcoming-name">{item.title}</span>
+                      <span className="dash-v2__upcoming-date">{item.date}</span>
+                    </div>
+                    <span className={`dash-v2__upcoming-badge dash-v2__upcoming-badge--${item.urgency}`}>
+                      {item.daysText}
+                    </span>
+                  </li>
+                ))
+              )}
+            </ul>
           </div>
+
+          {/* Payroll Pipeline — sits between Upcoming and Quick Actions */}
+          <div className="dash-v2__pipeline">
+            <div className="dash-v2__pipeline-header">
+              <span className="dash-v2__pipeline-title">This Month's Pipeline</span>
+              <button type="button" className="dash-v2__pipeline-link" onClick={() => navigate('/approval-dashboard')}>
+                View <ChevronRight size={13} />
+              </button>
+            </div>
+            <div className="dash-v2__pipeline-steps">
+              <div className="dash-v2__pipeline-step">
+                <span className="dash-v2__pipeline-step-icon dash-v2__pipeline-step-icon--pending">
+                  <Clock size={14} />
+                </span>
+                <div className="dash-v2__pipeline-step-info">
+                  <span className="dash-v2__pipeline-step-count">{stats.pipeline?.pending ?? 0}</span>
+                  <span className="dash-v2__pipeline-step-label">Pending</span>
+                </div>
+              </div>
+              <ChevronRight size={12} className="dash-v2__pipeline-sep" />
+              <div className="dash-v2__pipeline-step">
+                <span className="dash-v2__pipeline-step-icon dash-v2__pipeline-step-icon--hr">
+                  <CheckCircle2 size={14} />
+                </span>
+                <div className="dash-v2__pipeline-step-info">
+                  <span className="dash-v2__pipeline-step-count">{stats.pipeline?.hrApproved ?? 0}</span>
+                  <span className="dash-v2__pipeline-step-label">HR Approved</span>
+                </div>
+              </div>
+              <ChevronRight size={12} className="dash-v2__pipeline-sep" />
+              <div className="dash-v2__pipeline-step">
+                <span className="dash-v2__pipeline-step-icon dash-v2__pipeline-step-icon--md">
+                  <ShieldCheck size={14} />
+                </span>
+                <div className="dash-v2__pipeline-step-info">
+                  <span className="dash-v2__pipeline-step-count">{stats.pipeline?.mdApproved ?? 0}</span>
+                  <span className="dash-v2__pipeline-step-label">MD Approved</span>
+                </div>
+              </div>
+            </div>
+            {(stats.pipeline?.hrRejected > 0 || stats.pipeline?.mdRejected > 0) && (
+              <div className="dash-v2__pipeline-rejected">
+                <XCircle size={13} />
+                {stats.pipeline.hrRejected > 0 && <span>{stats.pipeline.hrRejected} HR rejected</span>}
+                {stats.pipeline.mdRejected > 0 && <span>{stats.pipeline.mdRejected} MD rejected</span>}
+              </div>
+            )}
+          </div>
+
+          {/* Quick Actions — sits below Upcoming Dates */}
+          <div className="dash-v2__quick">
+            <div className="dash-v2__quick-head">
+              <h3 className="dash-v2__quick-title">Quick Actions</h3>
+              <button type="button" className="dash-v2__quick-viewall" onClick={() => navigate('/payroll-run')}>
+                View All &gt;
+              </button>
+            </div>
+            <div className="dash-v2__quick-grid">
+              {QUICK_ACTIONS.map(({ label, path, icon: Icon, primary }) => (
+                <button
+                  key={path}
+                  type="button"
+                  className={`dash-v2__quick-btn ${primary ? 'dash-v2__quick-btn--primary' : ''}`}
+                  onClick={() => navigate(path)}
+                >
+                  <Icon size={20} strokeWidth={2} />
+                  <span>{label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
         </div>
       </div>
 
-      {/* Second row: This month | Upcoming Dates */}
+      {/* Second row: This month (full width) */}
       <div className="dash-v2__row2">
         <div className="dash-v2__month">
           <h3 className="dash-v2__month-title">This month</h3>
@@ -297,42 +399,6 @@ const DashboardPage = () => {
             </ResponsiveContainer>
           </div>
           <p className="dash-v2__month-note">Run payroll for this period to see totals.</p>
-        </div>
-
-        <div className="dash-v2__upcoming">
-          <div className="dash-v2__upcoming-head">
-            <h3 className="dash-v2__upcoming-title">Upcoming Dates</h3>
-            <button
-              type="button"
-              className="dash-v2__upcoming-arrow"
-              onClick={() => navigate('/payroll-run')}
-              aria-label="View all"
-            >
-              <ChevronRight size={20} />
-            </button>
-          </div>
-          <ul className="dash-v2__upcoming-list">
-            {upcomingList.length === 0 ? (
-              <li className="dash-v2__upcoming-item dash-v2__upcoming-item--empty">
-                <Calendar size={18} className="dash-v2__upcoming-icon" />
-                <div className="dash-v2__upcoming-text">
-                  <span className="dash-v2__upcoming-name">No upcoming dates</span>
-                  <span className="dash-v2__upcoming-date">Client contracts expiring in the next 30 days will appear here</span>
-                </div>
-              </li>
-            ) : (
-              upcomingList.map((item, i) => (
-                <li key={i} className="dash-v2__upcoming-item">
-                  <item.icon size={18} className="dash-v2__upcoming-icon" />
-                  <div className="dash-v2__upcoming-text">
-                    <span className="dash-v2__upcoming-name">{item.title}</span>
-                    <span className="dash-v2__upcoming-date">{item.date}</span>
-                  </div>
-                  {item.meta && <span className="dash-v2__upcoming-meta">{item.meta}</span>}
-                </li>
-              ))
-            )}
-          </ul>
         </div>
       </div>
 
