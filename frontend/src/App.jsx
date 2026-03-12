@@ -14,6 +14,7 @@ import ApprovalDashboardPage from './pages/ApprovalDashboardPage.jsx';
 import ContractsPage from './pages/ContractsPage.jsx';
 import ContractTemplatesPage from './pages/ContractTemplatesPage.jsx';
 import EmailSettingsPage from './pages/EmailSettingsPage.jsx';
+import EmailTemplatesPage from './pages/EmailTemplatesPage.jsx';
 import SettingsPage from './pages/SettingsPage.jsx';
 import NotificationSettingsPage from './pages/NotificationSettingsPage.jsx';
 import PayrollPeriodsPage from './pages/PayrollPeriodsPage.jsx';
@@ -77,6 +78,7 @@ const App = () => (
       <Route path="/contracts" element={<ContractsPage />} />
       <Route path="/contract-templates" element={<ContractTemplatesPage />} />
       <Route path="/email-settings" element={<EmailSettingsPage />} />
+      <Route path="/email-templates" element={<EmailTemplatesPage />} />
       <Route path="/settings" element={<SettingsPage />} />
       <Route path="/notification-settings" element={<NotificationSettingsPage />} />
       <Route path="/payroll-periods" element={<PayrollPeriodsPage />} />
