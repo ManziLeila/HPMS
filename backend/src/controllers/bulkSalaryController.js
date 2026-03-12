@@ -309,6 +309,18 @@ export const downloadBulkPayslips = async (req, res, next) => {
                     includeMedical: record.include_medical !== false,
                 });
 
+                // Override with authoritative stored net salary
+                if (record.net_paid_enc) {
+                    try {
+                        const storedNet = Number(decryptField('net_paid_enc', record.net_paid_enc)) || 0;
+                        if (storedNet > 0) {
+                            payrollSnapshot.storedNetSalary = storedNet;
+                            payrollSnapshot.netPaidToBank = storedNet;
+                            payrollSnapshot.netSalary = storedNet;
+                        }
+                    } catch { /* fall through */ }
+                }
+
                 let bankAccountNumber = 'N/A';
                 if (record.account_number_enc) {
                     try {
@@ -489,6 +501,18 @@ export const sendBulkPayslipEmails = async (req, res, next) => {
                     frequency: record.pay_frequency,
                     includeMedical: record.include_medical !== false,
                 });
+
+                // Override with authoritative stored net salary
+                if (record.net_paid_enc) {
+                    try {
+                        const storedNet = Number(decryptField('net_paid_enc', record.net_paid_enc)) || 0;
+                        if (storedNet > 0) {
+                            payrollSnapshot.storedNetSalary = storedNet;
+                            payrollSnapshot.netPaidToBank = storedNet;
+                            payrollSnapshot.netSalary = storedNet;
+                        }
+                    } catch { /* fall through */ }
+                }
 
                 let bankAccountNumber = null;
                 if (record.account_number_enc) {

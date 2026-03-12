@@ -647,6 +647,20 @@ export const downloadPayslip = async (req, res, next) => {
       includeMedical: record.include_medical !== false,
     });
 
+    // Decrypt the authoritative stored net salary and override the snapshot so the
+    // payslip always reflects exactly what was approved/processed in the system.
+    let storedNetSalary = null;
+    if (record.net_paid_enc) {
+      try {
+        storedNetSalary = Number(decryptField('net_paid_enc', record.net_paid_enc)) || null;
+      } catch (_) { /* fall through */ }
+    }
+    if (storedNetSalary && storedNetSalary > 0) {
+      payrollSnapshot.storedNetSalary = storedNetSalary;
+      payrollSnapshot.netPaidToBank = storedNetSalary;
+      payrollSnapshot.netSalary = storedNetSalary;
+    }
+
     console.log('Calculated payroll snapshot:', {
       grossSalary: payrollSnapshot.grossSalary,
       netSalary: payrollSnapshot.netSalary,
@@ -833,6 +847,18 @@ export const downloadMonthPayslips = async (req, res, next) => {
           frequency: record.pay_frequency,
           includeMedical: record.include_medical !== false,
         });
+
+        // Override with the authoritative stored net salary
+        if (record.net_paid_enc) {
+          try {
+            const storedNet = Number(decryptField('net_paid_enc', record.net_paid_enc)) || 0;
+            if (storedNet > 0) {
+              payrollSnapshot.storedNetSalary = storedNet;
+              payrollSnapshot.netPaidToBank = storedNet;
+              payrollSnapshot.netSalary = storedNet;
+            }
+          } catch { /* fall through */ }
+        }
 
         let bankAccountNumber = null;
         if (record.account_number_enc) {

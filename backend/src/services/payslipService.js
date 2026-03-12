@@ -35,6 +35,17 @@ export const generatePayslipPdf = ({ employee, salary, payrollSnapshot }) =>
     const allowances = snap.allowances || { transport: 0, housing: 0, performance: 0, variable: 0 };
     const basicSalary = snap.basicSalary ?? 0;
 
+    // RAMA Insurance is excluded from employee-facing payslips.
+    // Recalculate CBHI and Net Pay without RAMA so the payslip is internally consistent.
+    const _gross = snap.grossSalary ?? 0;
+    const _paye = snap.paye ?? 0;
+    const _rssbPension = snap.rssbEePension ?? 0;
+    const _rssbMaternity = snap.rssbEeMaternity ?? 0;
+    const _advance = snap.advanceAmount ?? 0;
+    const _netBeforeCbhi = _gross - _paye - _rssbPension - _rssbMaternity;
+    const _cbhi = Math.round(_netBeforeCbhi * 0.005);
+    const _netPay = _netBeforeCbhi - _cbhi - _advance;
+
     const pageWidth = 595.28;
     const margin = 50;
     const contentWidth = pageWidth - 2 * margin;
@@ -162,23 +173,17 @@ export const generatePayslipPdf = ({ employee, salary, payrollSnapshot }) =>
     currentY += 25;
 
     const deductionsItems = [
-      { label: 'PAYE Tax',             amount: snap.paye ?? 0 },
-      { label: 'RSSB Pension (6%)',    amount: snap.rssbEePension ?? 0 },
-      { label: 'RSSB Maternity (0.3%)', amount: snap.rssbEeMaternity ?? 0 },
+      { label: 'PAYE Tax',              amount: _paye },
+      { label: 'RSSB Pension (6%)',     amount: _rssbPension },
+      { label: 'RSSB Maternity (0.3%)', amount: _rssbMaternity },
+      { label: 'CBHI (0.5%)',           amount: _cbhi },
     ];
 
-    if (snap.includeMedical !== false) {
-      deductionsItems.push({
-        label: 'RAMA Insurance (7.5%)',
-        amount: snap.ramaInsuranceEmployee || snap.medicalInsuranceEmployee || 0,
-      });
+    if (_advance > 0) {
+      deductionsItems.push({ label: 'Advance Deduction', amount: _advance });
     }
 
-    deductionsItems.push({ label: 'CBHI (0.5%)', amount: snap.cbhiEmployee ?? 0 });
-
-    if ((snap.advanceAmount ?? 0) > 0) {
-      deductionsItems.push({ label: 'Advance Deduction', amount: snap.advanceAmount });
-    }
+    const _totalDeductions = deductionsItems.reduce((sum, item) => sum + item.amount, 0);
 
     deductionsItems.forEach((item) => {
       doc.rect(tableX, currentY, tableWidth, rowH).stroke();
@@ -192,23 +197,23 @@ export const generatePayslipPdf = ({ employee, salary, payrollSnapshot }) =>
       currentY += rowH;
     });
 
-    // Total Deductions
+    // Total Deductions (sum of visible items only — RAMA excluded)
     doc.rect(tableX, currentY, tableWidth, rowH).stroke();
     doc.rect(tableX, currentY, col1Width, rowH).stroke();
     doc.fontSize(11).font('Helvetica-Bold').fillColor('#000000').text('Total Deductions', tableX + 10, currentY + 5);
     doc.text(
-      formatCurrency(snap.totalEmployeeDeductions ?? 0).replace('RWF ', ''),
+      formatCurrency(_totalDeductions).replace('RWF ', ''),
       tableX + col1Width + 10, currentY + 5,
       { width: col2Width - 20, align: 'right' }
     );
     currentY += rowH;
 
-    // Net Pay (highlighted)
+    // Net Pay (highlighted) — computed without RAMA, consistent with earnings table
     doc.rect(tableX, currentY, tableWidth, 26).fillAndStroke('#f0f0f0', '#000000');
     doc.rect(tableX, currentY, col1Width, 26).stroke();
     doc.fontSize(12).font('Helvetica-Bold').fillColor('#000000').text('Net Pay', tableX + 10, currentY + 7);
     doc.text(
-      formatCurrency(snap.netPaidToBank || snap.netSalary || 0).replace('RWF ', ''),
+      formatCurrency(_netPay).replace('RWF ', ''),
       tableX + col1Width + 10, currentY + 7,
       { width: col2Width - 20, align: 'right' }
     );
